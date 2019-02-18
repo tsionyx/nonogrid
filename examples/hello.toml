@@ -1,0 +1,127 @@
+# Here used the simple format for defining nonograms:
+#
+# If the line starts with a '#' or ';' it's ignored.
+# Also if the '#' or ';' becomes at the middle of the line,
+# the rest of the line is also becomes a comment.
+#
+# The colors definitions are listed in [colors] section
+# (skipped in black-and-white nonograms) in the following format:
+# <COLOR NAME> = (<COLOR_DESC>) <ASCII CHARACTER>
+# COLOR_DESC should be one of the following:
+# 1) common color name, recognized by SVG like 'red'
+#    (http://www.december.com/html/spec/colorsvg.html)
+# 2) RGB-triplet like (89, 11, 255)
+# 3) hexadecimal color code like 88CC44
+# e.g:
+#
+# [colors]
+# p = (pink) %
+# g = (0, 255, 0) *
+# r = (FF0000) &
+#
+#
+# The clues (nonogram description) listed in the [clues] section
+# on one or more lines, separated by COMMA and/or NEWLINE.
+#
+# Inside the block of columns or rows the empty (comment) lines can appear
+# to visually break the long series of descriptions
+# (split by blocks of 5 lines for example).
+#
+# You could enclose the description in a single or double quotes
+# and the line can ends with the ',' (that is common if the descriptions
+# copied from source code).
+#
+# For the colored puzzles you have to suffix the block length with the
+# color name defined above like that:
+# '2g 1r 2' stands for the row of
+# 1) 2-block of 'g' color
+# 2) 1-block of 'r' color
+# 3) 2-block of default color (black)
+#
+#
+# FULL EXAMPLE:
+#
+# # # # # # # # 5.txt # # # # # # #
+# [clues]                         #
+# columns=3 1,1 1 1,1 1 1,1 3     #
+# rows=4,1,4,1,4                  #
+# # # # # # # # # # # # # # # # # #
+#
+# That is the most compact way to
+# define the board with the '5' digit:
+#
+#      X X X X
+#      X
+#      X X X X
+#            X
+#      X X X X
+#
+# If you want to be more verbose you could define the same board as following:
+#
+# # # # # # 5-verbose.txt # # # # #
+# # The '5' digit as a nonogram   #
+#                                 #
+# [clues]                         #
+# columns =                       #
+#   3 1                           #
+#   1 1 1                         #
+#   1 1 1                         #
+#   1 3                           #
+#                                 #
+# rows =                          #
+#   4      ; upper dash           #
+#   1                             #
+#   4      # middle dash          #
+#                                 #
+#   # The comment can appear here #
+#                                 #
+#   1                             #
+#   4      ; lower dash           #
+# # # # # # # # # # # # # # # # # #
+
+
+
+#       #                                 #
+#       #             #   #               #
+#       #     # #     #   #     # # #     #
+# # # # #   #     #   #   #   #   #   #   #
+#       #   # # # #   #   #   #   #   #   #
+#       #   #         #   #   #   #   #
+#       #     # #     #   #     # # #     #
+
+
+[clues]
+columns = """
+    7, 1, 1, 1, 7, 0           # 'H'
+
+    3, 1 1 1, "1 1 1", 2, 0    ; 'e'
+
+    6, 0                       # 'l'
+
+    6, 0                       ; 'l'
+
+    3, '1 1', 5, '1 1', 3, 0   # 'o'
+
+    # can put a single-line
+    # or even multi-line
+    # comment here
+
+    5 1                        ; '!'
+"""
+
+# Some comments between the columns and rows are allowed
+
+rows = """1 1 1
+    1 1 1 1 1
+    1 1 2 1 1 3 1
+    5 1 1 1 1 1 1 1 1
+    1 1 4 1 1 1 1 1 1
+    1 1 1 1 1 1 1 1
+    1 1 2 1 1 3 1
+"""
+
+# Some trailing comments are also allowed
+
+
+# The section can be empty or simply skipped
+[colors]
