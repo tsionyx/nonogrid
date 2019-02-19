@@ -65,13 +65,13 @@ impl MyFormat {
         )
     }
 
-    pub(in super::reader) fn parse_clues<B>(descriptions: &String) -> Vec<Description<B>>
+    pub(in super::reader) fn parse_clues<B>(descriptions: &str) -> Vec<Description<B>>
     where
         B: Block,
     {
         descriptions
             .lines()
-            .map(|line| Self::parse_line(line).unwrap_or(vec![]))
+            .map(|line| Self::parse_line(line).unwrap_or_else(|| vec![]))
             .flatten()
             .collect()
     }

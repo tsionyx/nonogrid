@@ -49,7 +49,7 @@ impl<'a> ShellRenderer<'a> {
         Self::descriptions_width(&self.board.desc_rows)
     }
 
-    fn descriptions_width<B: Block + Display>(descriptions: &Vec<Description<B>>) -> usize {
+    fn descriptions_width<B: Block + Display>(descriptions: &[Description<B>]) -> usize {
         descriptions
             .iter()
             .map(|desc| desc.vec.len())
@@ -62,7 +62,7 @@ impl<'a> ShellRenderer<'a> {
     }
 
     fn descriptions_to_matrix<B: Block + Display>(
-        descriptions: &Vec<Description<B>>,
+        descriptions: &[Description<B>],
     ) -> Vec<Vec<String>> {
         let mut rows: Vec<Vec<String>> = descriptions.iter().map(Self::desc_to_string).collect();
 
