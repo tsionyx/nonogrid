@@ -1,16 +1,17 @@
 use super::board::{BlackBlock, Block, Board, Description};
 use super::utils::{concat_vecs, pad_with, transpose};
 use std::fmt::Display;
+use std::rc::Rc;
 
 pub trait Renderer {
     fn render(&self) -> String;
 }
 
-pub struct ShellRenderer<'a> {
-    pub board: &'a Board<BlackBlock>,
+pub struct ShellRenderer {
+    pub board: Rc<Board<BlackBlock>>,
 }
 
-impl<'a> Renderer for ShellRenderer<'a> {
+impl Renderer for ShellRenderer {
     fn render(&self) -> String {
         let full_width = self.side_width() + self.board.width();
 
@@ -40,7 +41,7 @@ impl<'a> Renderer for ShellRenderer<'a> {
     }
 }
 
-impl<'a> ShellRenderer<'a> {
+impl ShellRenderer {
     fn header_height(&self) -> usize {
         Self::descriptions_width(&self.board.desc_cols)
     }

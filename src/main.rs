@@ -7,8 +7,9 @@ mod utils;
 extern crate serde_derive;
 
 use render::{Renderer, ShellRenderer};
+use std::rc::Rc;
 
 fn main() {
     let b = reader::MyFormat::read_board("examples/hello.toml");
-    println!("{}", ShellRenderer { board: &b }.render());
+    println!("{}", ShellRenderer { board: Rc::new(b) }.render());
 }
