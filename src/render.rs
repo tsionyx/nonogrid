@@ -1,4 +1,4 @@
-use super::board::{BlackBlock, Block, Board, Description};
+use super::board::{BinaryBlock, Block, Board, Description};
 use super::utils::{pad_with, transpose};
 use std::fmt::Display;
 use std::rc::Rc;
@@ -8,7 +8,7 @@ pub trait Renderer {
 }
 
 pub struct ShellRenderer {
-    pub board: Rc<Board<BlackBlock>>,
+    pub board: Rc<Board<BinaryBlock>>,
 }
 
 impl Renderer for ShellRenderer {
@@ -42,9 +42,9 @@ impl Renderer for ShellRenderer {
 }
 
 impl ShellRenderer {
-    fn header_height(&self) -> usize {
-        Self::descriptions_width(&self.board.desc_cols)
-    }
+    //fn header_height(&self) -> usize {
+    //    Self::descriptions_width(&self.board.desc_cols)
+    //}
 
     fn side_width(&self) -> usize {
         Self::descriptions_width(&self.board.desc_rows)

@@ -6,60 +6,97 @@ struct Point {
     y: usize,
 }
 
-pub trait State {
+//struct Cell {
+//    coord: Point,
+//    color: Color,
+//}
+
+pub trait Color {
     fn initial() -> Self;
+    fn blank() -> Self;
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum BlackState {
+pub enum BinaryColor {
     Undefined,
-    Space,
-    Box,
-    //Color(u32),
+    White,
+    Black,
+    // especially for DynamicSolver
+    BlackOrWhite,
 }
 
-impl State for BlackState {
+impl Color for BinaryColor {
     fn initial() -> Self {
-        BlackState::Undefined
+        BinaryColor::Undefined
+    }
+    fn blank() -> Self {
+        BinaryColor::White
     }
 }
 
-impl fmt::Display for BlackState {
+impl fmt::Display for BinaryColor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use BlackState::*;
+        use BinaryColor::*;
 
         let symbol = match self {
             Undefined => '?',
-            Space => '.',
-            Box => '\u{2b1b}',
+            White => '.',
+            Black => '\u{2b1b}',
+            BlackOrWhite => '?',
         };
         write!(f, "{}", symbol)
     }
 }
 
-struct Cell {
-    coord: Point,
-    // state: State,
-}
-
 pub trait Block {
-    type State: State;
+    type Color: Color;
 
     fn from_str(s: &str) -> Self;
+    fn partial_sums(desc: &[Self]) -> Vec<usize>
+    where
+        Self: Sized;
+
+    fn size(&self) -> usize;
+    fn color(&self) -> Self::Color;
 }
 
 #[derive(Debug, PartialEq)]
-pub struct BlackBlock(pub usize);
+pub struct BinaryBlock(pub usize);
 
-impl Block for BlackBlock {
-    type State = BlackState;
+impl Block for BinaryBlock {
+    type Color = BinaryColor;
 
     fn from_str(s: &str) -> Self {
         Self(s.parse::<usize>().unwrap())
     }
+
+    fn partial_sums(desc: &[Self]) -> Vec<usize> {
+        if desc.is_empty() {
+            return vec![];
+        }
+
+        desc.iter()
+            .fold(Vec::with_capacity(desc.len()), |mut acc, block| {
+                if acc.is_empty() {
+                    vec![block.0]
+                } else {
+                    let last = acc.last().unwrap();
+                    acc.push(last + block.0 + 1);
+                    acc
+                }
+            })
+    }
+
+    fn size(&self) -> usize {
+        self.0
+    }
+
+    fn color(&self) -> Self::Color {
+        BinaryColor::Black
+    }
 }
 
-impl fmt::Display for BlackBlock {
+impl fmt::Display for BinaryBlock {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -87,7 +124,7 @@ pub struct Board<B>
 where
     B: Block,
 {
-    pub cells: Vec<Vec<B::State>>,
+    pub cells: Vec<Vec<B::Color>>,
     pub desc_rows: Vec<Description<B>>,
     pub desc_cols: Vec<Description<B>>,
 }
@@ -95,13 +132,13 @@ where
 impl<B> Board<B>
 where
     B: Block,
-    B::State: Clone,
+    B::Color: Clone,
 {
     pub fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Board<B> {
         let height = rows.len();
         let width = columns.len();
 
-        let init = B::State::initial();
+        let init = B::Color::initial();
 
         let cells = vec![vec![init; width]; height];
 
@@ -123,8 +160,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::BlackState::Undefined;
-    use super::{BlackBlock, Board, Description};
+    use super::BinaryColor::Undefined;
+    use super::{BinaryBlock, Block, Board, Description};
 
     #[test]
     fn u_letter() {
@@ -132,18 +169,24 @@ mod tests {
         // X   X
         // X X X
         let rows = vec![
-            Description::new(vec![BlackBlock(1), BlackBlock(1)]),
-            Description::new(vec![BlackBlock(1), BlackBlock(1)]),
-            Description::new(vec![BlackBlock(3)]),
+            Description::new(vec![BinaryBlock(1), BinaryBlock(1)]),
+            Description::new(vec![BinaryBlock(1), BinaryBlock(1)]),
+            Description::new(vec![BinaryBlock(3)]),
         ];
         let columns = vec![
-            Description::new(vec![BlackBlock(3)]),
-            Description::new(vec![BlackBlock(1)]),
-            Description::new(vec![BlackBlock(3)]),
+            Description::new(vec![BinaryBlock(3)]),
+            Description::new(vec![BinaryBlock(1)]),
+            Description::new(vec![BinaryBlock(3)]),
         ];
 
         let board = Board::with_descriptions(rows, columns);
         assert_eq!(board.cells.len(), 3);
         assert_eq!(board.cells[0], [Undefined, Undefined, Undefined]);
+    }
+
+    #[test]
+    fn check_partial_sums() {
+        let d = Description::new(vec![BinaryBlock(1), BinaryBlock(2), BinaryBlock(3)]);
+        assert_eq!(BinaryBlock::partial_sums(&d.vec), vec![1, 4, 8]);
     }
 }

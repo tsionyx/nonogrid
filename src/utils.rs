@@ -41,9 +41,34 @@ pub fn transpose<T: Clone>(input: &[Vec<T>]) -> Result<Vec<Vec<T>>, String> {
         .collect())
 }
 
+pub fn replace<T>(vec: &mut Vec<T>, what: T, with_what: T)
+where
+    T: PartialEq + Clone,
+{
+    if what == with_what {
+        return;
+    }
+
+    if !vec.contains(&what) {
+        return;
+    }
+
+    let replaced_indexes: Vec<usize> = vec
+        .iter()
+        .enumerate()
+        .filter_map(|(index, val)| if val == &what { Some(index) } else { None })
+        .collect();
+
+    vec.extend(vec![with_what; replaced_indexes.len()]);
+    for index in replaced_indexes {
+        vec.swap_remove(index);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{pad, pad_with, transpose};
+    use crate::utils::replace;
 
     #[test]
     fn pad_vector_left() {
@@ -126,5 +151,21 @@ mod tests {
     fn transpose_jagged() {
         let m = vec![vec![1, 2, 3], vec![4, 5], vec![7, 8, 9]];
         assert_eq!(transpose(&m).unwrap_err(), "Jagged matrix: 2 vs 3")
+    }
+
+    #[test]
+    fn replace_ints() {
+        let mut v = vec![1, 2, 3, 2];
+        replace(&mut v, 2, 5);
+
+        assert_eq!(v, vec![1, 5, 3, 5]);
+    }
+
+    #[test]
+    fn no_replacement() {
+        let mut v = vec![1, 2, 3, 2];
+        replace(&mut v, 5, 4);
+
+        assert_eq!(v, vec![1, 2, 3, 2]);
     }
 }

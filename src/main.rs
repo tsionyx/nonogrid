@@ -1,6 +1,7 @@
 mod board;
 mod reader;
 mod render;
+mod solver;
 mod utils;
 
 #[macro_use]
