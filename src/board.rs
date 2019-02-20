@@ -49,13 +49,13 @@ pub trait Block {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct BlackBlock(pub u8);
+pub struct BlackBlock(pub usize);
 
 impl Block for BlackBlock {
     type State = BlackState;
 
     fn from_str(s: &str) -> Self {
-        Self(s.parse::<u8>().unwrap())
+        Self(s.parse::<usize>().unwrap())
     }
 }
 
