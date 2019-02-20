@@ -41,16 +41,6 @@ pub fn transpose<T: Clone>(input: &[Vec<T>]) -> Result<Vec<Vec<T>>, String> {
         .collect())
 }
 
-pub fn concat_vecs<T>(vecs: Vec<Vec<T>>) -> Vec<T> {
-    // https://stackoverflow.com/a/31126176
-    let size = vecs.iter().fold(0, |a, b| a + b.len());
-    vecs.into_iter()
-        .fold(Vec::with_capacity(size), |mut acc, v| {
-            acc.extend(v);
-            acc
-        })
-}
-
 #[cfg(test)]
 mod tests {
     use super::{pad, pad_with, transpose};

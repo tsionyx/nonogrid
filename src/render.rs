@@ -1,5 +1,5 @@
 use super::board::{BlackBlock, Block, Board, Description};
-use super::utils::{concat_vecs, pad_with, transpose};
+use super::utils::{pad_with, transpose};
 use std::fmt::Display;
 use std::rc::Rc;
 
@@ -37,7 +37,7 @@ impl Renderer for ShellRenderer {
         let g_lines: Vec<String> = grid.iter().map(|line| line.join(" ")).collect();
 
         let lines = vec![h_lines, g_lines];
-        concat_vecs(lines).join("\n")
+        lines.concat().join("\n")
     }
 }
 
