@@ -14,6 +14,7 @@ struct Point {
 pub trait Color {
     fn initial() -> Self;
     fn blank() -> Self;
+    fn is_solved(&self) -> bool;
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -31,6 +32,10 @@ impl Color for BinaryColor {
     }
     fn blank() -> Self {
         BinaryColor::White
+    }
+
+    fn is_solved(&self) -> bool {
+        self == &BinaryColor::Black || self == &BinaryColor::White
     }
 }
 
@@ -132,7 +137,7 @@ where
 impl<B> Board<B>
 where
     B: Block,
-    B::Color: Clone,
+    B::Color: Clone + Color,
 {
     pub fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Board<B> {
         let height = rows.len();
@@ -155,6 +160,12 @@ where
 
     pub fn width(&self) -> usize {
         self.desc_cols.len()
+    }
+
+    pub fn is_solved_full(&self) -> bool {
+        self.cells
+            .iter()
+            .all(|row| row.iter().all(|cell| cell.is_solved()))
     }
 }
 

@@ -1,5 +1,6 @@
 use super::board::{BinaryBlock, Block, Board, Description};
 use super::utils::{pad_with, transpose};
+use std::cell::{Ref, RefCell};
 use std::fmt::Display;
 use std::rc::Rc;
 
@@ -8,12 +9,12 @@ pub trait Renderer {
 }
 
 pub struct ShellRenderer {
-    pub board: Rc<Board<BinaryBlock>>,
+    pub board: Rc<RefCell<Board<BinaryBlock>>>,
 }
 
 impl Renderer for ShellRenderer {
     fn render(&self) -> String {
-        let full_width = self.side_width() + self.board.width();
+        let full_width = self.side_width() + self.board().width();
 
         let mut header = self.header_lines();
         for row in header.iter_mut() {
@@ -42,12 +43,15 @@ impl Renderer for ShellRenderer {
 }
 
 impl ShellRenderer {
+    fn board(&self) -> Ref<Board<BinaryBlock>> {
+        self.board.borrow()
+    }
     //fn header_height(&self) -> usize {
-    //    Self::descriptions_width(&self.board.desc_cols)
+    //    Self::descriptions_width(&self.board().desc_cols)
     //}
 
     fn side_width(&self) -> usize {
-        Self::descriptions_width(&self.board.desc_rows)
+        Self::descriptions_width(&self.board().desc_rows)
     }
 
     fn descriptions_width<B: Block + Display>(descriptions: &[Description<B>]) -> usize {
@@ -76,15 +80,15 @@ impl ShellRenderer {
     }
 
     fn side_lines(&self) -> Vec<Vec<String>> {
-        Self::descriptions_to_matrix(&self.board.desc_rows)
+        Self::descriptions_to_matrix(&self.board().desc_rows)
     }
 
     fn header_lines(&self) -> Vec<Vec<String>> {
-        transpose(&Self::descriptions_to_matrix(&self.board.desc_cols)).unwrap()
+        transpose(&Self::descriptions_to_matrix(&self.board().desc_cols)).unwrap()
     }
 
     fn grid_lines(&self) -> Vec<Vec<String>> {
-        self.board
+        self.board()
             .cells
             .iter()
             .map(|row| row.iter().map(|cell| cell.to_string()).collect())
