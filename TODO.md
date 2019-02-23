@@ -9,6 +9,8 @@
     - --nonograms-org=5178 - 1.85..2.11 (3421 lines)
     - --nonograms-org=5114 - 2.15..2.54 (5274 lines)
 
+    - einstein - 0.012 sec (1679 lines)
+
 - add webpbn format; compare with python (2040)
 
 - cache the lines; compare with python (2040, einstein)

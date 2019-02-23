@@ -1,6 +1,8 @@
 use super::super::board::BinaryColor;
 use super::super::board::{Block, Color, Description};
 use super::super::utils;
+use std::cell::Ref;
+use std::cell::RefCell;
 use std::fmt::Debug;
 use std::rc::Rc;
 
@@ -9,7 +11,7 @@ pub trait LineSolver {
 
     fn new(
         desc: Rc<Description<Self::BlockType>>,
-        line: Rc<Vec<<<Self as LineSolver>::BlockType as Block>::Color>>,
+        line: Rc<RefCell<Vec<<<Self as LineSolver>::BlockType as Block>::Color>>>,
     ) -> Self;
     fn solve(&mut self) -> Result<&Vec<<<Self as LineSolver>::BlockType as Block>::Color>, String>;
 }
@@ -21,7 +23,7 @@ where
     // it can be implemented very simple with generics specialization
     // https://github.com/aturon/rfcs/blob/impl-specialization/text/0000-impl-specialization.md
     // https://github.com/rust-lang/rfcs/issues/1053
-    fn set_additional_blank(line: Rc<Vec<Self>>) -> (Rc<Vec<Self>>, bool);
+    fn set_additional_blank(line: Rc<RefCell<Vec<Self>>>) -> (Rc<RefCell<Vec<Self>>>, bool);
     fn both_colors() -> Option<Self>;
 
     fn can_be_blank(&self) -> bool;
@@ -31,7 +33,7 @@ where
 
 pub struct DynamicSolver<B: Block, S = <B as Block>::Color> {
     pub desc: Rc<Description<B>>,
-    pub line: Rc<Vec<S>>,
+    pub line: Rc<RefCell<Vec<S>>>,
     additional_space: bool,
     block_sums: Vec<usize>,
     solution_matrix: Vec<Vec<Option<bool>>>,
@@ -45,12 +47,12 @@ where
 {
     type BlockType = B;
 
-    fn new(desc: Rc<Description<B>>, line: Rc<Vec<B::Color>>) -> Self {
+    fn new(desc: Rc<Description<B>>, line: Rc<RefCell<Vec<B::Color>>>) -> Self {
         let (line, additional_space) = B::Color::set_additional_blank(line);
 
         let block_sums = Self::calc_block_sum(&*desc);
-        let solution_matrix = Self::build_solution_matrix(&*desc, &*line);
-        let solved_line = line.to_vec();
+        let solution_matrix = Self::build_solution_matrix(&*desc, &line.borrow());
+        let solved_line = line.borrow().to_vec();
 
         Self {
             desc,
@@ -103,12 +105,16 @@ where
         vec![vec![None; positions]; job_size]
     }
 
+    fn line(&self) -> Ref<Vec<B::Color>> {
+        self.line.borrow()
+    }
+
     fn try_solve(&mut self) -> bool {
-        if self.line.is_empty() {
+        if self.line().is_empty() {
             return true;
         }
 
-        let (position, block) = (self.line.len() - 1, self.desc.vec.len());
+        let (position, block) = (self.line().len() - 1, self.desc.vec.len());
         self.get_sol(position as isize, block)
     }
 
@@ -138,8 +144,8 @@ where
         self.solution_matrix[block][position] = Some(can_be_solved)
     }
 
-    fn color_at(&self, position: usize) -> &B::Color {
-        &self.line[position]
+    fn color_at(&self, position: usize) -> B::Color {
+        self.line()[position].clone()
     }
 
     fn block_at(&self, block_position: usize) -> &B {
@@ -244,7 +250,9 @@ where
         }
 
         // the color can be placed in every cell
-        self.line[start..end].iter().all(|cell| cell.can_be(&color))
+        self.line()[start..end]
+            .iter()
+            .all(|cell| cell.can_be(&color))
     }
 
     fn set_color_block(
@@ -269,7 +277,7 @@ where
 }
 
 impl DynamicColor for BinaryColor {
-    fn set_additional_blank(line: Rc<Vec<Self>>) -> (Rc<Vec<Self>>, bool) {
+    fn set_additional_blank(line: Rc<RefCell<Vec<Self>>>) -> (Rc<RefCell<Vec<Self>>>, bool) {
         //let space = BinaryColor::White;
         //
         //if line.last().unwrap_or(&space) != &space {
@@ -310,6 +318,7 @@ mod tests {
     use super::super::super::board::BinaryColor::{Black, Undefined, White};
     use super::super::super::board::{BinaryBlock, BinaryColor, Description};
     use super::{DynamicSolver, LineSolver};
+    use std::cell::RefCell;
     use std::rc::Rc;
 
     fn simple_description() -> Rc<Description<BinaryBlock>> {
@@ -319,17 +328,17 @@ mod tests {
     #[test]
     fn check_empty_line() {
         let l = Vec::<BinaryColor>::new();
-        let ds = DynamicSolver::new(simple_description(), Rc::new(l));
+        let ds = DynamicSolver::new(simple_description(), Rc::new(RefCell::new(l)));
 
-        assert_eq!(*ds.line, vec![]);
+        assert_eq!(*ds.line.borrow(), vec![]);
     }
 
     #[test]
     fn check_no_additional_space() {
         let l = vec![White; 3];
-        let ds = DynamicSolver::new(simple_description(), Rc::new(l));
+        let ds = DynamicSolver::new(simple_description(), Rc::new(RefCell::new(l)));
 
-        assert_eq!(*ds.line, vec![White, White, White]);
+        assert_eq!(*ds.line.borrow(), vec![White, White, White]);
     }
 
     fn cases() -> Vec<(Vec<usize>, Vec<BinaryColor>, Vec<BinaryColor>)> {
@@ -398,7 +407,7 @@ mod tests {
     #[test]
     fn solve_basic() {
         let l = vec![Undefined; 3];
-        let mut ds = DynamicSolver::new(simple_description(), Rc::new(l));
+        let mut ds = DynamicSolver::new(simple_description(), Rc::new(RefCell::new(l)));
         assert_eq!(ds.solve().unwrap(), &vec![Black; 3]);
     }
 
@@ -410,9 +419,9 @@ mod tests {
 
             let original_line = line.clone();
 
-            let mut ds = DynamicSolver::new(Rc::new(desc), Rc::new(line));
+            let mut ds = DynamicSolver::new(Rc::new(desc), Rc::new(RefCell::new(line)));
             assert_eq!(ds.solve().unwrap(), &expected);
-            assert_eq!(*ds.line, original_line);
+            assert_eq!(*ds.line.borrow(), original_line);
         }
     }
 }

@@ -1,6 +1,8 @@
 use super::utils;
 
+use std::cell::RefCell;
 use std::fmt;
+use std::fmt::Debug;
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -155,7 +157,7 @@ pub struct Board<B>
 where
     B: Block,
 {
-    pub cells: Vec<Rc<Vec<B::Color>>>,
+    pub cells: Vec<Rc<RefCell<Vec<B::Color>>>>,
     pub desc_rows: Vec<Rc<Description<B>>>,
     pub desc_cols: Vec<Rc<Description<B>>>,
 }
@@ -163,7 +165,7 @@ where
 impl<B> Board<B>
 where
     B: Block,
-    B::Color: Clone + Color,
+    B::Color: Clone + Color + Debug,
 {
     pub fn with_descriptions(
         rows: Vec<Rc<Description<B>>>,
@@ -174,7 +176,9 @@ where
 
         let init = B::Color::initial();
 
-        let cells = vec![Rc::new(vec![init; width]); height];
+        let cells = (0..height).map(|_| {
+            Rc::new(RefCell::new(vec![init.clone(); width]))
+        }).collect();
 
         Board {
             desc_rows: rows,
@@ -194,24 +198,29 @@ where
     pub fn is_solved_full(&self) -> bool {
         self.cells
             .iter()
-            .all(|row| row.iter().all(|cell| cell.is_solved()))
+            .all(|row| row.borrow().iter().all(|cell| cell.is_solved()))
     }
 
-    pub fn get_row(&self, index: usize) -> Rc<Vec<B::Color>> {
+    pub fn get_row(&self, index: usize) -> Rc<RefCell<Vec<B::Color>>> {
         Rc::clone(&self.cells[index])
     }
 
-    pub fn get_column(&self, index: usize) -> Rc<Vec<B::Color>> {
-        Rc::new(self.cells.iter().map(|row| row[index].clone()).collect())
+    pub fn get_column(&self, index: usize) -> Rc<RefCell<Vec<B::Color>>> {
+        Rc::new(RefCell::new(
+            self.cells
+                .iter()
+                .map(|row| row.borrow()[index].clone())
+                .collect(),
+        ))
     }
 
     pub fn set_row(&mut self, index: usize, new: Vec<B::Color>) {
-        self.cells[index] = Rc::new(new);
+        self.cells[index] = Rc::new(RefCell::new(new));
     }
 
     pub fn set_column(&mut self, index: usize, new: Vec<B::Color>) {
-        self.cells.iter_mut().zip(new).map(|(row, new_cell)| {
-            row[index] = new_cell;
+        self.cells.iter().zip(new).for_each(|(row, new_cell)| {
+            row.borrow_mut()[index] = new_cell;
         });
     }
 
@@ -252,7 +261,7 @@ mod tests {
             columns.into_iter().map(Rc::new).collect(),
         );
         assert_eq!(board.cells.len(), 3);
-        assert_eq!(*board.cells[0], [Undefined, Undefined, Undefined]);
+        assert_eq!(*board.cells[0].borrow(), [Undefined, Undefined, Undefined]);
     }
 
     #[test]
@@ -282,7 +291,7 @@ mod tests {
             columns.into_iter().map(Rc::new).collect(),
         );
         assert_eq!(board.cells.len(), 5);
-        assert_eq!(*board.cells[0], [Undefined]);
+        assert_eq!(*board.cells[0].borrow(), [Undefined]);
         assert_eq!(board.desc_rows[0].vec, vec![BinaryBlock(1)]);
         assert_eq!(board.desc_rows[1].vec, vec![]);
         assert_eq!(board.desc_rows[2].vec, vec![BinaryBlock(1)]);

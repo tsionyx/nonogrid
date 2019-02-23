@@ -133,12 +133,12 @@ where
         //    warn!("The nonogram is not solved full: {:.4}", rate)
         //}
         let total_time = start.elapsed();
-        info!(
+        warn!(
             "Full solution: {}.{:06} sec",
             total_time.as_secs(),
             total_time.subsec_micros()
         );
-        info!("Lines solved: {}", lines_solved);
+        warn!("Lines solved: {}", lines_solved);
     }
 
     Ok(())
@@ -211,6 +211,8 @@ where
 
     let mut new_jobs = vec![];
     // if new_solution_rate > pre_solution_rate
+
+    let line = line.borrow();
     if *line != updated {
         debug!("Original: {:?}", line);
         debug!("Updated: {:?}", &updated);
@@ -221,8 +223,10 @@ where
             .enumerate()
             .filter_map(|(i, (pre, post))| {
                 if pre.is_updated_with(post) {
-                    debug!("Original: {:?}", pre);
-                    debug!("Updated: {:?}", &post);
+                    debug!(
+                        "Diff on index={}: original={:?}, updated={:?}",
+                        i, pre, &post
+                    );
                     Some((!is_column, i))
                 } else {
                     None

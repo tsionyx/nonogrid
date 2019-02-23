@@ -91,7 +91,7 @@ impl ShellRenderer {
         self.board()
             .cells
             .iter()
-            .map(|row| row.iter().map(|cell| cell.to_string()).collect())
+            .map(|row| row.borrow().iter().map(|cell| cell.to_string()).collect())
             .collect()
     }
 }
