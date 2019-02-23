@@ -3,6 +3,7 @@ use std::fs;
 extern crate toml;
 
 use super::board::{BinaryBlock, Block, Board, Description};
+use std::rc::Rc;
 
 #[derive(Debug, Deserialize)]
 struct Clues {
@@ -41,7 +42,7 @@ impl MyFormat {
 
     fn parse_line<B>(descriptions: &str) -> Option<Vec<Description<B>>>
     where
-        B: Block,
+        B: Block + Default + PartialEq,
     {
         let descriptions = descriptions.trim();
         let parts: Vec<&str> = descriptions.split(|c| c == '#' || c == ';').collect();
@@ -65,14 +66,15 @@ impl MyFormat {
         )
     }
 
-    pub(in super::reader) fn parse_clues<B>(descriptions: &str) -> Vec<Description<B>>
+    pub(in super::reader) fn parse_clues<B>(descriptions: &str) -> Vec<Rc<Description<B>>>
     where
-        B: Block,
+        B: Block + Default + PartialEq,
     {
         descriptions
             .lines()
             .map(|line| Self::parse_line(line).unwrap_or_else(|| vec![]))
             .flatten()
+            .map(Rc::new)
             .collect()
     }
 
@@ -92,12 +94,13 @@ mod tests {
     use super::MyFormat;
     use crate::board::BinaryBlock;
     use crate::board::Description;
+    use std::rc::Rc;
 
     #[test]
     fn parse_single() {
         assert_eq!(
-            MyFormat::parse_clues(&String::from("1")),
-            vec![Description::new(vec![BinaryBlock(1)])]
+            MyFormat::parse_clues::<BinaryBlock>(&String::from("1")),
+            vec![Rc::new(Description::new(vec![BinaryBlock(1)]))]
         )
     }
 
@@ -106,8 +109,8 @@ mod tests {
         assert_eq!(
             MyFormat::parse_clues(&String::from("1\n2")),
             vec![
-                Description::new(vec![BinaryBlock(1)]),
-                Description::new(vec![BinaryBlock(2)])
+                Rc::new(Description::new(vec![BinaryBlock(1)])),
+                Rc::new(Description::new(vec![BinaryBlock(2)]))
             ]
         )
     }
@@ -117,8 +120,8 @@ mod tests {
         assert_eq!(
             MyFormat::parse_clues(&String::from("1, 2")),
             vec![
-                Description::new(vec![BinaryBlock(1)]),
-                Description::new(vec![BinaryBlock(2)])
+                Rc::new(Description::new(vec![BinaryBlock(1)])),
+                Rc::new(Description::new(vec![BinaryBlock(2)]))
             ]
         )
     }
@@ -127,7 +130,10 @@ mod tests {
     fn parse_two_blocks() {
         assert_eq!(
             MyFormat::parse_clues(&String::from("1 2")),
-            vec![Description::new(vec![BinaryBlock(1), BinaryBlock(2)]),]
+            vec![Rc::new(Description::new(vec![
+                BinaryBlock(1),
+                BinaryBlock(2)
+            ])),]
         )
     }
 
@@ -135,7 +141,10 @@ mod tests {
     fn parse_quotes() {
         assert_eq!(
             MyFormat::parse_clues(&String::from("'1 2'")),
-            vec![Description::new(vec![BinaryBlock(1), BinaryBlock(2)]),]
+            vec![Rc::new(Description::new(vec![
+                BinaryBlock(1),
+                BinaryBlock(2)
+            ])),]
         )
     }
 
@@ -144,8 +153,8 @@ mod tests {
         assert_eq!(
             MyFormat::parse_clues(&String::from("1 2\n\"3 4\"\n")),
             vec![
-                Description::new(vec![BinaryBlock(1), BinaryBlock(2)]),
-                Description::new(vec![BinaryBlock(3), BinaryBlock(4)]),
+                Rc::new(Description::new(vec![BinaryBlock(1), BinaryBlock(2)])),
+                Rc::new(Description::new(vec![BinaryBlock(3), BinaryBlock(4)])),
             ]
         )
     }
@@ -154,7 +163,10 @@ mod tests {
     fn parse_comment_end_of_line() {
         assert_eq!(
             MyFormat::parse_clues(&String::from("1 2  # the comment")),
-            vec![Description::new(vec![BinaryBlock(1), BinaryBlock(2)]),]
+            vec![Rc::new(Description::new(vec![
+                BinaryBlock(1),
+                BinaryBlock(2)
+            ])),]
         )
     }
 
@@ -162,7 +174,10 @@ mod tests {
     fn parse_comment_semicolon() {
         assert_eq!(
             MyFormat::parse_clues(&String::from("1 2  ; another comment")),
-            vec![Description::new(vec![BinaryBlock(1), BinaryBlock(2)]),]
+            vec![Rc::new(Description::new(vec![
+                BinaryBlock(1),
+                BinaryBlock(2)
+            ])),]
         )
     }
 
@@ -173,9 +188,9 @@ mod tests {
                 "1 2 \n # the multi-line \n # comment \n 3, 4"
             )),
             vec![
-                Description::new(vec![BinaryBlock(1), BinaryBlock(2)]),
-                Description::new(vec![BinaryBlock(3)]),
-                Description::new(vec![BinaryBlock(4)]),
+                Rc::new(Description::new(vec![BinaryBlock(1), BinaryBlock(2)])),
+                Rc::new(Description::new(vec![BinaryBlock(3)])),
+                Rc::new(Description::new(vec![BinaryBlock(4)])),
             ]
         )
     }

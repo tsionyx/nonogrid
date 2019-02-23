@@ -1,6 +1,6 @@
 use super::super::board::BinaryColor;
 use super::super::board::{Block, Color, Description};
-use super::super::utils::replace;
+use super::super::utils;
 use std::fmt::Debug;
 use std::rc::Rc;
 
@@ -74,7 +74,7 @@ where
                 let both = both.unwrap();
                 let init = B::Color::initial();
 
-                replace(&mut solved, both, init);
+                utils::replace(&mut solved, both, init);
             }
             Ok(solved)
         } else {

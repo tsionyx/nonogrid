@@ -1,3 +1,5 @@
+use std::cmp::Reverse;
+
 pub fn pad(s: &mut String, max_size: usize, right: bool) {
     let s_len = s.len();
     if max_size > s_len {
@@ -65,10 +67,29 @@ where
     }
 }
 
+pub fn remove<T>(vec: &mut Vec<T>, what: T)
+where
+    T: PartialEq,
+{
+    if !vec.contains(&what) {
+        return;
+    }
+
+    let mut removed_indexes: Vec<usize> = vec
+        .iter()
+        .enumerate()
+        .filter_map(|(index, val)| if val == &what { Some(index) } else { None })
+        .collect();
+
+    removed_indexes.sort_by_key(|&n| Reverse(n));
+    for index in removed_indexes {
+        vec.remove(index);
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{pad, pad_with, transpose};
-    use crate::utils::replace;
+    use super::{pad, pad_with, remove, replace, transpose};
 
     #[test]
     fn pad_vector_left() {
@@ -167,5 +188,13 @@ mod tests {
         replace(&mut v, 5, 4);
 
         assert_eq!(v, vec![1, 2, 3, 2]);
+    }
+
+    #[test]
+    fn remove_with_replace() {
+        let mut v = vec![1, 2, 3, 2];
+        remove(&mut v, 2);
+
+        assert_eq!(v, vec![1, 3]);
     }
 }
