@@ -19,6 +19,7 @@ pub trait Color {
     fn blank() -> Self;
     fn is_solved(&self) -> bool;
     fn solution_rate(&self) -> f64;
+    fn is_updated_with(&self, new: &Self) -> bool;
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -48,6 +49,17 @@ impl Color for BinaryColor {
         } else {
             0.0
         }
+    }
+
+    fn is_updated_with(&self, new: &Self) -> bool {
+        if self == new {
+            return false;
+        }
+
+        assert_eq!(self, &BinaryColor::Undefined);
+        assert!((new == &BinaryColor::White) || (new == &BinaryColor::Black));
+
+        true
     }
 }
 
@@ -191,6 +203,16 @@ where
 
     pub fn get_column(&self, index: usize) -> Rc<Vec<B::Color>> {
         Rc::new(self.cells.iter().map(|row| row[index].clone()).collect())
+    }
+
+    pub fn set_row(&mut self, index: usize, new: Vec<B::Color>) {
+        self.cells[index] = Rc::new(new);
+    }
+
+    pub fn set_column(&mut self, index: usize, new: Vec<B::Color>) {
+        self.cells.iter_mut().zip(new).map(|(row, new_cell)| {
+            row[index] = new_cell;
+        });
     }
 
     /// How many cells in a line are known to be of particular color

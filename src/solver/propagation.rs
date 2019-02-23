@@ -1,4 +1,4 @@
-use super::super::board::{Block, Board};
+use super::super::board::{Block, Board, Color};
 use super::line::LineSolver;
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -15,9 +15,10 @@ pub fn solve<B, S>(
     rows: Option<Vec<usize>>,
     columns: Option<Vec<usize>>,
     contradiction_mode: bool,
-) where
+) -> Result<(), String>
+where
     B: Block + Debug,
-    <B as Block>::Color: Clone + Debug,
+    <B as Block>::Color: Clone + Debug + PartialEq,
     S: LineSolver<BlockType = B>,
 {
     let (rows, columns) = {
@@ -107,7 +108,7 @@ pub fn solve<B, S>(
     let mut _total_cells_solved = 0usize;
 
     while let Some((is_column, index, priority)) = get_top_job(&mut line_jobs) {
-        let new_jobs = solve_row::<B, S>(Rc::clone(&board), index, is_column);
+        let new_jobs = solve_row::<B, S>(Rc::clone(&board), index, is_column)?;
 
         _total_cells_solved += new_jobs.len();
         for new_job in new_jobs {
@@ -133,12 +134,14 @@ pub fn solve<B, S>(
         //}
         let total_time = start.elapsed();
         info!(
-            "Full solution: {}.{} sec",
+            "Full solution: {}.{:06} sec",
             total_time.as_secs(),
-            total_time.subsec_millis()
+            total_time.subsec_micros()
         );
         info!("Lines solved: {}", lines_solved);
     }
+
+    Ok(())
 }
 
 fn get_top_job(
@@ -164,15 +167,15 @@ pub fn solve_row<B, S>(
     board: Rc<RefCell<Board<B>>>,
     index: usize,
     is_column: bool,
-) -> Vec<(bool, usize)>
+) -> Result<Vec<(bool, usize)>, String>
 where
     B: Block + Debug,
-    <B as Block>::Color: Clone + Debug,
+    <B as Block>::Color: Clone + Debug + PartialEq,
     S: LineSolver<BlockType = B>,
 {
     let start = Instant::now();
 
-    {
+    let (line, updated) = {
         let board = board.borrow();
         let (line_desc, line, name) = if is_column {
             (
@@ -200,31 +203,54 @@ where
             "Solving {} {}: {:?}. Partial: {:?}",
             index, name, line_desc, line
         );
-        let mut solver = S::new(line_desc, line);
-        let updated = solver.solve();
+        let mut solver = S::new(line_desc, Rc::clone(&line));
+        (Rc::clone(&line), solver.solve()?.to_owned())
+    };
+
+    // let new_solution_rate = Board::<B>::line_solution_rate(&updated);
+
+    let mut new_jobs = vec![];
+    // if new_solution_rate > pre_solution_rate
+    if *line != updated {
+        debug!("Original: {:?}", line);
+        debug!("Updated: {:?}", &updated);
+
+        new_jobs = line
+            .iter()
+            .zip(&updated)
+            .enumerate()
+            .filter_map(|(i, (pre, post))| {
+                if pre.is_updated_with(post) {
+                    debug!("Original: {:?}", pre);
+                    debug!("Updated: {:?}", &post);
+                    Some((!is_column, i))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let mut board = board.borrow_mut();
+        let updated = updated.to_owned();
+        if is_column {
+            board.set_column(index, updated);
+        } else {
+            board.set_row(index, updated);
+        }
     }
 
-    vec![]
+    if log_enabled!(Level::Debug) {
+        let name = if is_column { "column" } else { "row" };
+        let total_time = start.elapsed();
+        debug!(
+            "{}s solution: {}.{:06} sec",
+            name,
+            total_time.as_secs(),
+            total_time.subsec_micros()
+        );
+        if !new_jobs.is_empty() {
+            debug!("New info on {} {}: {:?}", name, index, new_jobs);
+        }
+    }
+    Ok(new_jobs)
 }
-//    updated = solve_line(row_desc, row, method=method, normalized=True)
-//
-//    new_jobs = []
-//
-//    # if board.line_solution_rate(updated) > pre_solution_rate:
-//    if row != updated:
-//        # LOG.debug('Queue: %s', jobs_queue)
-//        # LOG.debug(row)
-//        # LOG.debug(updated)
-//        for i, (pre, post) in enumerate(zip(row, updated)):
-//            if _is_pixel_updated(pre, post):
-//                new_jobs.append((not is_column, i))
-//        # LOG.debug('Queue: %s', jobs_queue)
-//        # LOG.debug('New info on %s %s: %s', desc, index, [job_index for _, job_index in new_jobs])
-//
-//        if is_column:
-//            board.set_column(index, updated)
-//        else:
-//            board.set_row(index, updated)
-//
-//    # LOG.debug('%ss solution: %.6f sec', desc, time.time() - start)
-//    return new_jobs

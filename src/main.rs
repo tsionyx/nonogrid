@@ -28,6 +28,6 @@ fn main() {
     };
     println!("{}", r.render());
     println!("Solving...");
-    propagation::solve::<_, DynamicSolver<_>>(Rc::clone(&board), None, None, false);
+    propagation::solve::<_, DynamicSolver<_>>(Rc::clone(&board), None, None, false).unwrap();
     println!("{}", r.render());
 }
