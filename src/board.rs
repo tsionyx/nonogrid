@@ -176,9 +176,9 @@ where
 
         let init = B::Color::initial();
 
-        let cells = (0..height).map(|_| {
-            Rc::new(RefCell::new(vec![init.clone(); width]))
-        }).collect();
+        let cells = (0..height)
+            .map(|_| Rc::new(RefCell::new(vec![init.clone(); width])))
+            .collect();
 
         Board {
             desc_rows: rows,
