@@ -1,5 +1,5 @@
 use super::board::{BinaryBlock, Block, Board, Description};
-use super::utils::{pad_with, transpose};
+use super::utils::{pad, pad_with, transpose};
 use std::cell::{Ref, RefCell};
 use std::fmt::Display;
 use std::rc::Rc;
@@ -20,25 +20,35 @@ impl Renderer for ShellRenderer {
         for row in header.iter_mut() {
             pad_with(row, "#".to_string(), full_width, false);
         }
-        let h_lines: Vec<String> = header.iter().map(|line| line.join(" ")).collect();
 
         let mut side = self.side_lines();
-        //let s_lines: Vec<String> = side.iter().map(|line| line.join(" ")).collect();
-
         let grid = self.grid_lines();
-        let grid: Vec<&Vec<String>> = side
+        let grid: Vec<Vec<String>> = side
             .iter_mut()
             .zip(grid)
             .map(|(s, g)| {
                 s.extend(g);
                 // convert into immutable, https://stackoverflow.com/a/41367094
-                &*s
+                s.to_owned()
             })
             .collect();
-        let g_lines: Vec<String> = grid.iter().map(|line| line.join(" ")).collect();
 
-        let lines = vec![h_lines, g_lines];
-        lines.concat().join("\n")
+        let lines = vec![header, grid];
+        lines
+            .concat()
+            .iter()
+            .map(|line| {
+                line.iter()
+                    .map(|symbol| {
+                        let mut symbol = symbol.clone();
+                        pad(&mut symbol, 2, true);
+                        symbol
+                    })
+                    .collect::<Vec<_>>()
+                    .join("")
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }
 

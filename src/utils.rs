@@ -1,7 +1,7 @@
 use std::cmp::Reverse;
 
 pub fn pad(s: &mut String, max_size: usize, right: bool) {
-    let s_len = s.len();
+    let s_len = s.chars().count();
     if max_size > s_len {
         let spaces = " ".repeat(max_size - s_len);
         if right {
@@ -145,6 +145,13 @@ mod tests {
         let mut s = "world".to_string();
         pad(&mut s, 5, true);
         assert_eq!(s, "world")
+    }
+
+    #[test]
+    fn pad_non_ascii_right() {
+        let mut s = "Привет".to_string();
+        pad(&mut s, 8, true);
+        assert_eq!(s, "Привет  ")
     }
 
     #[test]
