@@ -4,6 +4,7 @@ mod render;
 mod solver;
 mod utils;
 
+use parser::BoardParser;
 use render::{Renderer, ShellRenderer};
 use solver::line::DynamicSolver;
 use solver::propagation;
