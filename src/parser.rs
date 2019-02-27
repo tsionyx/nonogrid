@@ -66,7 +66,7 @@ impl MyFormat {
         )
     }
 
-    pub(in super::reader) fn parse_clues<B>(descriptions: &str) -> Vec<Rc<Description<B>>>
+    pub(in super::parser) fn parse_clues<B>(descriptions: &str) -> Vec<Rc<Description<B>>>
     where
         B: Block + Default + PartialEq,
     {

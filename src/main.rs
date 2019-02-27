@@ -1,5 +1,5 @@
 mod board;
-mod reader;
+mod parser;
 mod render;
 mod solver;
 mod utils;
@@ -36,7 +36,7 @@ fn main() {
         .get_matches();
 
     let path_to_file = matches.value_of("INPUT").unwrap();
-    let board = reader::MyFormat::read_board(path_to_file);
+    let board = parser::MyFormat::read_board(path_to_file);
     let board = Rc::new(RefCell::new(board));
 
     let r = ShellRenderer {
