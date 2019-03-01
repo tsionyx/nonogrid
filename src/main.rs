@@ -20,7 +20,7 @@ extern crate clap;
 extern crate env_logger;
 extern crate priority_queue;
 
-use clap::{App, Arg};
+use clap::{App, ArgGroup};
 
 fn main() {
     env_logger::init();
@@ -28,16 +28,25 @@ fn main() {
     let matches = App::new("Nonogrid")
         .version("0.1.0")
         .about("Nonogram solver")
-        .arg(
-            Arg::with_name("INPUT")
+        .args_from_usage(
+            "--my [PATH]     'path to custom-formatted nonogram file'
+             --webpbn [PATH] 'path to Jan Wolter's webpbn.com XML-formatted file'",
+        )
+        .group(
+            ArgGroup::with_name("source")
                 .required(true)
-                .help("Path to nonogram descriptions file")
-                .index(1),
+                .args(&["my", "webpbn"]),
         )
         .get_matches();
 
-    let path_to_file = matches.value_of("INPUT").unwrap();
-    let board = parser::MyFormat::read_board(path_to_file);
+    let my_path = matches.value_of("my");
+    let webpbn_path = matches.value_of("webpbn");
+
+    let board = if let Some(webpbn_path) = webpbn_path {
+        parser::WebPbn::read_board(webpbn_path)
+    } else {
+        parser::MyFormat::read_board(my_path.unwrap())
+    };
     let board = Rc::new(RefCell::new(board));
 
     let r = ShellRenderer {

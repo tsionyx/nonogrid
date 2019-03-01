@@ -1,11 +1,16 @@
-use std::fs;
-
-extern crate toml;
-
 use super::board::{Block, Board, Description};
+
 use std::fmt::Debug;
+use std::fs;
 use std::marker::PhantomData;
 use std::rc::Rc;
+
+use self::sxd_xpath::nodeset::{Node, Nodeset};
+use self::sxd_xpath::{evaluate_xpath, Value};
+
+extern crate sxd_document;
+extern crate sxd_xpath;
+extern crate toml;
 
 #[derive(Debug, Deserialize)]
 struct Clues {
@@ -79,7 +84,7 @@ where
 {
     type BlockType = B;
 
-    fn read_board(resource_name: &str) -> Board<B> {
+    fn read_board(resource_name: &str) -> Board<Self::BlockType> {
         let clues = Self::from_file(resource_name)
             .expect("Something wrong with format")
             .clues;
@@ -87,6 +92,72 @@ where
             Self::parse_clues(&clues.rows),
             Self::parse_clues(&clues.columns),
         )
+    }
+}
+
+pub struct WebPbn<B> {
+    dummy: PhantomData<B>,
+}
+
+impl<B> BoardParser for WebPbn<B>
+where
+    B: Block + Default + PartialEq,
+    <B as Block>::Color: Clone + Debug,
+{
+    type BlockType = B;
+
+    fn read_board(resource_name: &str) -> Board<Self::BlockType> {
+        let package = Self::from_file(resource_name);
+        Board::with_descriptions(
+            Self::parse_clues(&package, "rows"),
+            Self::parse_clues(&package, "columns"),
+        )
+    }
+}
+
+impl<B> WebPbn<B>
+where
+    B: Block + Default + PartialEq,
+{
+    pub fn from_file(file_name: &str) -> sxd_document::Package {
+        let contents =
+            fs::read_to_string(file_name).expect("Something went wrong reading the file");
+
+        sxd_document::parser::parse(&contents).expect("failed to parse XML")
+    }
+
+    fn parse_line(description: &Node) -> Description<B> {
+        Description::new(
+            description
+                .children()
+                .iter()
+                .map(|child| B::from_str(&child.string_value()))
+                .collect(),
+        )
+    }
+
+    pub(in super::parser) fn parse_clues(
+        package: &sxd_document::Package,
+        type_: &str,
+    ) -> Vec<Rc<Description<B>>> {
+        let document = package.as_document();
+        let value = evaluate_xpath(&document, &format!(".//clues[@type='{}']/line", type_))
+            .expect("XPath evaluation failed");
+
+        if let Value::Nodeset(ns) = value {
+            Self::get_clues(&ns)
+        } else {
+            vec![]
+        }
+    }
+
+    fn get_clues(descriptions: &Nodeset) -> Vec<Rc<Description<B>>> {
+        descriptions
+            .document_order()
+            .iter()
+            .map(Self::parse_line)
+            .map(Rc::new)
+            .collect()
     }
 }
 
