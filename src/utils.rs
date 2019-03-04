@@ -1,14 +1,10 @@
 use std::cmp::Reverse;
 
-pub fn pad(s: &mut String, max_size: usize, right: bool) {
-    let s_len = s.chars().count();
-    if max_size > s_len {
-        let spaces = " ".repeat(max_size - s_len);
-        if right {
-            s.push_str(spaces.as_str())
-        } else {
-            s.insert_str(0, spaces.as_str())
-        }
+pub fn pad(s: &str, max_size: usize, right: bool) -> String {
+    if right {
+        format!("{:<width$}", s, width = max_size)
+    } else {
+        format!("{:>width$}", s, width = max_size)
     }
 }
 
@@ -121,37 +117,37 @@ mod tests {
 
     #[test]
     fn pad_string_left() {
-        let mut s = "hello".to_string();
-        pad(&mut s, 7, false);
-        assert_eq!(s, "  hello")
+        let s = "hello";
+        let s2 = pad(s, 7, false);
+        assert_eq!(s2, "  hello")
     }
 
     #[test]
     fn pad_string_right() {
-        let mut s = "world".to_string();
-        pad(&mut s, 7, true);
-        assert_eq!(s, "world  ")
+        let s = "world";
+        let s2 = pad(s, 7, true);
+        assert_eq!(s2, "world  ")
     }
 
     #[test]
     fn do_not_pad_string_left() {
-        let mut s = "hello".to_string();
-        pad(&mut s, 4, false);
-        assert_eq!(s, "hello")
+        let s = "hello";
+        let s2 = pad(s, 4, false);
+        assert_eq!(s2, "hello")
     }
 
     #[test]
     fn do_not_pad_string_right() {
-        let mut s = "world".to_string();
-        pad(&mut s, 5, true);
-        assert_eq!(s, "world")
+        let s = "world";
+        let s2 = pad(s, 5, true);
+        assert_eq!(s2, "world")
     }
 
     #[test]
     fn pad_non_ascii_right() {
-        let mut s = "Привет".to_string();
-        pad(&mut s, 8, true);
-        assert_eq!(s, "Привет  ")
+        let s = "Привет";
+        let s2 = pad(s, 8, true);
+        assert_eq!(s2, "Привет  ")
     }
 
     #[test]

@@ -39,11 +39,7 @@ impl Renderer for ShellRenderer {
             .iter()
             .map(|line| {
                 line.iter()
-                    .map(|symbol| {
-                        let mut symbol = symbol.clone();
-                        pad(&mut symbol, 2, true);
-                        symbol
-                    })
+                    .map(|symbol| pad(symbol, 2, true))
                     .collect::<Vec<_>>()
                     .join("")
             })
