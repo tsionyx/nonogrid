@@ -16,6 +16,7 @@ use std::rc::Rc;
 extern crate serde_derive;
 #[macro_use]
 extern crate log;
+#[macro_use]
 extern crate clap;
 extern crate env_logger;
 extern crate priority_queue;
@@ -29,21 +30,26 @@ fn main() {
         .version("0.1.0")
         .about("Nonogram solver")
         .args_from_usage(
-            "--my [PATH]     'path to custom-formatted nonogram file'
-             --webpbn [PATH] 'path to Jan Wolter's webpbn.com XML-formatted file'",
+            "-b, --my [PATH]     'path to custom-formatted nonogram file'
+             -p, --webpbn [PATH] 'path to Jan Wolter's http://webpbn.com XML-formatted file'
+             -w, --webpbn-online [ID] 'id of the http://webpbn.com puzzle'",
         )
-        .group(
-            ArgGroup::with_name("source")
-                .required(true)
-                .args(&["my", "webpbn"]),
-        )
+        .group(ArgGroup::with_name("source").required(true).args(&[
+            "my",
+            "webpbn",
+            "webpbn-online",
+        ]))
         .get_matches();
 
     let my_path = matches.value_of("my");
     let webpbn_path = matches.value_of("webpbn");
+    let webpbn_id = matches.value_of("webpbn-online");
 
     let board = if let Some(webpbn_path) = webpbn_path {
         parser::WebPbn::read_board(webpbn_path)
+    } else if let Some(webpbn_id) = webpbn_id {
+        value_t_or_exit!(matches, "webpbn-online", u16);
+        parser::WebPbn::get_board(webpbn_id)
     } else {
         parser::MyFormat::read_board(my_path.unwrap())
     };

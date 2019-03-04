@@ -8,6 +8,7 @@ use std::rc::Rc;
 use self::sxd_xpath::nodeset::{Node, Nodeset};
 use self::sxd_xpath::{evaluate_xpath, Value};
 
+extern crate reqwest;
 extern crate sxd_document;
 extern crate sxd_xpath;
 extern crate toml;
@@ -158,6 +159,30 @@ where
             .map(Self::parse_line)
             .map(Rc::new)
             .collect()
+    }
+}
+
+impl<B> WebPbn<B>
+where
+    B: Block + Default + PartialEq,
+    <B as Block>::Color: Clone + Debug,
+{
+    const BASE_URL: &'static str = "http://webpbn.com";
+
+    fn get_puzzle_xml(id: &str) -> reqwest::Result<String> {
+        let url = format!("{}/XMLpuz.cgi?id={}", Self::BASE_URL, id);
+        info!("Requesting {} ...", &url);
+        reqwest::get(url.as_str())?.text()
+    }
+
+    pub fn get_board(resource_name: &str) -> Board<B> {
+        let xml_content = Self::get_puzzle_xml(resource_name).unwrap();
+        let package = sxd_document::parser::parse(&xml_content).expect("failed to parse XML");
+
+        Board::with_descriptions(
+            Self::parse_clues(&package, "rows"),
+            Self::parse_clues(&package, "columns"),
+        )
     }
 }
 
