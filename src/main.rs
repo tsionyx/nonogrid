@@ -21,6 +21,7 @@ extern crate clap;
 extern crate env_logger;
 extern crate priority_queue;
 
+use cached::Cached;
 use clap::{App, ArgGroup};
 
 fn main() {
@@ -60,8 +61,29 @@ fn main() {
     };
     // println!("{}", r.render());
     println!("Solving...");
-    propagation::Solver::new(Rc::clone(&board))
-        .run::<DynamicSolver<_>>()
-        .unwrap();
+
+    let cache = propagation::new_cache(10000);
+    let _solver = propagation::Solver::with_options(
+        Rc::clone(&board),
+        None,
+        None,
+        false,
+        Some(Rc::clone(&cache)),
+    );
+
+    let solver = propagation::Solver::new(Rc::clone(&board));
+    solver.run::<DynamicSolver<_>>().unwrap();
     println!("{}", r.render());
+
+    {
+        let cache = cache.borrow();
+        if cache.cache_size() > 0 {
+            warn!(
+                "Cache size: {}, hits: {}, misses: {}",
+                cache.cache_size(),
+                cache.cache_hits().unwrap_or(0),
+                cache.cache_misses().unwrap_or(0),
+            );
+        }
+    }
 }

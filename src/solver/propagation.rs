@@ -15,6 +15,15 @@ use priority_queue::PriorityQueue;
 
 type CacheKey<B> = (Rc<Description<B>>, Rc<Vec<<B as Block>::Color>>);
 type CacheValue<B> = Result<Rc<Vec<<B as Block>::Color>>, String>;
+type ExternalCache<B> = Rc<RefCell<UnboundCache<CacheKey<B>, CacheValue<B>>>>;
+
+pub fn new_cache<B>(capacity: usize) -> ExternalCache<B>
+where
+    B: Block + Eq + Hash,
+    <B as Block>::Color: Eq + Hash,
+{
+    Rc::new(RefCell::new(UnboundCache::with_capacity(capacity)))
+}
 
 pub struct Solver<B>
 where
@@ -25,8 +34,7 @@ where
     rows: Option<Vec<usize>>,
     columns: Option<Vec<usize>>,
     contradiction_mode: bool,
-    cache: UnboundCache<CacheKey<B>, CacheValue<B>>,
-    use_cache: bool,
+    cache: Option<ExternalCache<B>>,
 }
 
 impl<B> Solver<B>
@@ -35,7 +43,7 @@ where
     <B as Block>::Color: Clone + Debug + PartialEq + Eq + Hash,
 {
     pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
-        Self::with_options(board, None, None, false, 0)
+        Self::with_options(board, None, None, false, None)
     }
 
     pub fn with_options(
@@ -43,19 +51,22 @@ where
         rows: Option<Vec<usize>>,
         columns: Option<Vec<usize>>,
         contradiction_mode: bool,
-        cache_capacity: usize,
+        cache: Option<ExternalCache<B>>,
     ) -> Self {
         Self {
             board,
             rows,
             columns,
             contradiction_mode,
-            cache: UnboundCache::with_capacity(cache_capacity),
-            use_cache: cache_capacity > 0,
+            cache,
         }
     }
 
-    pub fn run<S>(&mut self) -> Result<(), String>
+    fn cache(&self) -> Option<ExternalCache<B>> {
+        self.cache.clone()
+    }
+
+    pub fn run<S>(&self) -> Result<(), String>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -205,11 +216,7 @@ where
     /// If the line gets partially solved, put the crossed lines into queue.
     ///
     /// Return the list of new jobs that should be solved next (one job for each solved cell).
-    pub fn solve_row<S>(
-        &mut self,
-        index: usize,
-        is_column: bool,
-    ) -> Result<Vec<(bool, usize)>, String>
+    pub fn solve_row<S>(&self, index: usize, is_column: bool) -> Result<Vec<(bool, usize)>, String>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -305,7 +312,7 @@ where
     }
 
     fn solve<S>(
-        &mut self,
+        &self,
         line_desc: Rc<Description<B>>,
         line: Rc<Vec<<B as Block>::Color>>,
     ) -> CacheValue<B>
@@ -314,18 +321,19 @@ where
     {
         let key = (Rc::clone(&line_desc), Rc::clone(&line));
 
-        if self.use_cache {
-            let res = self.cache.cache_get(&key);
+        if let Some(cache) = self.cache() {
+            let mut cache = cache.borrow_mut();
+            let res = cache.cache_get(&key);
             if let Some(value) = res {
                 return value.to_owned();
             }
         }
 
-        let mut solver = S::new(line_desc, line);
-        let value = solver.solve();
+        let mut line_solver = S::new(line_desc, line);
+        let value = line_solver.solve();
 
-        if self.use_cache {
-            self.cache.cache_set(key, value.clone());
+        if let Some(cache) = self.cache() {
+            cache.borrow_mut().cache_set(key, value.clone());
         }
         value
     }
