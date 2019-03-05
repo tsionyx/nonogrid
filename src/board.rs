@@ -24,7 +24,7 @@ pub trait Color {
     fn is_updated_with(&self, new: &Self) -> bool;
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum BinaryColor {
     Undefined,
     White,
@@ -91,7 +91,7 @@ pub trait Block {
     fn color(&self) -> Self::Color;
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Eq, Hash)]
 pub struct BinaryBlock(pub usize);
 
 impl Block for BinaryBlock {
@@ -133,7 +133,7 @@ impl fmt::Display for BinaryBlock {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Description<T: Block>
 where
     T: Block,
@@ -201,17 +201,15 @@ where
             .all(|row| row.borrow().iter().all(|cell| cell.is_solved()))
     }
 
-    pub fn get_row(&self, index: usize) -> Rc<RefCell<Vec<B::Color>>> {
-        Rc::clone(&self.cells[index])
+    pub fn get_row(&self, index: usize) -> Vec<B::Color> {
+        self.cells[index].borrow().clone()
     }
 
-    pub fn get_column(&self, index: usize) -> Rc<RefCell<Vec<B::Color>>> {
-        Rc::new(RefCell::new(
-            self.cells
-                .iter()
-                .map(|row| row.borrow()[index].clone())
-                .collect(),
-        ))
+    pub fn get_column(&self, index: usize) -> Vec<B::Color> {
+        self.cells
+            .iter()
+            .map(|row| row.borrow()[index].clone())
+            .collect()
     }
 
     pub fn set_row(&mut self, index: usize, new: Vec<B::Color>) {

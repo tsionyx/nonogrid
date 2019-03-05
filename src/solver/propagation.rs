@@ -4,30 +4,38 @@ use super::line::LineSolver;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::rc::Rc;
 use std::time::Instant;
 
+use cached::{Cached, UnboundCache};
 use log::Level;
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
 
+type CacheKey<B> = (Rc<Description<B>>, Rc<Vec<<B as Block>::Color>>);
+type CacheValue<B> = Result<Rc<Vec<<B as Block>::Color>>, String>;
+
 pub struct Solver<B>
 where
     B: Block,
+    <B as Block>::Color: Clone + Debug + Eq + Hash,
 {
     board: Rc<RefCell<Board<B>>>,
     rows: Option<Vec<usize>>,
     columns: Option<Vec<usize>>,
     contradiction_mode: bool,
+    cache: UnboundCache<CacheKey<B>, CacheValue<B>>,
+    use_cache: bool,
 }
 
 impl<B> Solver<B>
 where
-    B: Block + Debug,
-    <B as Block>::Color: Clone + Debug + PartialEq,
+    B: Block + Debug + Eq + Hash,
+    <B as Block>::Color: Clone + Debug + PartialEq + Eq + Hash,
 {
     pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
-        Self::with_options(board, None, None, false)
+        Self::with_options(board, None, None, false, 0)
     }
 
     pub fn with_options(
@@ -35,16 +43,19 @@ where
         rows: Option<Vec<usize>>,
         columns: Option<Vec<usize>>,
         contradiction_mode: bool,
+        cache_capacity: usize,
     ) -> Self {
         Self {
             board,
             rows,
             columns,
             contradiction_mode,
+            cache: UnboundCache::with_capacity(cache_capacity),
+            use_cache: cache_capacity > 0,
         }
     }
 
-    pub fn solve<S>(&self) -> Result<(), String>
+    pub fn run<S>(&mut self) -> Result<(), String>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -194,26 +205,32 @@ where
     /// If the line gets partially solved, put the crossed lines into queue.
     ///
     /// Return the list of new jobs that should be solved next (one job for each solved cell).
-    pub fn solve_row<S>(&self, index: usize, is_column: bool) -> Result<Vec<(bool, usize)>, String>
+    pub fn solve_row<S>(
+        &mut self,
+        index: usize,
+        is_column: bool,
+    ) -> Result<Vec<(bool, usize)>, String>
     where
         S: LineSolver<BlockType = B>,
     {
         let start = Instant::now();
 
         let (line, updated) = {
-            let board = self.board.borrow();
-            let (line_desc, line, name) = if is_column {
-                (
-                    Rc::clone(&board.desc_cols[index]),
-                    board.get_column(index),
-                    "column",
-                )
-            } else {
-                (
-                    Rc::clone(&board.desc_rows[index]),
-                    board.get_row(index),
-                    "row",
-                )
+            let (line_desc, line, name) = {
+                let board = self.board.borrow();
+                if is_column {
+                    (
+                        Rc::clone(&board.desc_cols[index]),
+                        board.get_column(index),
+                        "column",
+                    )
+                } else {
+                    (
+                        Rc::clone(&board.desc_rows[index]),
+                        board.get_row(index),
+                        "row",
+                    )
+                }
             };
 
             //let pre_solution_rate = Board::<B>::line_solution_rate(&line);
@@ -229,8 +246,9 @@ where
                 index, name, line_desc, line
             );
 
-            let solution = Self::solve_with_cache::<S>(line_desc, Rc::clone(&line))?;
-            (Rc::clone(&line), solution)
+            let line = Rc::new(line);
+            let solution = self.solve::<S>(line_desc, Rc::clone(&line))?;
+            (line, solution)
         };
 
         // let new_solution_rate = Board::<B>::line_solution_rate(&updated);
@@ -238,8 +256,9 @@ where
         let mut new_jobs = vec![];
         // if new_solution_rate > pre_solution_rate
 
-        let line = line.borrow();
-        if *line != updated {
+        if *line != *updated {
+            let updated = (*updated).to_owned();
+
             debug!("Original: {:?}", line);
             debug!("Updated: {:?}", &updated);
 
@@ -261,7 +280,7 @@ where
                 .collect();
 
             let mut board = self.board.borrow_mut();
-            let updated = updated.to_owned();
+
             if is_column {
                 board.set_column(index, updated);
             } else {
@@ -285,14 +304,29 @@ where
         Ok(new_jobs)
     }
 
-    fn solve_with_cache<S>(
+    fn solve<S>(
+        &mut self,
         line_desc: Rc<Description<B>>,
-        line: Rc<RefCell<Vec<<B as Block>::Color>>>,
-    ) -> Result<Vec<<B as Block>::Color>, String>
+        line: Rc<Vec<<B as Block>::Color>>,
+    ) -> CacheValue<B>
     where
         S: LineSolver<BlockType = B>,
     {
-        let mut solver = S::new(line_desc, Rc::clone(&line));
-        Ok(solver.solve()?.to_owned())
+        let key = (Rc::clone(&line_desc), Rc::clone(&line));
+
+        if self.use_cache {
+            let res = self.cache.cache_get(&key);
+            if let Some(value) = res {
+                return value.to_owned();
+            }
+        }
+
+        let mut solver = S::new(line_desc, line);
+        let value = solver.solve();
+
+        if self.use_cache {
+            self.cache.cache_set(key, value.clone());
+        }
+        value
     }
 }
