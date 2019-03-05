@@ -131,12 +131,13 @@ where
         let position = position as usize;
 
         let can_be_solved = self._get_sol(position, block);
-        if can_be_solved.is_none() {
-            let can_be_solved = self.fill_matrix(position, block);
-            self.set_sol(position, block, can_be_solved);
-            can_be_solved
-        } else {
-            can_be_solved.unwrap()
+        match can_be_solved {
+            Some(result) => result,
+            None => {
+                let can_be_solved = self.fill_matrix(position, block);
+                self.set_sol(position, block, can_be_solved);
+                can_be_solved
+            }
         }
     }
 
@@ -167,52 +168,61 @@ where
             return false;
         }
 
-        let blank = B::Color::blank();
+        // do not short-circuit
+        self.fill_matrix_blank(position, block) | self.fill_matrix_color(position, block)
+    }
 
-        let mut has_blank = false;
+    fn fill_matrix_blank(&mut self, position: usize, block: usize) -> bool {
         if self.color_at(position).can_be_blank() {
             // current cell is either blank or unknown
-            has_blank = self.get_sol(position as isize - 1, block);
+            let has_blank = self.get_sol(position as isize - 1, block);
             if has_blank {
+                let blank = B::Color::blank();
                 // set cell blank and continue
                 self.update_solved(position, &blank);
+                return true;
             }
         }
 
-        let mut has_color = false;
+        false
+    }
+
+    fn fill_matrix_color(&mut self, position: usize, block: usize) -> bool {
         // block == 0 means we finished filling all the blocks (can still fill whitespace)
-        if block > 0 {
-            let current_block = self.block_at(block - 1);
-            let mut block_size = current_block.size();
-            let current_color = current_block.color();
-            let should_have_trailing_space = self.trail_with_space(block);
-            if should_have_trailing_space {
-                block_size += 1;
-            }
+        if block == 0 {
+            return false;
+        }
+        let current_block = self.block_at(block - 1);
+        let mut block_size = current_block.size();
+        let current_color = current_block.color();
+        let should_have_trailing_space = self.trail_with_space(block);
+        if should_have_trailing_space {
+            block_size += 1;
+        }
 
-            let block_start = position as isize - block_size as isize + 1;
+        let block_start = position as isize - block_size as isize + 1;
 
-            // (position-block_size, position]
-            if self.can_place_color(
-                block_start,
-                position,
-                &current_color,
-                should_have_trailing_space,
-            ) {
-                has_color = self.get_sol(block_start - 1, block - 1);
-                if has_color {
-                    // set cell blank, place the current block and continue
-                    self.set_color_block(
-                        block_start,
-                        position,
-                        &current_color,
-                        should_have_trailing_space,
-                    );
-                }
+        // (position-block_size, position]
+        if self.can_place_color(
+            block_start,
+            position,
+            &current_color,
+            should_have_trailing_space,
+        ) {
+            let has_color = self.get_sol(block_start - 1, block - 1);
+            if has_color {
+                // set cell blank, place the current block and continue
+                self.set_color_block(
+                    block_start,
+                    position,
+                    &current_color,
+                    should_have_trailing_space,
+                );
+                return true;
             }
         }
 
-        has_blank || has_color
+        false
     }
 
     fn trail_with_space(&self, block: usize) -> bool {
