@@ -72,11 +72,19 @@ fn main() {
 
         let cache = solver.cache.borrow();
         if cache.cache_size() > 0 {
+            let hits = cache.cache_hits().unwrap_or(0);
+            let misses = cache.cache_misses().unwrap_or(0);
+            let hit_rate = if hits == 0 {
+                0.0
+            } else {
+                hits as f32 / (hits + misses) as f32
+            };
+
             warn!(
-                "Cache size: {}, hits: {}, misses: {}",
+                "Cache size: {}, hits: {}, hit rate: {}",
                 cache.cache_size(),
-                cache.cache_hits().unwrap_or(0),
-                cache.cache_misses().unwrap_or(0),
+                hits,
+                hit_rate,
             );
         }
     }

@@ -8,6 +8,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::{Add, Sub};
 use std::rc::Rc;
+use std::time::Instant;
 
 pub struct FullProbe1<B>
 where
@@ -62,50 +63,67 @@ where
         cached_solver.run::<S>()
     }
 
+    fn is_solved(&self) -> bool {
+        self.board().is_solved_full()
+    }
+
     pub fn run<S>(&self) -> Result<(), String>
     where
         S: LineSolver<BlockType = B>,
     {
-        if self.board().is_solved_full() {
+        if self.is_solved() {
             return Ok(());
         }
 
         warn!("Trying to solve with probing");
+        let start = Instant::now();
+        let mut contradictions = 0;
+
         loop {
-            if self.board().is_solved_full() {
+            if self.is_solved() {
                 break;
             }
 
-            self.update_all();
-
             let mut found_update = false;
             for point in self.board().unsolved_cells() {
-                let updated = self.probe::<S>(point)?;
-                if updated > 0 {
-                    found_update = true;
+                found_update = self.probe::<S>(point)?;
+                if found_update {
+                    contradictions += 1;
                     break;
                 }
             }
 
-            if !found_update || self.board().is_solved_full() {
+            if !found_update || self.is_solved() {
                 break;
             } else {
                 self.propagate::<S>()?;
+                info!("Solution rate: {}", self.board().solution_rate());
             }
         }
+
+        let total_time = start.elapsed();
+        warn!(
+            "Full solution: {}.{:06} sec",
+            total_time.as_secs(),
+            total_time.subsec_micros()
+        );
+        warn!("Contradictions found: {}", contradictions);
 
         Ok(())
     }
 
-    fn update_all(&self) {}
-
-    fn probe<S>(&self, point: Point) -> Result<u32, String>
+    fn probe<S>(&self, point: Point) -> Result<bool, String>
     where
         S: LineSolver<BlockType = B>,
     {
-        let probes: HashMap<B::Color, Board<B>> = HashMap::new();
+        //let probes: HashMap<B::Color, Board<B>> = HashMap::new();
 
-        for assumption in self.board().cell(&point).variants() {
+        let vars = self.board().cell(&point).variants();
+        for assumption in vars {
+            if self.board().cell(&point).is_solved() {
+                warn!("Probing expired! {:?}: {:?}", &point, &assumption);
+            }
+
             let board_temp = self.board().clone();
             board_temp.set_color(&point, &assumption);
 
@@ -123,10 +141,12 @@ where
                     debug!("New info: {:?}", new_cells);
                 }
             } else {
-                warn!("Probing failed! {:?}: {:?}", point, assumption);
+                warn!("Probing failed! {:?}: {:?}", &point, &assumption);
+                self.board().unset_color(&point, &assumption)?;
+                return Ok(true);
             }
         }
 
-        Ok(0)
+        Ok(false)
     }
 }
