@@ -1,14 +1,31 @@
 use super::utils;
 
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::fmt;
 use std::fmt::Debug;
+use std::marker::Sized;
+use std::ops::{Add, Sub};
 use std::rc::Rc;
 
-#[derive(Debug)]
-struct Point {
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub struct Point {
     x: usize,
     y: usize,
+}
+
+impl Point {
+    pub fn new(x: usize, y: usize) -> Self {
+        Self { x, y }
+    }
+
+    pub fn x(&self) -> usize {
+        self.x
+    }
+
+    pub fn y(&self) -> usize {
+        self.y
+    }
 }
 
 //struct Cell {
@@ -21,7 +38,10 @@ pub trait Color {
     fn blank() -> Self;
     fn is_solved(&self) -> bool;
     fn solution_rate(&self) -> f64;
-    fn is_updated_with(&self, new: &Self) -> bool;
+    fn is_updated_with(&self, new: &Self) -> Result<bool, String>;
+    fn variants(&self) -> HashSet<Self>
+    where
+        Self: Sized;
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -53,15 +73,29 @@ impl Color for BinaryColor {
         }
     }
 
-    fn is_updated_with(&self, new: &Self) -> bool {
+    fn is_updated_with(&self, new: &Self) -> Result<bool, String> {
         if self == new {
-            return false;
+            return Ok(false);
         }
 
-        assert_eq!(self, &BinaryColor::Undefined);
-        assert!((new == &BinaryColor::White) || (new == &BinaryColor::Black));
+        if self != &BinaryColor::Undefined {
+            return Err("Can only update undefined".to_string());
+        }
+        if !new.is_solved() {
+            return Err("Cannot update already solved".to_string());
+        }
 
-        true
+        Ok(true)
+    }
+
+    fn variants(&self) -> HashSet<Self> {
+        if self.is_solved() {
+            vec![self.clone()]
+        } else {
+            vec![BinaryColor::White, BinaryColor::Black]
+        }
+        .into_iter()
+        .collect()
     }
 }
 
@@ -76,6 +110,30 @@ impl fmt::Display for BinaryColor {
             BlackOrWhite => '?',
         };
         write!(f, "{}", symbol)
+    }
+}
+
+impl Add for BinaryColor {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        rhs
+    }
+}
+
+impl Sub for BinaryColor {
+    type Output = Result<Self, String>;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        if self.is_solved() {
+            return Err(format!("Cannot unset already set cell {:?}", &self));
+        }
+
+        Ok(match rhs {
+            BinaryColor::Black => BinaryColor::White,
+            BinaryColor::White => BinaryColor::Black,
+            _ => self,
+        })
     }
 }
 
@@ -165,7 +223,7 @@ where
 impl<B> Board<B>
 where
     B: Block,
-    B::Color: Clone + Color + Debug,
+    B::Color: Clone + Debug,
 {
     pub fn with_descriptions(
         rows: Vec<Rc<Description<B>>>,
@@ -238,6 +296,111 @@ where
             .map(|row| Self::line_solution_rate(&row.borrow()))
             .sum::<f64>()
             / (self.height() as f64)
+    }
+
+    pub fn unsolved_cells(&self) -> Vec<Point> {
+        self.cells
+            .iter()
+            .enumerate()
+            .map(|(x, row)| {
+                let row = row.borrow();
+                row.iter()
+                    .enumerate()
+                    .filter_map(move |(y, cell)| {
+                        if cell.is_solved() {
+                            None
+                        } else {
+                            Some(Point::new(x, y))
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .flatten()
+            .collect()
+    }
+
+    pub fn cell(&self, point: &Point) -> B::Color {
+        let Point { x, y } = point.clone();
+        self.cells[x].borrow()[y].clone()
+    }
+}
+
+impl<B> Board<B>
+where
+    B: Block,
+    B::Color: Color + PartialEq,
+{
+    /// Difference between two boards as coordinates of changed cells.
+    /// Standard diff semantic as result:
+    /// - first returned points which set in current board and unset in the other
+    /// - second returned points which unset in current board and set in the other
+    pub fn diff(&self, other: &Self) -> (Vec<Point>, Vec<Point>) {
+        let mut removed = vec![];
+        let mut added = vec![];
+
+        for (x, (row, other_row)) in self.cells.iter().zip(&other.cells).enumerate() {
+            let row = row.borrow();
+            let other_row = other_row.borrow();
+
+            for (y, (cell, other_cell)) in row.iter().zip(other_row.iter()).enumerate() {
+                if cell != other_cell {
+                    let p = Point::new(x, y);
+
+                    if !cell.is_updated_with(other_cell).unwrap_or(false) {
+                        removed.push(p.clone());
+                    }
+
+                    if !other_cell.is_updated_with(cell).unwrap_or(false) {
+                        added.push(p.clone());
+                    }
+                }
+            }
+        }
+        (removed, added)
+    }
+}
+
+impl<B> Board<B>
+where
+    B: Block,
+    B::Color: Clone + Debug + Add<Output = B::Color> + Sub<Output = Result<B::Color, String>>,
+{
+    pub fn set_color(&self, point: &Point, color: &B::Color) {
+        let old_value = self.cell(point);
+        let Point { x, y } = point.clone();
+        let mut row = self.cells[x].borrow_mut();
+        row[y] = old_value + color.clone();
+    }
+
+    pub fn unset_color(&self, point: &Point, color: &B::Color) -> Result<(), String> {
+        let old_value = self.cell(point);
+        let Point { x, y } = point.clone();
+        let mut row = self.cells[x].borrow_mut();
+        row[y] = (old_value - color.clone())?;
+        Ok(())
+    }
+}
+
+impl<B> Clone for Board<B>
+where
+    B: Block,
+    B::Color: Clone,
+{
+    fn clone(&self) -> Self {
+        let cells = self
+            .cells
+            .iter()
+            .map(|row| {
+                let row = row.borrow().to_vec();
+                Rc::new(RefCell::new(row))
+            })
+            .collect();
+
+        Self {
+            cells,
+            desc_rows: self.desc_rows.clone(),
+            desc_cols: self.desc_cols.clone(),
+        }
     }
 }
 

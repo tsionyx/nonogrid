@@ -1,8 +1,8 @@
-use super::super::board::{Block, Board, Color, Description};
+use super::super::board::{Block, Board, Color, Description, Point};
 use super::line::LineSolver;
 
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::rc::Rc;
@@ -40,7 +40,7 @@ where
 impl<B> Solver<B>
 where
     B: Block + Debug + Eq + Hash,
-    <B as Block>::Color: Clone + Debug + PartialEq + Eq + Hash,
+    B::Color: Clone + Debug + PartialEq + Eq + Hash,
 {
     pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
         Self::with_options(board, None, None, false, None)
@@ -66,7 +66,7 @@ where
         self.cache.clone()
     }
 
-    pub fn run<S>(&self) -> Result<(), String>
+    pub fn run<S>(&self) -> Result<HashMap<Point, B::Color>, String>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -158,13 +158,27 @@ where
             add_job(new_job, priority);
         }
 
-        let mut _total_cells_solved = 0usize;
+        let mut solved_cells = HashMap::new();
 
         while let Some((is_column, index, priority)) = Self::get_top_job(&mut line_jobs) {
             let new_jobs = self.solve_row::<S>(index, is_column)?;
 
-            _total_cells_solved += new_jobs.len();
-            for new_job in new_jobs {
+            let new_states: Vec<_> = if is_column {
+                let x = index;
+                new_jobs
+                    .iter()
+                    .map(|((_, y), color)| (Point::new(x, *y), color.clone()))
+                    .collect()
+            } else {
+                let y = index;
+                new_jobs
+                    .iter()
+                    .map(|((_, x), color)| (Point::new(*x, y), color.clone()))
+                    .collect()
+            };
+
+            solved_cells.extend(new_states);
+            for (new_job, _color) in new_jobs {
                 let new_priority = priority + 1.0;
                 // if board.has_blots:
                 //    // the more attempts the less priority
@@ -185,16 +199,19 @@ where
             //if rate != 1 {
             //    warn!("The nonogram is not solved full: {:.4}", rate)
             //}
-            let total_time = start.elapsed();
-            warn!(
-                "Full solution: {}.{:06} sec",
-                total_time.as_secs(),
-                total_time.subsec_micros()
-            );
-            warn!("Lines solved: {}", lines_solved);
+
+            if log_enabled!(Level::Info) {
+                let total_time = start.elapsed();
+                info!(
+                    "Full solution: {}.{:06} sec",
+                    total_time.as_secs(),
+                    total_time.subsec_micros()
+                );
+                info!("Lines solved: {}", lines_solved);
+            }
         }
 
-        Ok(())
+        Ok(solved_cells)
     }
 
     fn get_top_job(
@@ -202,9 +219,9 @@ where
     ) -> Option<(bool, usize, f64)> {
         let ((is_column, index), priority) = pq.pop()?;
 
-        if log_enabled!(Level::Info) {
+        if log_enabled!(Level::Debug) {
             let line_description = if is_column { "column" } else { "row" };
-            info!(
+            debug!(
                 "Solving {} {} with priority {}",
                 index, line_description, priority
             );
@@ -216,7 +233,11 @@ where
     /// If the line gets partially solved, put the crossed lines into queue.
     ///
     /// Return the list of new jobs that should be solved next (one job for each solved cell).
-    pub fn solve_row<S>(&self, index: usize, is_column: bool) -> Result<Vec<(bool, usize)>, String>
+    pub fn solve_row<S>(
+        &self,
+        index: usize,
+        is_column: bool,
+    ) -> Result<Vec<((bool, usize), B::Color)>, String>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -274,12 +295,12 @@ where
                 .zip(&updated)
                 .enumerate()
                 .filter_map(|(i, (pre, post))| {
-                    if pre.is_updated_with(post) {
+                    if pre.is_updated_with(post).unwrap() {
                         debug!(
                             "Diff on index={}: original={:?}, updated={:?}",
                             i, pre, &post
                         );
-                        Some((!is_column, i))
+                        Some(((!is_column, i), post.clone()))
                     } else {
                         None
                     }

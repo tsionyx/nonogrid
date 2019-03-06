@@ -60,7 +60,7 @@ fn main() {
     let r = ShellRenderer {
         board: Rc::clone(&board),
     };
-    // println!("{}", r.render());
+    println!("{}", r.render());
     warn!("Solving with simple line propagation");
     let solver = propagation::Solver::new(Rc::clone(&board));
     solver.run::<DynamicSolver<_>>().unwrap();
