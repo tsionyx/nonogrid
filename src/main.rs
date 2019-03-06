@@ -7,6 +7,7 @@ mod utils;
 use parser::BoardParser;
 use render::{Renderer, ShellRenderer};
 use solver::line::DynamicSolver;
+use solver::probing;
 use solver::propagation;
 
 use std::cell::RefCell;
@@ -60,23 +61,17 @@ fn main() {
         board: Rc::clone(&board),
     };
     // println!("{}", r.render());
-    println!("Solving...");
-
-    let cache = propagation::new_cache(10000);
-    let _solver = propagation::Solver::with_options(
-        Rc::clone(&board),
-        None,
-        None,
-        false,
-        Some(Rc::clone(&cache)),
-    );
-
+    warn!("Solving with simple line propagation");
     let solver = propagation::Solver::new(Rc::clone(&board));
     solver.run::<DynamicSolver<_>>().unwrap();
     println!("{}", r.render());
 
     {
-        let cache = cache.borrow();
+        warn!("Trying to solve with probing");
+        let solver = probing::FullProbe1::new(Rc::clone(&board));
+        solver.run::<DynamicSolver<_>>().unwrap();
+
+        let cache = solver.cache.borrow();
         if cache.cache_size() > 0 {
             warn!(
                 "Cache size: {}, hits: {}, misses: {}",

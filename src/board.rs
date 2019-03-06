@@ -230,6 +230,15 @@ where
 
         solved / size as f64
     }
+
+    /// How many cells in the whole grid are known to be of particular color
+    pub fn solution_rate(&self) -> f64 {
+        self.cells
+            .iter()
+            .map(|row| Self::line_solution_rate(&row.borrow()))
+            .sum::<f64>()
+            / (self.height() as f64)
+    }
 }
 
 #[cfg(test)]

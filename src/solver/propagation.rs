@@ -15,7 +15,7 @@ use priority_queue::PriorityQueue;
 
 type CacheKey<B> = (Rc<Description<B>>, Rc<Vec<<B as Block>::Color>>);
 type CacheValue<B> = Result<Rc<Vec<<B as Block>::Color>>, String>;
-type ExternalCache<B> = Rc<RefCell<UnboundCache<CacheKey<B>, CacheValue<B>>>>;
+pub type ExternalCache<B> = Rc<RefCell<UnboundCache<CacheKey<B>, CacheValue<B>>>>;
 
 pub fn new_cache<B>(capacity: usize) -> ExternalCache<B>
 where
