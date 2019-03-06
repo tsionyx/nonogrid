@@ -37,6 +37,8 @@ where
     cache: Option<ExternalCache<B>>,
 }
 
+type Job = (bool, usize);
+
 impl<B> Solver<B>
 where
     B: Block + Debug + Eq + Hash,
@@ -112,7 +114,7 @@ where
         let mut line_jobs = PriorityQueue::new();
         let mut all_jobs = HashSet::new();
 
-        let mut add_job = |job: (bool, usize), priority: f64| {
+        let mut add_job = |job: Job, priority: f64| {
             let priority = OrderedFloat(priority);
             line_jobs.push(job, priority);
             all_jobs.insert(job);
@@ -160,7 +162,7 @@ where
 
         let mut solved_cells = HashMap::new();
 
-        while let Some((is_column, index, priority)) = Self::get_top_job(&mut line_jobs) {
+        while let Some(((is_column, index), priority)) = Self::get_top_job(&mut line_jobs) {
             let new_jobs = self.solve_row::<S>(index, is_column)?;
 
             let new_states: Vec<_> = if is_column {
@@ -214,9 +216,7 @@ where
         Ok(solved_cells)
     }
 
-    fn get_top_job(
-        pq: &mut PriorityQueue<(bool, usize), OrderedFloat<f64>>,
-    ) -> Option<(bool, usize, f64)> {
+    fn get_top_job(pq: &mut PriorityQueue<Job, OrderedFloat<f64>>) -> Option<(Job, f64)> {
         let ((is_column, index), priority) = pq.pop()?;
 
         if log_enabled!(Level::Debug) {
@@ -226,7 +226,7 @@ where
                 index, line_description, priority
             );
         }
-        Some((is_column, index, priority.0))
+        Some(((is_column, index), priority.0))
     }
 
     /// Solve a line with the solver S.
@@ -237,7 +237,7 @@ where
         &self,
         index: usize,
         is_column: bool,
-    ) -> Result<Vec<((bool, usize), B::Color)>, String>
+    ) -> Result<Vec<(Job, B::Color)>, String>
     where
         S: LineSolver<BlockType = B>,
     {

@@ -90,7 +90,7 @@ impl Color for BinaryColor {
 
     fn variants(&self) -> HashSet<Self> {
         if self.is_solved() {
-            vec![self.clone()]
+            vec![*self]
         } else {
             vec![BinaryColor::White, BinaryColor::Black]
         }

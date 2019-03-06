@@ -70,7 +70,8 @@ where
             return Ok(());
         }
 
-        'outer: loop {
+        warn!("Trying to solve with probing");
+        loop {
             if self.board().is_solved_full() {
                 break;
             }
@@ -116,9 +117,8 @@ where
                 Some(vec![point.y()]),
             );
 
-
             if let Ok(new_cells) = solved {
-                if new_cells.len() > 0 {
+                if !new_cells.is_empty() {
                     info!("Probing {:?}: {:?}", point, assumption);
                     debug!("New info: {:?}", new_cells);
                 }

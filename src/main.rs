@@ -60,16 +60,15 @@ fn main() {
     let r = ShellRenderer {
         board: Rc::clone(&board),
     };
-    println!("{}", r.render());
     warn!("Solving with simple line propagation");
     let solver = propagation::Solver::new(Rc::clone(&board));
     solver.run::<DynamicSolver<_>>().unwrap();
     println!("{}", r.render());
 
     {
-        warn!("Trying to solve with probing");
         let solver = probing::FullProbe1::new(Rc::clone(&board));
         solver.run::<DynamicSolver<_>>().unwrap();
+        println!("{}", r.render());
 
         let cache = solver.cache.borrow();
         if cache.cache_size() > 0 {
