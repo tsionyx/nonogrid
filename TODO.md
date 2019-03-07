@@ -1,4 +1,4 @@
-### Comparison with python solver
+### Comparison with python solver (simple line solver)
 
 | puzzle name | lines solved (python/rust) | python (PyPy), sec | rust (debug), sec | rust (release), sec | gain, times |
 |-------------|----------------------------|-------------------:|------------------:|--------------------:|:-----------:|
@@ -12,7 +12,16 @@
 | -n 5178     | 3421                       | 1.146..1.380       | unimplemented     | unimplemented       | N/A         |
 | -n 19043    | 4608                       | 1.043..1.286       | unimplemented     | unimplemented       | N/A         |
 
-- cache the lines; compare with python (2040, einstein)
+
+### Comparison with python solver (probing solver)
+
+| puzzle name | contradictions (python/rust) | python (PyPy), sec | rust (debug), sec | rust (release), sec | gain, times |
+|-------------|------------------------------|-------------------:|------------------:|--------------------:|:-----------:|
+| -b MLP      | 429/?                        | 3.200..4.617       | 3.404..3.982      | 0.122..0.162        | 19..38      |
+| -p 2040     | 204/?                        | 1.922..2.349       | 2.384..3.500      | 0.095..0.124        | 15..25      |
+
+
+- do I need RefCell for cells?
 
 - add backtracking; compare with python (all the others)
 
