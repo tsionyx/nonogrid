@@ -59,10 +59,15 @@ where
         Some(
             non_comment
                 .split(',')
-                .map(|row| {
+                .filter_map(|row| {
                     let row: &str = row.trim().trim_matches(|c| c == '\'' || c == '"');
-                    // dbg!(row);
-                    Description::new(row.split_whitespace().map(B::from_str).collect())
+                    if row == "" {
+                        None
+                    } else {
+                        Some(Description::new(
+                            row.split_whitespace().map(B::from_str).collect(),
+                        ))
+                    }
                 })
                 .collect(),
         )
@@ -222,6 +227,18 @@ mod tests {
             vec![
                 Rc::new(Description::new(vec![block(1)])),
                 Rc::new(Description::new(vec![block(2)]))
+            ]
+        )
+    }
+
+    #[test]
+    fn parse_two_rows_with_commas() {
+        assert_eq!(
+            MyFormat::parse_clues(&String::from("1, 2,\n3")),
+            vec![
+                Rc::new(Description::new(vec![block(1)])),
+                Rc::new(Description::new(vec![block(2)])),
+                Rc::new(Description::new(vec![block(3)])),
             ]
         )
     }
