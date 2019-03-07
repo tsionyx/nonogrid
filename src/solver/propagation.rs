@@ -3,8 +3,6 @@ use super::line::LineSolver;
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
-use std::fmt::Debug;
-use std::hash::Hash;
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -19,8 +17,7 @@ pub type ExternalCache<B> = Rc<RefCell<UnboundCache<CacheKey<B>, CacheValue<B>>>
 
 pub fn new_cache<B>(capacity: usize) -> ExternalCache<B>
 where
-    B: Block + Eq + Hash,
-    <B as Block>::Color: Eq + Hash,
+    B: Block,
 {
     Rc::new(RefCell::new(UnboundCache::with_capacity(capacity)))
 }
@@ -28,7 +25,6 @@ where
 pub struct Solver<B>
 where
     B: Block,
-    <B as Block>::Color: Clone + Debug + Eq + Hash,
 {
     board: Rc<RefCell<Board<B>>>,
     rows: Option<Vec<usize>>,
@@ -41,8 +37,7 @@ type Job = (bool, usize);
 
 impl<B> Solver<B>
 where
-    B: Block + Debug + Eq + Hash,
-    B::Color: Clone + Debug + PartialEq + Eq + Hash,
+    B: Block,
 {
     pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
         Self::with_options(board, None, None, false, None)
@@ -169,13 +164,13 @@ where
                 let x = index;
                 new_jobs
                     .iter()
-                    .map(|((_, y), color)| (Point::new(x, *y), color.clone()))
+                    .map(|((_, y), color)| (Point::new(x, *y), *color))
                     .collect()
             } else {
                 let y = index;
                 new_jobs
                     .iter()
-                    .map(|((_, x), color)| (Point::new(*x, y), color.clone()))
+                    .map(|((_, x), color)| (Point::new(*x, y), *color))
                     .collect()
             };
 
@@ -300,7 +295,7 @@ where
                             "Diff on index={}: original={:?}, updated={:?}",
                             i, pre, &post
                         );
-                        Some(((!is_column, i), post.clone()))
+                        Some(((!is_column, i), *post))
                     } else {
                         None
                     }

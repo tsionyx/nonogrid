@@ -4,11 +4,12 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fmt;
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::marker::Sized;
 use std::ops::{Add, Sub};
 use std::rc::Rc;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub struct Point {
     x: usize,
     y: usize,
@@ -28,7 +29,10 @@ impl Point {
     }
 }
 
-pub trait Color {
+pub trait Color
+where
+    Self: Debug + PartialEq + Eq + Hash + Copy + Clone,
+{
     fn initial() -> Self;
     fn blank() -> Self;
     fn is_solved(&self) -> bool;
@@ -39,7 +43,7 @@ pub trait Color {
         Self: Sized;
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum BinaryColor {
     Undefined,
     White,
@@ -132,7 +136,10 @@ impl Sub for BinaryColor {
     }
 }
 
-pub trait Block {
+pub trait Block
+where
+    Self: Debug + PartialEq + Eq + Hash + Default,
+{
     type Color: Color;
 
     fn from_str(s: &str) -> Self;
@@ -144,7 +151,7 @@ pub trait Block {
     fn color(&self) -> Self::Color;
 }
 
-#[derive(Debug, PartialEq, Default, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Default)]
 pub struct BinaryBlock(pub usize);
 
 impl Block for BinaryBlock {
@@ -196,7 +203,7 @@ where
 
 impl<T> Description<T>
 where
-    T: Block + Default + PartialEq,
+    T: Block,
 {
     pub fn new(mut vec: Vec<T>) -> Description<T> {
         // remove zero blocks
@@ -218,7 +225,7 @@ where
 impl<B> Board<B>
 where
     B: Block,
-    B::Color: Clone + Debug,
+    B::Color: Copy,
 {
     pub fn with_descriptions(
         rows: Vec<Rc<Description<B>>>,
@@ -230,7 +237,7 @@ where
         let init = B::Color::initial();
 
         let cells = (0..height)
-            .map(|_| Rc::new(RefCell::new(vec![init.clone(); width])))
+            .map(|_| Rc::new(RefCell::new(vec![init; width])))
             .collect();
 
         Board {
@@ -259,10 +266,7 @@ where
     }
 
     pub fn get_column(&self, index: usize) -> Vec<B::Color> {
-        self.cells
-            .iter()
-            .map(|row| row.borrow()[index].clone())
-            .collect()
+        self.cells.iter().map(|row| row.borrow()[index]).collect()
     }
 
     pub fn set_row(&mut self, index: usize, new: Vec<B::Color>) {
@@ -326,7 +330,7 @@ where
 
     pub fn cell(&self, point: &Point) -> B::Color {
         let Point { x, y } = *point;
-        self.cells[y].borrow()[x].clone()
+        self.cells[y].borrow()[x]
     }
 
     /// For the given cell yield
@@ -371,7 +375,6 @@ where
 impl<B> Board<B>
 where
     B: Block,
-    B::Color: Color + PartialEq,
 {
     /// Difference between two boards as coordinates of changed cells.
     /// Standard diff semantic as result:
@@ -406,20 +409,20 @@ where
 impl<B> Board<B>
 where
     B: Block,
-    B::Color: Clone + Debug + Add<Output = B::Color> + Sub<Output = Result<B::Color, String>>,
+    B::Color: Copy + Add<Output = B::Color> + Sub<Output = Result<B::Color, String>>,
 {
     pub fn set_color(&self, point: &Point, color: &B::Color) {
         let old_value = self.cell(point);
         let Point { x, y } = *point;
         let mut row = self.cells[y].borrow_mut();
-        row[x] = old_value + color.clone();
+        row[x] = old_value + *color;
     }
 
     pub fn unset_color(&self, point: &Point, color: &B::Color) -> Result<(), String> {
         let old_value = self.cell(point);
         let Point { x, y } = *point;
         let mut row = self.cells[y].borrow_mut();
-        row[x] = (old_value - color.clone())?;
+        row[x] = (old_value - *color)?;
         Ok(())
     }
 }
@@ -427,7 +430,6 @@ where
 impl<B> Clone for Board<B>
 where
     B: Block,
-    B::Color: Clone,
 {
     fn clone(&self) -> Self {
         let cells = self

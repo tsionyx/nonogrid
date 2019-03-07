@@ -1,7 +1,6 @@
 use super::super::board::BinaryColor;
 use super::super::board::{Block, Color, Description};
 use super::super::utils;
-use std::fmt::Debug;
 use std::rc::Rc;
 
 pub trait LineSolver {
@@ -43,7 +42,7 @@ pub struct DynamicSolver<B: Block, S = <B as Block>::Color> {
 impl<B> LineSolver for DynamicSolver<B>
 where
     B: Block,
-    B::Color: Clone + PartialEq + DynamicColor + Debug,
+    B::Color: DynamicColor,
 {
     type BlockType = B;
 
@@ -88,7 +87,7 @@ where
 impl<B> DynamicSolver<B>
 where
     B: Block,
-    B::Color: DynamicColor + PartialEq + Clone,
+    B::Color: DynamicColor,
 {
     fn calc_block_sum(desc: &Description<B>) -> Vec<usize> {
         let mut min_indexes: Vec<usize> = B::partial_sums(&desc.vec)
@@ -146,7 +145,7 @@ where
     }
 
     fn color_at(&self, position: usize) -> B::Color {
-        self.line()[position].clone()
+        self.line()[position]
     }
 
     fn block_at(&self, block_position: usize) -> &B {
@@ -154,7 +153,7 @@ where
     }
 
     fn set_solved(&mut self, position: usize, color: B::Color) {
-        self.solved_line[position] = color.clone();
+        self.solved_line[position] = color;
     }
 
     fn update_solved(&mut self, position: usize, color: &B::Color) {

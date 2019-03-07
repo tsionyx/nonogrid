@@ -10,7 +10,6 @@ use render::{Renderer, ShellRenderer};
 use solver::line::DynamicSolver;
 
 use std::cell::RefCell;
-use std::fmt::Debug;
 use std::rc::Rc;
 
 #[macro_use]
@@ -53,8 +52,7 @@ fn main() {
 
 fn board_from_args<B>(matches: &ArgMatches) -> Board<B>
 where
-    B: Block + PartialEq + Default,
-    B::Color: Clone + Debug,
+    B: Block,
 {
     let my_path = matches.value_of("my");
     let webpbn_path = matches.value_of("webpbn");

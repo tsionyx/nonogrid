@@ -1,6 +1,5 @@
 use super::board::{Block, Board, Description};
 
-use std::fmt::Debug;
 use std::fs;
 use std::marker::PhantomData;
 use std::rc::Rc;
@@ -37,7 +36,7 @@ pub trait BoardParser {
 
 impl<B> MyFormat<B>
 where
-    B: Block + Default + PartialEq,
+    B: Block,
 {
     pub fn from_file(file_name: &str) -> Result<Self, toml::de::Error> {
         let contents =
@@ -85,8 +84,7 @@ where
 
 impl<B> BoardParser for MyFormat<B>
 where
-    B: Block + Default + PartialEq,
-    B::Color: Clone + Debug,
+    B: Block,
 {
     type BlockType = B;
 
@@ -107,8 +105,7 @@ pub struct WebPbn<B> {
 
 impl<B> BoardParser for WebPbn<B>
 where
-    B: Block + Default + PartialEq,
-    <B as Block>::Color: Clone + Debug,
+    B: Block,
 {
     type BlockType = B;
 
@@ -123,7 +120,7 @@ where
 
 impl<B> WebPbn<B>
 where
-    B: Block + Default + PartialEq,
+    B: Block,
 {
     pub fn from_file(file_name: &str) -> sxd_document::Package {
         let contents =
@@ -169,8 +166,7 @@ where
 
 impl<B> WebPbn<B>
 where
-    B: Block + Default + PartialEq,
-    <B as Block>::Color: Clone + Debug,
+    B: Block,
 {
     const BASE_URL: &'static str = "http://webpbn.com";
 
