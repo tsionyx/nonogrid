@@ -8,10 +8,10 @@ use std::marker::Sized;
 use std::ops::{Add, Sub};
 use std::rc::Rc;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct Point {
-    x: usize,
-    y: usize,
+    pub x: usize,
+    pub y: usize,
 }
 
 impl Point {
@@ -289,6 +289,16 @@ where
         solved / size as f64
     }
 
+    /// How many cells in the row with given index are known to be of particular color
+    pub fn row_solution_rate(&self, index: usize) -> f64 {
+        Self::line_solution_rate(&self.get_row(index))
+    }
+
+    /// How many cells in the column with given index are known to be of particular color
+    pub fn column_solution_rate(&self, index: usize) -> f64 {
+        Self::line_solution_rate(&self.get_column(index))
+    }
+
     /// How many cells in the whole grid are known to be of particular color
     pub fn solution_rate(&self) -> f64 {
         self.cells
@@ -322,6 +332,41 @@ where
     pub fn cell(&self, point: &Point) -> B::Color {
         let Point { x, y } = point.clone();
         self.cells[x].borrow()[y].clone()
+    }
+
+    /// For the given cell yield
+    /// the four possible neighbour cells.
+    /// When the given cell is on a border,
+    /// that number can reduce to three or two.
+    fn neighbours(&self, point: &Point) -> Vec<Point> {
+        let Point{x, y} = *point;
+        let mut res = vec![];
+        if x > 0 {
+            res.push(Point::new(x - 1, y));
+        }
+        if x < self.height() - 1 {
+            res.push(Point::new(x + 1, y));
+        }
+        if y > 0 {
+            res.push(Point::new(x, y - 1));
+        }
+        if y < self.width() - 1 {
+            res.push(Point::new(x, y + 1));
+        }
+        res
+    }
+
+    /// For the given cell yield
+    /// the neighbour cells
+    /// that are not completely solved yet.
+    pub fn unsolved_neighbours(&self, point: &Point) -> Vec<Point> {
+        self.neighbours(&point).iter().filter_map(|n| {
+            if self.cell(n).is_solved() {
+                None
+            } else {
+                Some(*n)
+            }
+        }).collect()
     }
 }
 

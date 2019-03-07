@@ -7,8 +7,7 @@ mod utils;
 use parser::BoardParser;
 use render::{Renderer, ShellRenderer};
 use solver::line::DynamicSolver;
-use solver::probing;
-use solver::propagation;
+use solver::{probing, propagation};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -19,8 +18,6 @@ extern crate serde_derive;
 extern crate log;
 #[macro_use]
 extern crate clap;
-extern crate env_logger;
-extern crate priority_queue;
 
 use cached::Cached;
 use clap::{App, ArgGroup};

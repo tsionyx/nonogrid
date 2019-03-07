@@ -10,6 +10,9 @@ use std::ops::{Add, Sub};
 use std::rc::Rc;
 use std::time::Instant;
 
+use ordered_float::OrderedFloat;
+use std::cmp::Reverse;
+
 pub struct FullProbe1<B>
 where
     B: Block,
@@ -67,6 +70,21 @@ where
         self.board().is_solved_full()
     }
 
+    fn unsolved_cells(&self) -> Vec<Point> {
+        let board = self.board();
+        let unsolved = board.unsolved_cells();
+        let mut with_priority: Vec<_> = unsolved.iter().map(|p| {
+            let no_unsolved = board.unsolved_neighbours(p).len() as f64;
+            let row_rate = board.row_solution_rate(p.x);
+            let column_rate = board.column_solution_rate(p.y);
+            let priority = row_rate + column_rate - no_unsolved;
+            (OrderedFloat(priority), p)
+        }).collect();
+
+        with_priority.sort_by_key(|&(priority, _point)| Reverse(priority));
+        with_priority.iter().map(|&(_priority, &point)| point).collect()
+    }
+
     pub fn run<S>(&self) -> Result<(), String>
     where
         S: LineSolver<BlockType = B>,
@@ -85,8 +103,10 @@ where
             }
 
             let mut found_update = false;
-            for point in self.board().unsolved_cells() {
-                found_update = self.probe::<S>(point)?;
+
+            let unsolved = &self.unsolved_cells();
+            for point in unsolved {
+                found_update = self.probe::<S>(*point)?;
                 if found_update {
                     contradictions += 1;
                     break;
@@ -118,12 +138,13 @@ where
     {
         //let probes: HashMap<B::Color, Board<B>> = HashMap::new();
 
-        let vars = self.board().cell(&point).variants();
-        for assumption in vars {
-            if self.board().cell(&point).is_solved() {
-                warn!("Probing expired! {:?}: {:?}", &point, &assumption);
-            }
+        if self.board().cell(&point).is_solved() {
+            info!("Probing expired! {:?}", &point);
+        }
 
+        let vars = self.board().cell(&point).variants();
+
+        for assumption in vars {
             let board_temp = self.board().clone();
             board_temp.set_color(&point, &assumption);
 
