@@ -43,15 +43,32 @@ where
         self.board.borrow()
     }
 
-    fn propagate<S>(
-        &self,
-        rows: Option<Vec<usize>>,
-        columns: Option<Vec<usize>>,
-    ) -> Result<HashMap<Point, B::Color>, String>
+    fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, OrderedFloat<f64>)>, String>
     where
         S: LineSolver<BlockType = B>,
     {
-        self.propagate_board::<S>(Rc::clone(&self.board), rows, columns)
+        let fixed_points = self.propagate_board::<S>(
+            Rc::clone(&self.board),
+            Some(vec![point.y()]),
+            Some(vec![point.x()]),
+        )?;
+        let mut new_jobs = vec![];
+
+        for new_point in fixed_points.keys() {
+            for neighbour in self.board().unsolved_neighbours(new_point) {
+                new_jobs.push((neighbour, OrderedFloat(PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED)));
+            }
+        }
+
+        for neighbour in self.board().unsolved_neighbours(&point) {
+            new_jobs.push((
+                neighbour,
+                OrderedFloat(PRIORITY_NEIGHBOURS_OF_CONTRADICTION),
+            ));
+        }
+
+        info!("Solution rate: {}", self.board().solution_rate());
+        Ok(new_jobs)
     }
 
     fn propagate_board<S>(
@@ -100,7 +117,6 @@ where
             return Ok(());
         }
 
-        warn!("Trying to solve with probing");
         let start = Instant::now();
         let mut contradictions_number = 0;
 
@@ -124,24 +140,9 @@ where
             }
 
             if let Some(contradiction) = contradiction {
-                let fixed_points = self
-                    .propagate::<S>(Some(vec![contradiction.y()]), Some(vec![contradiction.x()]))?;
-
-                for point in fixed_points.keys() {
-                    for neighbour in self.board().unsolved_neighbours(point) {
-                        unsolved_probes
-                            .push(neighbour, OrderedFloat(PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED));
-                    }
+                for (point, priority) in self.propagate_point::<S>(&contradiction)? {
+                    unsolved_probes.push(point, priority);
                 }
-
-                for neighbour in self.board().unsolved_neighbours(&contradiction) {
-                    unsolved_probes.push(
-                        neighbour,
-                        OrderedFloat(PRIORITY_NEIGHBOURS_OF_CONTRADICTION),
-                    );
-                }
-
-                info!("Solution rate: {}", self.board().solution_rate());
             } else {
                 break;
             }

@@ -4,12 +4,13 @@ mod render;
 mod solver;
 mod utils;
 
+use board::{Block, Board};
 use parser::BoardParser;
 use render::{Renderer, ShellRenderer};
 use solver::line::DynamicSolver;
-use solver::{probing, propagation};
 
 use std::cell::RefCell;
+use std::fmt::Debug;
 use std::rc::Rc;
 
 #[macro_use]
@@ -19,8 +20,7 @@ extern crate log;
 #[macro_use]
 extern crate clap;
 
-use cached::Cached;
-use clap::{App, ArgGroup};
+use clap::{App, ArgGroup, ArgMatches};
 
 fn main() {
     env_logger::init();
@@ -40,49 +40,32 @@ fn main() {
         ]))
         .get_matches();
 
+    let board = board_from_args(&matches);
+    let board = Rc::new(RefCell::new(board));
+
+    let r = ShellRenderer {
+        board: Rc::clone(&board),
+    };
+
+    solver::run::<_, DynamicSolver<_>>(Rc::clone(&board)).unwrap();
+    println!("{}", r.render());
+}
+
+fn board_from_args<B>(matches: &ArgMatches) -> Board<B>
+where
+    B: Block + PartialEq + Default,
+    B::Color: Clone + Debug,
+{
     let my_path = matches.value_of("my");
     let webpbn_path = matches.value_of("webpbn");
     let webpbn_id = matches.value_of("webpbn-online");
 
-    let board = if let Some(webpbn_path) = webpbn_path {
+    if let Some(webpbn_path) = webpbn_path {
         parser::WebPbn::read_board(webpbn_path)
     } else if let Some(webpbn_id) = webpbn_id {
         value_t_or_exit!(matches, "webpbn-online", u16);
         parser::WebPbn::get_board(webpbn_id)
     } else {
         parser::MyFormat::read_board(my_path.unwrap())
-    };
-    let board = Rc::new(RefCell::new(board));
-
-    let r = ShellRenderer {
-        board: Rc::clone(&board),
-    };
-    warn!("Solving with simple line propagation");
-    let solver = propagation::Solver::new(Rc::clone(&board));
-    solver.run::<DynamicSolver<_>>().unwrap();
-    println!("{}", r.render());
-
-    {
-        let solver = probing::FullProbe1::new(Rc::clone(&board));
-        solver.run::<DynamicSolver<_>>().unwrap();
-        println!("{}", r.render());
-
-        let cache = solver.cache.borrow();
-        if cache.cache_size() > 0 {
-            let hits = cache.cache_hits().unwrap_or(0);
-            let misses = cache.cache_misses().unwrap_or(0);
-            let hit_rate = if hits == 0 {
-                0.0
-            } else {
-                hits as f32 / (hits + misses) as f32
-            };
-
-            warn!(
-                "Cache size: {}, hits: {}, hit rate: {}",
-                cache.cache_size(),
-                hits,
-                hit_rate,
-            );
-        }
     }
 }
