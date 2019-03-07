@@ -11,7 +11,7 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use ordered_float::OrderedFloat;
-use std::cmp::Reverse;
+use priority_queue::PriorityQueue;
 
 pub struct FullProbe1<B>
 where
@@ -20,6 +20,9 @@ where
     board: Rc<RefCell<Board<B>>>,
     pub cache: propagation::ExternalCache<B>,
 }
+
+const PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED: f64 = 10.0;
+const PRIORITY_NEIGHBOURS_OF_CONTRADICTION: f64 = 20.0;
 
 impl<B> FullProbe1<B>
 where
@@ -40,11 +43,15 @@ where
         self.board.borrow()
     }
 
-    fn propagate<S>(&self) -> Result<HashMap<Point, B::Color>, String>
+    fn propagate<S>(
+        &self,
+        rows: Option<Vec<usize>>,
+        columns: Option<Vec<usize>>,
+    ) -> Result<HashMap<Point, B::Color>, String>
     where
         S: LineSolver<BlockType = B>,
     {
-        self.propagate_board::<S>(Rc::clone(&self.board), None, None)
+        self.propagate_board::<S>(Rc::clone(&self.board), rows, columns)
     }
 
     fn propagate_board<S>(
@@ -70,19 +77,19 @@ where
         self.board().is_solved_full()
     }
 
-    fn unsolved_cells(&self) -> Vec<Point> {
+    fn unsolved_cells(&self) -> PriorityQueue<Point, OrderedFloat<f64>> {
+        let mut queue = PriorityQueue::new();
         let board = self.board();
         let unsolved = board.unsolved_cells();
-        let mut with_priority: Vec<_> = unsolved.iter().map(|p| {
+        unsolved.iter().for_each(|p| {
             let no_unsolved = board.unsolved_neighbours(p).len() as f64;
-            let row_rate = board.row_solution_rate(p.x);
-            let column_rate = board.column_solution_rate(p.y);
-            let priority = row_rate + column_rate - no_unsolved;
-            (OrderedFloat(priority), p)
-        }).collect();
+            let row_rate = board.row_solution_rate(p.y());
+            let column_rate = board.column_solution_rate(p.x());
+            let priority = row_rate + column_rate - no_unsolved + 4.0;
+            queue.push(*p, OrderedFloat(priority));
+        });
 
-        with_priority.sort_by_key(|&(priority, _point)| Reverse(priority));
-        with_priority.iter().map(|&(_priority, &point)| point).collect()
+        queue
     }
 
     pub fn run<S>(&self) -> Result<(), String>
@@ -95,29 +102,48 @@ where
 
         warn!("Trying to solve with probing");
         let start = Instant::now();
-        let mut contradictions = 0;
+        let mut contradictions_number = 0;
+
+        let unsolved_probes = &mut self.unsolved_cells();
 
         loop {
             if self.is_solved() {
                 break;
             }
 
-            let mut found_update = false;
+            let mut contradiction = None;
 
-            let unsolved = &self.unsolved_cells();
-            for point in unsolved {
-                found_update = self.probe::<S>(*point)?;
+            while let Some((point, priority)) = unsolved_probes.pop() {
+                warn!("Trying probe {:?} with priority {}", &point, priority.0);
+                let found_update = self.probe::<S>(point)?;
                 if found_update {
-                    contradictions += 1;
+                    contradiction = Some(point);
+                    contradictions_number += 1;
                     break;
                 }
             }
 
-            if !found_update || self.is_solved() {
-                break;
-            } else {
-                self.propagate::<S>()?;
+            if let Some(contradiction) = contradiction {
+                let fixed_points = self
+                    .propagate::<S>(Some(vec![contradiction.y()]), Some(vec![contradiction.x()]))?;
+
+                for point in fixed_points.keys() {
+                    for neighbour in self.board().unsolved_neighbours(point) {
+                        unsolved_probes
+                            .push(neighbour, OrderedFloat(PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED));
+                    }
+                }
+
+                for neighbour in self.board().unsolved_neighbours(&contradiction) {
+                    unsolved_probes.push(
+                        neighbour,
+                        OrderedFloat(PRIORITY_NEIGHBOURS_OF_CONTRADICTION),
+                    );
+                }
+
                 info!("Solution rate: {}", self.board().solution_rate());
+            } else {
+                break;
             }
         }
 
@@ -127,7 +153,7 @@ where
             total_time.as_secs(),
             total_time.subsec_micros()
         );
-        warn!("Contradictions found: {}", contradictions);
+        warn!("Contradictions found: {}", contradictions_number);
 
         Ok(())
     }
@@ -152,8 +178,8 @@ where
 
             let solved = self.propagate_board::<S>(
                 Rc::new(RefCell::new(board_temp)),
-                Some(vec![point.x()]),
                 Some(vec![point.y()]),
+                Some(vec![point.x()]),
             );
 
             if let Ok(new_cells) = solved {

@@ -10,8 +10,8 @@ use std::rc::Rc;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct Point {
-    pub x: usize,
-    pub y: usize,
+    x: usize,
+    y: usize,
 }
 
 impl Point {
@@ -27,11 +27,6 @@ impl Point {
         self.y
     }
 }
-
-//struct Cell {
-//    coord: Point,
-//    color: Color,
-//}
 
 pub trait Color {
     fn initial() -> Self;
@@ -312,11 +307,11 @@ where
         self.cells
             .iter()
             .enumerate()
-            .map(|(x, row)| {
+            .map(|(y, row)| {
                 let row = row.borrow();
                 row.iter()
                     .enumerate()
-                    .filter_map(move |(y, cell)| {
+                    .filter_map(move |(x, cell)| {
                         if cell.is_solved() {
                             None
                         } else {
@@ -330,8 +325,8 @@ where
     }
 
     pub fn cell(&self, point: &Point) -> B::Color {
-        let Point { x, y } = point.clone();
-        self.cells[x].borrow()[y].clone()
+        let Point { x, y } = *point;
+        self.cells[y].borrow()[x].clone()
     }
 
     /// For the given cell yield
@@ -339,18 +334,18 @@ where
     /// When the given cell is on a border,
     /// that number can reduce to three or two.
     fn neighbours(&self, point: &Point) -> Vec<Point> {
-        let Point{x, y} = *point;
+        let Point { x, y } = *point;
         let mut res = vec![];
         if x > 0 {
             res.push(Point::new(x - 1, y));
         }
-        if x < self.height() - 1 {
+        if x < self.width() - 1 {
             res.push(Point::new(x + 1, y));
         }
         if y > 0 {
             res.push(Point::new(x, y - 1));
         }
-        if y < self.width() - 1 {
+        if y < self.height() - 1 {
             res.push(Point::new(x, y + 1));
         }
         res
@@ -360,13 +355,16 @@ where
     /// the neighbour cells
     /// that are not completely solved yet.
     pub fn unsolved_neighbours(&self, point: &Point) -> Vec<Point> {
-        self.neighbours(&point).iter().filter_map(|n| {
-            if self.cell(n).is_solved() {
-                None
-            } else {
-                Some(*n)
-            }
-        }).collect()
+        self.neighbours(&point)
+            .iter()
+            .filter_map(|n| {
+                if self.cell(n).is_solved() {
+                    None
+                } else {
+                    Some(*n)
+                }
+            })
+            .collect()
     }
 }
 
@@ -383,20 +381,20 @@ where
         let mut removed = vec![];
         let mut added = vec![];
 
-        for (x, (row, other_row)) in self.cells.iter().zip(&other.cells).enumerate() {
+        for (y, (row, other_row)) in self.cells.iter().zip(&other.cells).enumerate() {
             let row = row.borrow();
             let other_row = other_row.borrow();
 
-            for (y, (cell, other_cell)) in row.iter().zip(other_row.iter()).enumerate() {
+            for (x, (cell, other_cell)) in row.iter().zip(other_row.iter()).enumerate() {
                 if cell != other_cell {
                     let p = Point::new(x, y);
 
                     if !cell.is_updated_with(other_cell).unwrap_or(false) {
-                        removed.push(p.clone());
+                        removed.push(p);
                     }
 
                     if !other_cell.is_updated_with(cell).unwrap_or(false) {
-                        added.push(p.clone());
+                        added.push(p);
                     }
                 }
             }
@@ -412,16 +410,16 @@ where
 {
     pub fn set_color(&self, point: &Point, color: &B::Color) {
         let old_value = self.cell(point);
-        let Point { x, y } = point.clone();
-        let mut row = self.cells[x].borrow_mut();
-        row[y] = old_value + color.clone();
+        let Point { x, y } = *point;
+        let mut row = self.cells[y].borrow_mut();
+        row[x] = old_value + color.clone();
     }
 
     pub fn unset_color(&self, point: &Point, color: &B::Color) -> Result<(), String> {
         let old_value = self.cell(point);
-        let Point { x, y } = point.clone();
-        let mut row = self.cells[x].borrow_mut();
-        row[y] = (old_value - color.clone())?;
+        let Point { x, y } = *point;
+        let mut row = self.cells[y].borrow_mut();
+        row[x] = (old_value - color.clone())?;
         Ok(())
     }
 }
