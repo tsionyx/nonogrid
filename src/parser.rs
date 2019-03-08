@@ -7,6 +7,7 @@ use std::rc::Rc;
 use self::sxd_xpath::nodeset::{Node, Nodeset};
 use self::sxd_xpath::{evaluate_xpath, Value};
 
+#[cfg(feature = "web")]
 extern crate reqwest;
 extern crate sxd_document;
 extern crate sxd_xpath;
@@ -170,10 +171,20 @@ where
 {
     const BASE_URL: &'static str = "http://webpbn.com";
 
+    #[cfg(feature = "web")]
     fn get_puzzle_xml(id: &str) -> reqwest::Result<String> {
         let url = format!("{}/XMLpuz.cgi?id={}", Self::BASE_URL, id);
         info!("Requesting {} ...", &url);
         reqwest::get(url.as_str())?.text()
+    }
+    #[cfg(not(feature = "web"))]
+    fn get_puzzle_xml(id: &str) -> Result<&str, String> {
+        let url = format!("{}/XMLpuz.cgi?id={}", Self::BASE_URL, id);
+        info!("Requesting {} ...", &url);
+        Err(format!(
+            "Cannot request url {}: no support for web client (hint: add --features=web)",
+            url
+        ))
     }
 
     pub fn get_board(resource_name: &str) -> Board<B> {

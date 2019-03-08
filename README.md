@@ -1,6 +1,6 @@
 # Yet another nonograms solver. Now in Rust!
 
-## Solve puzzles from http://webpbn.com
+## Solve puzzles from http://webpbn.com (should be build with --features=web)
 
 ```
 # solve puzzle http://webpbn.com/5933
