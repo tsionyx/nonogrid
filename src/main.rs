@@ -8,6 +8,7 @@ use board::{Block, Board};
 use parser::BoardParser;
 use render::{Renderer, ShellRenderer};
 use solver::line::DynamicSolver;
+use solver::probing::FullProbe1;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -46,7 +47,7 @@ fn main() {
         board: Rc::clone(&board),
     };
 
-    solver::run::<_, DynamicSolver<_>>(Rc::clone(&board)).unwrap();
+    solver::run::<_, DynamicSolver<_>, FullProbe1<_>>(Rc::clone(&board)).unwrap();
     println!("{}", r.render());
 }
 

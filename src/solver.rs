@@ -1,53 +1,31 @@
+pub mod backtracking;
 pub mod line;
 pub mod probing;
 pub mod propagation;
 
 use super::board::{Block, Board};
-use probing::{FullProbe1, ProbeSolver};
+use backtracking::Solver;
+use probing::ProbeSolver;
 
-use std::cell::{Ref, RefCell};
-use std::hash::Hash;
+use std::cell::RefCell;
 use std::rc::Rc;
 
-use cached::Cached;
-
-pub fn run<B, S>(board: Rc<RefCell<Board<B>>>) -> Result<(), String>
+pub fn run<B, S, P>(board: Rc<RefCell<Board<B>>>) -> Result<(), String>
 where
     B: Block,
     S: line::LineSolver<BlockType = B>,
+    P: ProbeSolver<BlockType = B>,
 {
     warn!("Solving with simple line propagation");
     let solver = propagation::Solver::new(Rc::clone(&board));
     solver.run::<S>()?;
 
     if !board.borrow().is_solved_full() {
-        warn!("Trying to solve with probing");
-        let solver = FullProbe1::new(Rc::clone(&board));
+        warn!("Trying to solve with backtracking");
+        let solver = Solver::<_, P>::new(Rc::clone(&board));
         solver.run::<S>()?;
-        print_cache_info(solver.cache());
+        solver.print_cache_info();
     }
 
     Ok(())
-}
-
-fn print_cache_info<K, V>(cache: Ref<Cached<K, V>>)
-where
-    K: Hash + Eq,
-{
-    if cache.cache_size() > 0 {
-        let hits = cache.cache_hits().unwrap_or(0);
-        let misses = cache.cache_misses().unwrap_or(0);
-        let hit_rate = if hits == 0 {
-            0.0
-        } else {
-            hits as f32 / (hits + misses) as f32
-        };
-
-        warn!(
-            "Cache size: {}, hits: {}, hit rate: {}",
-            cache.cache_size(),
-            hits,
-            hit_rate,
-        );
-    }
 }
