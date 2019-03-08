@@ -6,7 +6,6 @@ use super::board::{Block, Board};
 
 use std::cell::RefCell;
 use std::hash::Hash;
-use std::ops::{Add, Sub};
 use std::rc::Rc;
 
 use cached::{Cached, UnboundCache};
@@ -14,7 +13,6 @@ use cached::{Cached, UnboundCache};
 pub fn run<B, S>(board: Rc<RefCell<Board<B>>>) -> Result<(), String>
 where
     B: Block,
-    B::Color: Add<Output = B::Color> + Sub<Output = Result<B::Color, String>>,
     S: line::LineSolver<BlockType = B>,
 {
     warn!("Solving with simple line propagation");

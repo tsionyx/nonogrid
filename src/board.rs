@@ -31,7 +31,14 @@ impl Point {
 
 pub trait Color
 where
-    Self: Debug + PartialEq + Eq + Hash + Copy + Clone,
+    Self: Debug
+        + PartialEq
+        + Eq
+        + Hash
+        + Copy
+        + Clone
+        + Add<Output = Self>
+        + Sub<Output = Result<Self, String>>,
 {
     fn initial() -> Self;
     fn blank() -> Self;
@@ -409,7 +416,7 @@ where
 impl<B> Board<B>
 where
     B: Block,
-    B::Color: Copy + Add<Output = B::Color> + Sub<Output = Result<B::Color, String>>,
+    B::Color: Copy,
 {
     pub fn set_color(&self, point: &Point, color: &B::Color) {
         let old_value = self.cell(point);

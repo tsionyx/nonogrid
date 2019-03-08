@@ -4,7 +4,6 @@ use super::propagation;
 
 use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
-use std::ops::{Add, Sub};
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -25,7 +24,6 @@ const PRIORITY_NEIGHBOURS_OF_CONTRADICTION: f64 = 20.0;
 impl<B> FullProbe1<B>
 where
     B: Block,
-    B::Color: Add<Output = B::Color> + Sub<Output = Result<B::Color, String>>,
 {
     pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
         Self::with_cache(board, 10_000)
