@@ -1,7 +1,7 @@
 use nonogrid::{
     board::{BinaryBlock, BinaryColor},
     parser::{BoardParser, MyFormat},
-    solver::{line, probing, propagation},
+    solver::{line, probing::*, propagation},
 };
 
 #[macro_use]
@@ -48,7 +48,7 @@ fn pony() {
         assert_eq!(board.solution_rate(), 0.0);
     }
 
-    let solver = probing::FullProbe1::new(Rc::clone(&board));
+    let solver = FullProbe1::new(Rc::clone(&board));
     solver.run::<line::DynamicSolver<_>>().unwrap();
 
     {

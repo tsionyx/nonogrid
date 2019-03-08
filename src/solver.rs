@@ -3,12 +3,13 @@ pub mod probing;
 pub mod propagation;
 
 use super::board::{Block, Board};
+use probing::{FullProbe1, ProbeSolver};
 
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell};
 use std::hash::Hash;
 use std::rc::Rc;
 
-use cached::{Cached, UnboundCache};
+use cached::Cached;
 
 pub fn run<B, S>(board: Rc<RefCell<Board<B>>>) -> Result<(), String>
 where
@@ -21,15 +22,15 @@ where
 
     if !board.borrow().is_solved_full() {
         warn!("Trying to solve with probing");
-        let solver = probing::FullProbe1::new(Rc::clone(&board));
+        let solver = FullProbe1::new(Rc::clone(&board));
         solver.run::<S>()?;
-        print_cache_info(&solver.cache.borrow());
+        print_cache_info(solver.cache());
     }
 
     Ok(())
 }
 
-fn print_cache_info<K, V>(cache: &UnboundCache<K, V>)
+fn print_cache_info<K, V>(cache: Ref<Cached<K, V>>)
 where
     K: Hash + Eq,
 {

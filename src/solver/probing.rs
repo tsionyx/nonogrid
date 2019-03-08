@@ -1,34 +1,108 @@
 use super::super::board::{Block, Board, Color, Point};
 use super::line::LineSolver;
 use super::propagation;
+use super::propagation::{CacheKey, CacheValue};
 
 use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Instant;
 
+use cached::Cached;
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
+
+pub trait ProbeSolver {
+    type BlockType: Block;
+
+    fn new(board: Rc<RefCell<Board<Self::BlockType>>>) -> Self;
+    fn run<S>(&self) -> Result<(), String>
+    where
+        S: LineSolver<BlockType = Self::BlockType>;
+
+    fn cache(&self) -> Ref<Cached<CacheKey<Self::BlockType>, CacheValue<Self::BlockType>>>;
+}
 
 pub struct FullProbe1<B>
 where
     B: Block,
 {
     board: Rc<RefCell<Board<B>>>,
-    pub cache: propagation::ExternalCache<B>,
+    cache: propagation::ExternalCache<B>,
 }
 
 const PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED: f64 = 10.0;
 const PRIORITY_NEIGHBOURS_OF_CONTRADICTION: f64 = 20.0;
 
+impl<B> ProbeSolver for FullProbe1<B>
+where
+    B: Block,
+{
+    type BlockType = B;
+
+    fn new(board: Rc<RefCell<Board<B>>>) -> Self {
+        Self::with_cache(board, 10_000)
+    }
+
+    fn run<S>(&self) -> Result<(), String>
+    where
+        S: LineSolver<BlockType = B>,
+    {
+        if self.is_solved() {
+            return Ok(());
+        }
+
+        let start = Instant::now();
+        let mut contradictions_number = 0;
+
+        let unsolved_probes = &mut self.unsolved_cells();
+
+        loop {
+            if self.is_solved() {
+                break;
+            }
+
+            let mut contradiction = None;
+
+            while let Some((point, priority)) = unsolved_probes.pop() {
+                warn!("Trying probe {:?} with priority {}", &point, priority.0);
+                let found_update = self.probe::<S>(point)?;
+                if found_update {
+                    contradiction = Some(point);
+                    contradictions_number += 1;
+                    break;
+                }
+            }
+
+            if let Some(contradiction) = contradiction {
+                for (point, priority) in self.propagate_point::<S>(&contradiction)? {
+                    unsolved_probes.push(point, priority);
+                }
+            } else {
+                break;
+            }
+        }
+
+        let total_time = start.elapsed();
+        warn!(
+            "Full solution: {}.{:06} sec",
+            total_time.as_secs(),
+            total_time.subsec_micros()
+        );
+        warn!("Contradictions found: {}", contradictions_number);
+
+        Ok(())
+    }
+
+    fn cache(&self) -> Ref<Cached<CacheKey<Self::BlockType>, CacheValue<Self::BlockType>>> {
+        self.cache.borrow()
+    }
+}
+
 impl<B> FullProbe1<B>
 where
     B: Block,
 {
-    pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
-        Self::with_cache(board, 10_000)
-    }
-
     pub fn with_cache(board: Rc<RefCell<Board<B>>>, cache_capacity: usize) -> Self {
         let cache = propagation::new_cache(cache_capacity);
         Self { board, cache }
@@ -102,56 +176,6 @@ where
         });
 
         queue
-    }
-
-    pub fn run<S>(&self) -> Result<(), String>
-    where
-        S: LineSolver<BlockType = B>,
-    {
-        if self.is_solved() {
-            return Ok(());
-        }
-
-        let start = Instant::now();
-        let mut contradictions_number = 0;
-
-        let unsolved_probes = &mut self.unsolved_cells();
-
-        loop {
-            if self.is_solved() {
-                break;
-            }
-
-            let mut contradiction = None;
-
-            while let Some((point, priority)) = unsolved_probes.pop() {
-                warn!("Trying probe {:?} with priority {}", &point, priority.0);
-                let found_update = self.probe::<S>(point)?;
-                if found_update {
-                    contradiction = Some(point);
-                    contradictions_number += 1;
-                    break;
-                }
-            }
-
-            if let Some(contradiction) = contradiction {
-                for (point, priority) in self.propagate_point::<S>(&contradiction)? {
-                    unsolved_probes.push(point, priority);
-                }
-            } else {
-                break;
-            }
-        }
-
-        let total_time = start.elapsed();
-        warn!(
-            "Full solution: {}.{:06} sec",
-            total_time.as_secs(),
-            total_time.subsec_micros()
-        );
-        warn!("Contradictions found: {}", contradictions_number);
-
-        Ok(())
     }
 
     fn probe<S>(&self, point: Point) -> Result<bool, String>

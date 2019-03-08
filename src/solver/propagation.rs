@@ -11,8 +11,8 @@ use log::Level;
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
 
-type CacheKey<B> = (Rc<Description<B>>, Rc<Vec<<B as Block>::Color>>);
-type CacheValue<B> = Result<Rc<Vec<<B as Block>::Color>>, String>;
+pub type CacheKey<B> = (Rc<Description<B>>, Rc<Vec<<B as Block>::Color>>);
+pub type CacheValue<B> = Result<Rc<Vec<<B as Block>::Color>>, String>;
 pub type ExternalCache<B> = Rc<RefCell<UnboundCache<CacheKey<B>, CacheValue<B>>>>;
 
 pub fn new_cache<B>(capacity: usize) -> ExternalCache<B>
