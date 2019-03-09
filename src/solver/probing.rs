@@ -12,15 +12,17 @@ use cached::Cached;
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
 
+pub type Impact<B> = HashMap<(Point, <B as Block>::Color), (usize, OrderedFloat<f64>)>;
+
 pub trait ProbeSolver {
     type BlockType: Block;
 
     fn new(board: Rc<RefCell<Board<Self::BlockType>>>) -> Self;
 
-    fn run_unsolved<S>(&self) -> Result<(), String>
+    fn run_unsolved<S>(&self) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = Self::BlockType>;
-    fn run<S>(&self, probes: &mut PriorityQueue<Point, OrderedFloat<f64>>) -> Result<(), String>
+    fn run<S>(&self, probes: &mut PriorityQueue<Point, OrderedFloat<f64>>) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = Self::BlockType>;
 
@@ -48,19 +50,21 @@ where
         Self::with_cache(board, 10_000)
     }
 
-    fn run_unsolved<S>(&self) -> Result<(), String>
+    fn run_unsolved<S>(&self) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = B>,
     {
         self.run::<S>(&mut self.unsolved_cells())
     }
 
-    fn run<S>(&self, probes: &mut PriorityQueue<Point, OrderedFloat<f64>>) -> Result<(), String>
+    fn run<S>(&self, probes: &mut PriorityQueue<Point, OrderedFloat<f64>>) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = B>,
     {
+        let mut changed_cells = HashMap::new();
+
         if self.is_solved() {
-            return Ok(());
+            return Ok(changed_cells);
         }
 
         let start = Instant::now();
@@ -73,13 +77,21 @@ where
 
             let mut contradiction = None;
 
-            while let Some((point, priority)) = probes.pop() {
+            'outer: while let Some((point, priority)) = probes.pop() {
+                // TODO: do not try probe if it was already tried after last contradiction
                 warn!("Trying probe {:?} with priority {}", &point, priority.0);
-                let found_update = self.probe::<S>(point)?;
-                if found_update {
-                    contradiction = Some(point);
-                    contradictions_number += 1;
-                    break;
+                let probe_results = self.probe::<S>(point);
+
+                for (color, updated) in probe_results.iter(){
+                    if let Some(updated_cells) = updated {
+                        changed_cells.insert((point, *color), (*updated_cells, priority));
+                    }
+                    else {
+                        self.board().unset_color(&point, &color)?;
+                        contradiction = Some(point);
+                        contradictions_number += 1;
+                        break 'outer;
+                    }
                 }
             }
 
@@ -100,7 +112,7 @@ where
         );
         warn!("Contradictions found: {}", contradictions_number);
 
-        Ok(())
+        Ok(changed_cells)
     }
 
     fn cache(&self) -> Ref<Cached<CacheKey<Self::BlockType>, CacheValue<Self::BlockType>>> {
@@ -187,11 +199,13 @@ where
         queue
     }
 
-    fn probe<S>(&self, point: Point) -> Result<bool, String>
+    /// Try every color for given cell
+    /// and return the number of solved cells (Some) or contradiction (None)
+    fn probe<S>(&self, point: Point) -> HashMap<B::Color, Option<usize>>
     where
         S: LineSolver<BlockType = B>,
     {
-        //let probes: HashMap<B::Color, Board<B>> = HashMap::new();
+        let mut changes = HashMap::new();
 
         if self.board().cell(&point).is_solved() {
             info!("Probing expired! {:?}", &point);
@@ -216,13 +230,14 @@ where
                     info!("Probing {:?}: {:?}", point, assumption);
                     debug!("New info: {:?}", new_cells);
                 }
+                changes.insert(assumption,Some(new_cells.len()));
+
             } else {
                 warn!("Probing failed! {:?}: {:?}", &point, &assumption);
-                self.board().unset_color(&point, &assumption)?;
-                return Ok(true);
+                changes.insert(assumption, None);
             }
         }
 
-        Ok(false)
+        changes
     }
 }
