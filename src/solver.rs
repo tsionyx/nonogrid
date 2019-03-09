@@ -4,13 +4,18 @@ pub mod probing;
 pub mod propagation;
 
 use super::board::{Block, Board};
-use backtracking::Solver;
-use probing::ProbeSolver;
+use super::solver::backtracking::Solver;
+use super::solver::probing::ProbeSolver;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub fn run<B, S, P>(board: Rc<RefCell<Board<B>>>) -> Result<(), String>
+pub fn run<B, S, P>(
+    board: Rc<RefCell<Board<B>>>,
+    max_solutions: Option<usize>,
+    timeout: Option<u32>,
+    max_depth: Option<usize>,
+) -> Result<(), String>
 where
     B: Block,
     S: line::LineSolver<BlockType = B>,
@@ -22,7 +27,8 @@ where
 
     if !board.borrow().is_solved_full() {
         warn!("Trying to solve with backtracking");
-        let solver = Solver::<_, P>::new(Rc::clone(&board));
+        let mut solver =
+            Solver::<_, P>::with_options(Rc::clone(&board), max_solutions, timeout, max_depth);
         solver.run::<S>()?;
         solver.print_cache_info();
     }
