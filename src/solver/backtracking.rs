@@ -10,6 +10,8 @@ use std::time::Instant;
 
 use cached::Cached;
 
+type Solution<B> = Vec<Rc<RefCell<Vec<<B as Block>::Color>>>>;
+
 pub struct Solver<B, P>
 where
     B: Block,
@@ -24,9 +26,10 @@ where
     max_depth: Option<usize>,
 
     // dynamic variables
+    solutions: Vec<Solution<B>>,
     depth_reached: u32,
     start_time: Option<Instant>,
-    explored_paths: HashSet<Point>,
+    explored_paths: HashSet<Vec<Point>>,
 }
 
 impl<B, P> Solver<B, P>
@@ -51,6 +54,7 @@ where
             max_solutions,
             timeout,
             max_depth,
+            solutions: vec![],
             depth_reached: 0,
             start_time: None,
             explored_paths: HashSet::new(),
@@ -72,13 +76,27 @@ where
 
         self.start_time = Some(Instant::now());
 
-        // TODO: add backtracking logic here
+        //self._solve_without_search(to_the_max=True)
+        let best_candidates = self.choose_candidates();
+        warn!(
+            "Starting depth-first search (initial rate is {:.4})",
+            self.board().solution_rate()
+        );
+        let mut path = vec![];
+        self.search(&best_candidates, &mut path);
 
         let total_time = self.start_time.unwrap().elapsed();
         warn!(
-            "Full solution: {}.{:06} sec",
+            "Search completed (depth reached: {}, solutions found: {})",
+            self.depth_reached,
+            self.solutions.len()
+        );
+
+        warn!(
+            "Full solution: {}.{:06} sec. The rate is {:.4}",
             total_time.as_secs(),
-            total_time.subsec_micros()
+            total_time.subsec_micros(),
+            self.board().solution_rate(),
         );
         warn!("Depth reached: {}", self.depth_reached);
 
@@ -97,9 +115,53 @@ where
         self.board().is_solved_full()
     }
 
-    fn is_explored(&self, _path: &[Point]) -> bool {
-        // TODO: implement explored paths storage
+    fn set_explored(&mut self, path: &[Point]) {
+        let mut path = path.to_vec();
+        path.sort();
+        self.explored_paths.insert(path);
+    }
+
+    fn is_explored(&self, path: &[Point]) -> bool {
+        let mut path = path.to_vec();
+        path.sort();
+        self.explored_paths.contains(&path)
+    }
+
+    fn already_found(&self) -> bool {
+        for (i, solution) in self.solutions.iter().enumerate() {
+            let (removed, added) = self.board().diff(solution);
+
+            if removed.is_empty() && added.is_empty() {
+                info!("The solution is the same as {}-th", i);
+                return true;
+            }
+            info!("The current solution differs from {}-th saved one: (added in current: {:?}, removed in current: {:?})", i, removed, added);
+        }
+
         false
+    }
+
+    fn add_solution<S>(&mut self) -> Result<(), String>
+    where
+        S: LineSolver<BlockType = B>,
+    {
+        // force to check the board
+        self.probe_solver.run::<S>()?;
+
+        info!("Found one of solutions");
+        if self.already_found() {
+            info!("Solution already exists.");
+        } else {
+            let cells = self.board().make_snapshot();
+            self.solutions.push(cells);
+        }
+
+        Ok(())
+    }
+
+    fn choose_candidates(&self) -> Vec<Point> {
+        //TODO: implement
+        vec![]
     }
 
     fn search(&mut self, candidates: &[Point], path: &mut Vec<Point>) -> bool {
@@ -107,6 +169,7 @@ where
             return true;
         }
 
+        //TODO: implement
         true
     }
 }

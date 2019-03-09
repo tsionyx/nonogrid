@@ -9,7 +9,7 @@ use std::marker::Sized;
 use std::ops::{Add, Sub};
 use std::rc::Rc;
 
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 pub struct Point {
     x: usize,
     y: usize,
@@ -387,11 +387,11 @@ where
     /// Standard diff semantic as result:
     /// - first returned points which set in current board and unset in the other
     /// - second returned points which unset in current board and set in the other
-    pub fn diff(&self, other: &Self) -> (Vec<Point>, Vec<Point>) {
+    pub fn diff(&self, other: &[Rc<RefCell<Vec<B::Color>>>]) -> (Vec<Point>, Vec<Point>) {
         let mut removed = vec![];
         let mut added = vec![];
 
-        for (y, (row, other_row)) in self.cells.iter().zip(&other.cells).enumerate() {
+        for (y, (row, other_row)) in self.cells.iter().zip(other).enumerate() {
             let row = row.borrow();
             let other_row = other_row.borrow();
 
@@ -410,6 +410,16 @@ where
             }
         }
         (removed, added)
+    }
+
+    pub fn make_snapshot(&self) -> Vec<Rc<RefCell<Vec<B::Color>>>> {
+        self.cells
+            .iter()
+            .map(|row| {
+                let row = row.borrow().to_vec();
+                Rc::new(RefCell::new(row))
+            })
+            .collect()
     }
 }
 
@@ -439,17 +449,8 @@ where
     B: Block,
 {
     fn clone(&self) -> Self {
-        let cells = self
-            .cells
-            .iter()
-            .map(|row| {
-                let row = row.borrow().to_vec();
-                Rc::new(RefCell::new(row))
-            })
-            .collect();
-
         Self {
-            cells,
+            cells: self.make_snapshot(),
             desc_rows: self.desc_rows.clone(),
             desc_cols: self.desc_cols.clone(),
         }
