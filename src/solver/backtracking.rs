@@ -69,7 +69,7 @@ where
             return Ok(());
         }
 
-        self.probe_solver.run::<S>()?;
+        self.probe_solver.run_unsolved::<S>()?;
         if self.is_solved() {
             return Ok(());
         }
@@ -146,7 +146,7 @@ where
         S: LineSolver<BlockType = B>,
     {
         // force to check the board
-        self.probe_solver.run::<S>()?;
+        self.probe_solver.run_unsolved::<S>()?;
 
         info!("Found one of solutions");
         if self.already_found() {

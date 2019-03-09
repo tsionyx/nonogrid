@@ -49,7 +49,7 @@ fn pony() {
     }
 
     let solver = FullProbe1::new(Rc::clone(&board));
-    solver.run::<line::DynamicSolver<_>>().unwrap();
+    solver.run_unsolved::<line::DynamicSolver<_>>().unwrap();
 
     {
         let board = board.borrow();

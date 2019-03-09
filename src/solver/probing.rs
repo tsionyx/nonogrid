@@ -16,7 +16,11 @@ pub trait ProbeSolver {
     type BlockType: Block;
 
     fn new(board: Rc<RefCell<Board<Self::BlockType>>>) -> Self;
-    fn run<S>(&self) -> Result<(), String>
+
+    fn run_unsolved<S>(&self) -> Result<(), String>
+    where
+        S: LineSolver<BlockType = Self::BlockType>;
+    fn run<S>(&self, probes: &mut PriorityQueue<Point, OrderedFloat<f64>>) -> Result<(), String>
     where
         S: LineSolver<BlockType = Self::BlockType>;
 
@@ -44,7 +48,14 @@ where
         Self::with_cache(board, 10_000)
     }
 
-    fn run<S>(&self) -> Result<(), String>
+    fn run_unsolved<S>(&self) -> Result<(), String>
+    where
+        S: LineSolver<BlockType = B>,
+    {
+        self.run::<S>(&mut self.unsolved_cells())
+    }
+
+    fn run<S>(&self, probes: &mut PriorityQueue<Point, OrderedFloat<f64>>) -> Result<(), String>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -55,8 +66,6 @@ where
         let start = Instant::now();
         let mut contradictions_number = 0;
 
-        let unsolved_probes = &mut self.unsolved_cells();
-
         loop {
             if self.is_solved() {
                 break;
@@ -64,7 +73,7 @@ where
 
             let mut contradiction = None;
 
-            while let Some((point, priority)) = unsolved_probes.pop() {
+            while let Some((point, priority)) = probes.pop() {
                 warn!("Trying probe {:?} with priority {}", &point, priority.0);
                 let found_update = self.probe::<S>(point)?;
                 if found_update {
@@ -76,7 +85,7 @@ where
 
             if let Some(contradiction) = contradiction {
                 for (point, priority) in self.propagate_point::<S>(&contradiction)? {
-                    unsolved_probes.push(point, priority);
+                    probes.push(point, priority);
                 }
             } else {
                 break;
