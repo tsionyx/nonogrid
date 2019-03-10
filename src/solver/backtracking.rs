@@ -1,14 +1,16 @@
-use super::super::board::{Block, Board, Point};
+use super::super::board::{Block, Board, Color, Point};
 use super::line::LineSolver;
-use super::probing::ProbeSolver;
+use super::probing::{Impact, ProbeSolver};
 
 use std::cell::{Ref, RefCell};
-use std::collections::HashSet;
+use std::cmp::Reverse;
+use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::rc::Rc;
 use std::time::Instant;
 
 use cached::Cached;
+use ordered_float::OrderedFloat;
 
 type Solution<B> = Vec<Rc<RefCell<Vec<<B as Block>::Color>>>>;
 
@@ -69,21 +71,20 @@ where
             return Ok(());
         }
 
-        self.probe_solver.run_unsolved::<S>()?;
+        let impact = self.probe_solver.run_unsolved::<S>()?;
         if self.is_solved() {
             return Ok(());
         }
 
         self.start_time = Some(Instant::now());
 
-        //self._solve_without_search(to_the_max=True)
-        let best_candidates = self.choose_candidates();
+        let directions = self.choose_directions(&impact);
         warn!(
             "Starting depth-first search (initial rate is {:.4})",
             self.board().solution_rate()
         );
         let mut path = vec![];
-        self.search(&best_candidates, &mut path);
+        self.search(&directions, &mut path);
 
         let total_time = self.start_time.unwrap().elapsed();
         warn!(
@@ -159,12 +160,70 @@ where
         Ok(())
     }
 
-    fn choose_candidates(&self) -> Vec<Point> {
-        //TODO: implement
-        vec![]
+    /// The most promising (point+color) pair should go first
+    fn choose_directions(&self, impact: &Impact<B>) -> Vec<(Point, B::Color)> {
+        let mut point_wise = HashMap::new();
+
+        for ((point, color), (new_points, priority)) in impact.iter() {
+            if self.board().cell(point).is_solved() {
+                continue;
+            }
+            let point_colors = point_wise.entry(*point).or_insert_with(HashMap::new);
+            point_colors.insert(color, (*new_points, *priority));
+        }
+
+        let mut points_rate: Vec<_> = point_wise
+            .iter()
+            .map(|(point, color_to_impact)| {
+                let values: Vec<_> = color_to_impact.values().collect();
+                (point, OrderedFloat(Self::rate_by_impact(values)))
+            })
+            .collect();
+        points_rate.sort_by_key(|&(_point, rate)| Reverse(rate));
+        dbg!(&points_rate[..10]);
+
+        points_rate
+            .iter()
+            .map(|&(point, _rate)| {
+                let mut point_colors: Vec<_> =
+                    point_wise[point].iter().map(|(k, v)| (**k, *v)).collect();
+                // the most impacting color goes first
+                point_colors.sort_by_key(|(_color, (new_points, _priority))| Reverse(*new_points));
+                let point_order: Vec<_> = point_colors
+                    .iter()
+                    .map(|(color, _impact)| (*point, *color))
+                    .collect();
+                point_order
+            })
+            .flatten()
+            .collect::<Vec<_>>()
     }
 
-    fn search(&mut self, candidates: &[Point], path: &mut Vec<Point>) -> bool {
+    fn rate_by_impact(impact: Vec<&(usize, f64)>) -> f64 {
+        let only_new_points: Vec<_> = impact
+            .iter()
+            .map(|(new_points, _priority)| *new_points)
+            .collect();
+
+        // MAX is the most trivial, but also most ineffective solution.
+        // For details, see https://ieeexplore.ieee.org/document/6476646
+        //
+        //let max = only_new_points.iter().max().unwrap_or(&&0);
+        //*max.clone() as f64
+
+        match only_new_points.as_slice() {
+            [] => 0.0,
+            [single] => *single as f64,
+            [first, second] => {
+                let min = only_new_points.iter().min().unwrap();
+                let diff = ((first + 1) as f64).ln() - ((second + 1) as f64).ln();
+                *min as f64 + diff.abs()
+            }
+            _more_than_two => only_new_points.iter().map(|x| (x + 1) as f64).product(),
+        }
+    }
+
+    fn search(&mut self, candidates: &[(Point, B::Color)], path: &mut Vec<Point>) -> bool {
         if self.is_explored(path) {
             return true;
         }
