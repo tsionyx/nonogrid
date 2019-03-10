@@ -12,7 +12,7 @@ use cached::Cached;
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
 
-pub type Impact<B> = HashMap<(Point, <B as Block>::Color), (usize, OrderedFloat<f64>)>;
+pub type Impact<B> = HashMap<(Point, <B as Block>::Color), (usize, f64)>;
 
 pub trait ProbeSolver {
     type BlockType: Block;
@@ -22,7 +22,10 @@ pub trait ProbeSolver {
     fn run_unsolved<S>(&self) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = Self::BlockType>;
-    fn run<S>(&self, probes: &mut PriorityQueue<Point, OrderedFloat<f64>>) -> Result<Impact<Self::BlockType>, String>
+    fn run<S>(
+        &self,
+        probes: &mut PriorityQueue<Point, OrderedFloat<f64>>,
+    ) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = Self::BlockType>;
 
@@ -57,18 +60,22 @@ where
         self.run::<S>(&mut self.unsolved_cells())
     }
 
-    fn run<S>(&self, probes: &mut PriorityQueue<Point, OrderedFloat<f64>>) -> Result<Impact<Self::BlockType>, String>
+    fn run<S>(
+        &self,
+        probes: &mut PriorityQueue<Point, OrderedFloat<f64>>,
+    ) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = B>,
     {
-        let mut changed_cells = HashMap::new();
+        let mut impact = HashMap::new();
 
         if self.is_solved() {
-            return Ok(changed_cells);
+            return Ok(impact);
         }
 
         let start = Instant::now();
         let mut contradictions_number = 0;
+        //let mut iteration_probes = HashSet::new();
 
         loop {
             if self.is_solved() {
@@ -76,26 +83,37 @@ where
             }
 
             let mut contradiction = None;
+            let mut probe_counter = 0u32;
 
             'outer: while let Some((point, priority)) = probes.pop() {
-                // TODO: do not try probe if it was already tried after last contradiction
-                warn!("Trying probe {:?} with priority {}", &point, priority.0);
+                probe_counter += 1;
+                //if iteration_probes.contains(&point) {
+                //    warn!("The probe {:?} with priority {} has been already tried before last contradiction", &point, priority.0);
+                //    continue;
+                //}
+
+                warn!(
+                    "Trying probe #{} {:?} with priority {}",
+                    probe_counter, &point, priority.0
+                );
                 let probe_results = self.probe::<S>(point);
 
-                for (color, updated) in probe_results.iter(){
+                for (color, updated) in probe_results {
                     if let Some(updated_cells) = updated {
-                        changed_cells.insert((point, *color), (*updated_cells, priority));
-                    }
-                    else {
+                        impact.insert((point, color), (updated_cells, priority.0));
+                    } else {
                         self.board().unset_color(&point, &color)?;
                         contradiction = Some(point);
-                        contradictions_number += 1;
                         break 'outer;
                     }
                 }
+                //iteration_probes.insert(point);
             }
 
             if let Some(contradiction) = contradiction {
+                contradictions_number += 1;
+                //iteration_probes.clear();
+
                 for (point, priority) in self.propagate_point::<S>(&contradiction)? {
                     probes.push(point, priority);
                 }
@@ -112,7 +130,7 @@ where
         );
         warn!("Contradictions found: {}", contradictions_number);
 
-        Ok(changed_cells)
+        Ok(impact)
     }
 
     fn cache(&self) -> Ref<Cached<CacheKey<Self::BlockType>, CacheValue<Self::BlockType>>> {
@@ -230,10 +248,9 @@ where
                     info!("Probing {:?}: {:?}", point, assumption);
                     debug!("New info: {:?}", new_cells);
                 }
-                changes.insert(assumption,Some(new_cells.len()));
-
+                changes.insert(assumption, Some(new_cells.len()));
             } else {
-                warn!("Probing failed! {:?}: {:?}", &point, &assumption);
+                warn!("Contradiction found! {:?}: {:?}", &point, &assumption);
                 changes.insert(assumption, None);
             }
         }
