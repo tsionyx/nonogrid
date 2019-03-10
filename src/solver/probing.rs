@@ -85,7 +85,7 @@ where
             let mut contradiction = None;
             let mut probe_counter = 0u32;
 
-            'outer: while let Some((point, priority)) = probes.pop() {
+            while let Some((point, priority)) = probes.pop() {
                 probe_counter += 1;
                 //if iteration_probes.contains(&point) {
                 //    warn!("The probe {:?} with priority {} has been already tried before last contradiction", &point, priority.0);
@@ -98,22 +98,41 @@ where
                 );
                 let probe_results = self.probe::<S>(point);
 
-                for (color, updated) in probe_results {
+                let (contradictions, non_contradictions): (Vec<_>, Vec<_>) = probe_results
+                    .into_iter()
+                    .partition(|(_color, size)| size.is_none());
+
+                match contradictions.as_slice() {
+                    [] => {}
+                    [(color, None)] => {
+                        contradiction = Some((point, color.clone()));
+                        break;
+                    }
+
+                    too_many => {
+                        if too_many.len() > 1 {
+                            error!("Contradictions for {:?}: {:?}", &point, too_many);
+                            return Err(format!(
+                                "Too many contradictions found for {:?}: {:?}",
+                                &point, too_many
+                            ));
+                        }
+                    }
+                }
+
+                for (color, updated) in non_contradictions {
                     if let Some(updated_cells) = updated {
                         impact.insert((point, color), (updated_cells, priority.0));
-                    } else {
-                        self.board().unset_color(&point, &color)?;
-                        contradiction = Some(point);
-                        break 'outer;
                     }
                 }
                 //iteration_probes.insert(point);
             }
 
-            if let Some(contradiction) = contradiction {
+            if let Some((contradiction, color)) = contradiction {
                 contradictions_number += 1;
                 //iteration_probes.clear();
 
+                self.board().unset_color(&contradiction, &color)?;
                 for (point, priority) in self.propagate_point::<S>(&contradiction)? {
                     probes.push(point, priority);
                 }
