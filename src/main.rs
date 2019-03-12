@@ -1,4 +1,5 @@
 mod board;
+mod cache;
 mod parser;
 mod render;
 mod solver;

@@ -1,4 +1,5 @@
 use super::super::board::{Block, Board, Color, Description, Point};
+use super::super::cache::UnboundCache;
 use super::line::LineSolver;
 
 use std::cell::RefCell;
@@ -6,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::time::Instant;
 
-use cached::{Cached, UnboundCache};
+use cached::Cached;
 use log::Level;
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
