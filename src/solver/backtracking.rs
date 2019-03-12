@@ -38,6 +38,17 @@ where
     _phantom: PhantomData<S>,
 }
 
+#[allow(dead_code)]
+enum ChoosePixel {
+    Sum,
+    Min,
+    Max,
+    Mul,
+    Sqrt,
+    MinLogm,
+    MinLogd,
+}
+
 impl<B, P, S> Solver<B, P, S>
 where
     B: Block,
@@ -198,27 +209,39 @@ where
             .collect::<Vec<_>>()
     }
 
+    const CHOOSE_STRATEGY: ChoosePixel = ChoosePixel::Max;
+
     fn rate_by_impact(impact: Vec<&(usize, f64)>) -> f64 {
-        let only_new_points: Vec<_> = impact
+        let sizes_only: Vec<_> = impact
             .iter()
             .map(|(new_points, _priority)| *new_points)
             .collect();
 
-        // MAX is the most trivial, but also most ineffective solution.
-        // For details, see https://ieeexplore.ieee.org/document/6476646
-        //
-        //let max = only_new_points.iter().max().unwrap_or(&&0);
-        //*max as f64
+        let min = sizes_only.iter().min().unwrap_or(&0);
+        let max = sizes_only.iter().max().unwrap_or(&0);
+        let sum = sizes_only.iter().sum::<usize>();
 
-        match only_new_points.as_slice() {
-            [] => 0.0,
-            [single] => *single as f64,
-            [first, second] => {
-                let min = only_new_points.iter().min().unwrap();
-                let diff = ((first + 1) as f64).ln() - ((second + 1) as f64).ln();
-                *min as f64 + diff.abs()
+        let log = |f: f64| (1.0 + f).ln() + 1.0;
+
+        // Max is the most trivial, but also most ineffective strategy.
+        // For details, see https://ieeexplore.ieee.org/document/6476646
+        match Self::CHOOSE_STRATEGY {
+            ChoosePixel::Sum => sum as f64,
+            ChoosePixel::Min => *min as f64,
+            ChoosePixel::Max => *max as f64,
+            ChoosePixel::Mul => sizes_only.iter().map(|x| (x + 1) as f64).product(),
+            ChoosePixel::Sqrt => (*max as f64 / (min + 1) as f64).sqrt() + (*min as f64),
+            ChoosePixel::MinLogm => {
+                let logm: f64 = sizes_only.iter().map(|&x| log(x as f64)).product();
+                logm + (*min as f64)
             }
-            _more_than_two => only_new_points.iter().map(|x| (x + 1) as f64).product(),
+            ChoosePixel::MinLogd => match sizes_only.as_slice() {
+                [first, second] => {
+                    let diff = log(*first as f64) - log(*second as f64);
+                    *min as f64 + diff.abs()
+                }
+                _other => *min as f64,
+            },
         }
     }
 
