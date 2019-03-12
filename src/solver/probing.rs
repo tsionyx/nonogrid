@@ -19,9 +19,18 @@ pub trait ProbeSolver {
 
     fn new(board: Rc<RefCell<Board<Self::BlockType>>>) -> Self;
 
-    fn run_unsolved<S>(&self) -> Result<Impact<Self::BlockType>, String>
+    fn unsolved_cells(&self) -> PriorityQueue<Point, OrderedFloat<f64>>;
+    fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, OrderedFloat<f64>)>, String>
     where
         S: LineSolver<BlockType = Self::BlockType>;
+
+    fn run_unsolved<S>(&self) -> Result<Impact<Self::BlockType>, String>
+    where
+        S: LineSolver<BlockType = Self::BlockType>,
+    {
+        self.run::<S>(&mut self.unsolved_cells())
+    }
+
     fn run<S>(
         &self,
         probes: &mut PriorityQueue<Point, OrderedFloat<f64>>,
@@ -53,11 +62,47 @@ where
         Self::with_cache(board, 10_000)
     }
 
-    fn run_unsolved<S>(&self) -> Result<Impact<Self::BlockType>, String>
+    fn unsolved_cells(&self) -> PriorityQueue<Point, OrderedFloat<f64>> {
+        let mut queue = PriorityQueue::new();
+        let board = self.board();
+        let unsolved = board.unsolved_cells();
+        unsolved.iter().for_each(|p| {
+            let no_unsolved = board.unsolved_neighbours(p).len() as f64;
+            let row_rate = board.row_solution_rate(p.y());
+            let column_rate = board.column_solution_rate(p.x());
+            let priority = row_rate + column_rate - no_unsolved + 4.0;
+            queue.push(*p, OrderedFloat(priority));
+        });
+
+        queue
+    }
+
+    fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, OrderedFloat<f64>)>, String>
     where
         S: LineSolver<BlockType = B>,
     {
-        self.run::<S>(&mut self.unsolved_cells())
+        let fixed_points = self.propagate_board::<S>(
+            Rc::clone(&self.board),
+            Some(vec![point.y()]),
+            Some(vec![point.x()]),
+        )?;
+        let mut new_jobs = vec![];
+
+        for new_point in fixed_points.keys() {
+            for neighbour in self.board().unsolved_neighbours(new_point) {
+                new_jobs.push((neighbour, OrderedFloat(PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED)));
+            }
+        }
+
+        for neighbour in self.board().unsolved_neighbours(&point) {
+            new_jobs.push((
+                neighbour,
+                OrderedFloat(PRIORITY_NEIGHBOURS_OF_CONTRADICTION),
+            ));
+        }
+
+        info!("Solution rate: {}", self.board().solution_rate());
+        Ok(new_jobs)
     }
 
     fn run<S>(
@@ -92,7 +137,7 @@ where
                 //    continue;
                 //}
 
-                warn!(
+                info!(
                     "Trying probe #{} {:?} with priority {}",
                     probe_counter, &point, priority.0
                 );
@@ -111,7 +156,7 @@ where
 
                     too_many => {
                         if too_many.len() > 1 {
-                            error!("Contradictions for {:?}: {:?}", &point, too_many);
+                            warn!("Contradictions for {:?}: {:?}", &point, too_many);
                             return Err(format!(
                                 "Too many contradictions found for {:?}: {:?}",
                                 &point, too_many
@@ -142,13 +187,14 @@ where
         }
 
         let total_time = start.elapsed();
-        warn!(
-            "Full solution: {}.{:06} sec",
-            total_time.as_secs(),
-            total_time.subsec_micros()
-        );
-        warn!("Contradictions found: {}", contradictions_number);
-
+        if contradictions_number > 0 {
+            warn!(
+                "Full solution: {}.{:06} sec",
+                total_time.as_secs(),
+                total_time.subsec_micros()
+            );
+            warn!("Contradictions found: {}", contradictions_number);
+        }
         Ok(impact)
     }
 
@@ -168,34 +214,6 @@ where
 
     fn board(&self) -> Ref<Board<B>> {
         self.board.borrow()
-    }
-
-    fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, OrderedFloat<f64>)>, String>
-    where
-        S: LineSolver<BlockType = B>,
-    {
-        let fixed_points = self.propagate_board::<S>(
-            Rc::clone(&self.board),
-            Some(vec![point.y()]),
-            Some(vec![point.x()]),
-        )?;
-        let mut new_jobs = vec![];
-
-        for new_point in fixed_points.keys() {
-            for neighbour in self.board().unsolved_neighbours(new_point) {
-                new_jobs.push((neighbour, OrderedFloat(PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED)));
-            }
-        }
-
-        for neighbour in self.board().unsolved_neighbours(&point) {
-            new_jobs.push((
-                neighbour,
-                OrderedFloat(PRIORITY_NEIGHBOURS_OF_CONTRADICTION),
-            ));
-        }
-
-        info!("Solution rate: {}", self.board().solution_rate());
-        Ok(new_jobs)
     }
 
     fn propagate_board<S>(
@@ -219,21 +237,6 @@ where
 
     fn is_solved(&self) -> bool {
         self.board().is_solved_full()
-    }
-
-    fn unsolved_cells(&self) -> PriorityQueue<Point, OrderedFloat<f64>> {
-        let mut queue = PriorityQueue::new();
-        let board = self.board();
-        let unsolved = board.unsolved_cells();
-        unsolved.iter().for_each(|p| {
-            let no_unsolved = board.unsolved_neighbours(p).len() as f64;
-            let row_rate = board.row_solution_rate(p.y());
-            let column_rate = board.column_solution_rate(p.x());
-            let priority = row_rate + column_rate - no_unsolved + 4.0;
-            queue.push(*p, OrderedFloat(priority));
-        });
-
-        queue
     }
 
     /// Try every color for given cell
@@ -269,7 +272,7 @@ where
                 }
                 changes.insert(assumption, Some(new_cells.len()));
             } else {
-                warn!("Contradiction found! {:?}: {:?}", &point, &assumption);
+                info!("Contradiction found! {:?}: {:?}", &point, &assumption);
                 changes.insert(assumption, None);
             }
         }

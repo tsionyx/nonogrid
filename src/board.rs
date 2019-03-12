@@ -123,7 +123,7 @@ impl fmt::Display for BinaryColor {
 }
 
 impl BinaryColor {
-    fn order(&self) -> u8 {
+    fn order(self) -> u8 {
         match self {
             BinaryColor::Undefined => 0,
             BinaryColor::White => 1,

@@ -69,8 +69,7 @@ where
         }
     }
 
-    pub fn run(&mut self) -> Result<(), String>
-    {
+    pub fn run(&mut self) -> Result<(), String> {
         if self.is_solved() {
             return Ok(());
         }
@@ -87,7 +86,7 @@ where
             "Starting depth-first search (initial rate is {:.4})",
             self.board().solution_rate()
         );
-        self.search(&directions, &vec![])?;
+        self.search(&directions, &[])?;
 
         let total_time = self.start_time.unwrap().elapsed();
         warn!(
@@ -145,8 +144,7 @@ where
         false
     }
 
-    fn add_solution(&mut self) -> Result<(), String>
-    {
+    fn add_solution(&mut self) -> Result<(), String> {
         // force to check the board
         self.probe_solver.run_unsolved::<S>()?;
 
@@ -210,7 +208,7 @@ where
         // For details, see https://ieeexplore.ieee.org/document/6476646
         //
         //let max = only_new_points.iter().max().unwrap_or(&&0);
-        //*max.clone() as f64
+        //*max as f64
 
         match only_new_points.as_slice() {
             [] => 0.0,
@@ -230,8 +228,7 @@ where
         &mut self,
         directions: &[(Point, B::Color)],
         path: &[(Point, B::Color)],
-    ) -> Result<bool, String>
-    {
+    ) -> Result<bool, String> {
         if self.is_explored(path) {
             return Ok(true);
         }
@@ -257,8 +254,7 @@ where
         &mut self,
         directions: &[(Point, B::Color)],
         path: &[(Point, B::Color)],
-    ) -> Result<bool, String>
-    {
+    ) -> Result<bool, String> {
         let depth = path.len();
         // going to dive deeper, so increment it (full_path's length)
         self.depth_reached = self.depth_reached.max(depth + 1);
@@ -280,7 +276,7 @@ where
             }
 
             let (point, color) = direction;
-            let cell_colors: HashSet<_> = self.board().cell(&point).variants();
+            let cell_colors: HashSet<B::Color> = self.board().cell(&point).variants();
 
             if !cell_colors.contains(&color) {
                 warn!(
@@ -292,7 +288,7 @@ where
 
             if cell_colors.len() == 1 {
                 warn!(
-                    "Only one color for cell {:?} left: {:?}. Solve it unconditionally",
+                    "Only one color for {:?} left: {:?}. Solve it unconditionally",
                     point, color
                 );
                 assert!(cell_colors.contains(&color));
@@ -304,7 +300,7 @@ where
                 let impact = self.probe_solver.run_unsolved::<S>();
                 if impact.is_err() {
                     // the whole `path` branch of a search tree is a dead end
-                    warn!("The last possible color {:?} for the cell {:?} lead to the contradiction. The path {:?} is invalid", color, point, path);
+                    warn!("The last possible color {:?} for the {:?} lead to the contradiction. The path {:?} is invalid", color, point, path);
                     // self._add_search_result(path, False)
                     return Ok(false);
                 } else {
@@ -315,7 +311,7 @@ where
                 // self._add_search_result(path, rate)
                 if self.board().is_solved_full() {
                     self.add_solution()?;
-                    warn!("The only color {:?} for the cell {:?} lead to full solution. No need to traverse the path {:?} anymore", color, point, path);
+                    warn!("The only color {:?} for the {:?} lead to full solution. No need to traverse the path {:?} anymore", color, point, path);
                     return Ok(true);
                 }
                 continue;
@@ -325,7 +321,7 @@ where
             full_path.push(direction);
 
             if self.is_explored(&full_path) {
-                info!("The path {:?} already explored", full_path);
+                info!("The path {:?} already explored", &full_path);
                 continue;
             }
 
@@ -339,7 +335,7 @@ where
             );
             // self._add_search_result(path, rate)
 
-            let state_result = self.try_state(direction, &path);
+            let state_result = self.try_direction(&full_path);
             //let is_solved = board.is_solved_full();
             self.board.borrow_mut().restore(guess_save);
             self.set_explored(&full_path);
@@ -348,66 +344,161 @@ where
                 return state_result;
             }
 
-            let state_result = state_result.unwrap();
+            let success = state_result.unwrap();
 
-            //if not success:
-            //    # TODO: add backjumping here
-            //    try:
-            //        LOG.warning(
-            //            "Unset the color %s for cell '%s'. Solve it unconditionally",
-            //            color, point)
-            //        board.unset_color(direction)
-            //        self._solve_without_search()
-            //        unconditional = True
-            //    except ValueError:
-            //        # the whole `path` branch of a search tree is a dead end
-            //        LOG.warning(
-            //            "The last possible color '%s' for the cell '%s' "
-            //            "lead to the contradiction. "
-            //            "The whole branch (depth=%d) is invalid. ", color, point, depth)
-            //        # self._add_search_result(path, False)
-            //        return False
-            //
-            //    # rate = board.solution_rate
-            //    # self._add_search_result(path, rate)
-            //    if board.is_solved_full:
-            //        self._add_solution()
-            //        LOG.warning(
-            //            "The negation of color '%s' for the cell '%s' lead to full solution. "
-            //            "No need to traverse the path %s anymore", color, point, path)
-            //        return True
-            //
-            //if not success or board.is_solved_full:
-            //    # immediately try the other colors as well
-            //    # if all of them goes to the dead end,
-            //    # then the parent path is a dead end
-            //    states_to_try = []
-            //    for cc in cell_colors:
-            //        if cc == color:
-            //            continue
-            //
-            //        states_to_try.append(CellState.from_position(point, cc))
-            //
-            //    # if all(self._is_explored(path + (direction,)) for direction in states_to_try):
-            //    #     LOG.warning('All other colors (%s) of cell %s already explored',
-            //    #                 states_to_try, cell)
-            //    #     return True
-            //
-            //    for direction in states_to_try:
-            //        if direction not in directions:
-            //            directions.appendleft(direction)
+            if !success {
+                // TODO: add backjumping here
+                warn!(
+                    "Unset the color {:?} for {:?}. Solve it unconditionally",
+                    color, point
+                );
+
+                let err = self.board.borrow_mut().unset_color(&point, &color);
+                if err.is_err() {
+                    // the whole `path` branch of a search tree is a dead end
+                    warn!(
+                        "The last possible color {:?} for the {:?} cannot be unset. The whole branch (depth={}) is invalid.",
+                        color, point, depth);
+                    // self._add_search_result(path, False)
+                    return Ok(false);
+                }
+
+                let err = self.probe_solver.run_unsolved::<S>();
+                if err.is_err() {
+                    // the whole `path` branch of a search tree is a dead end
+                    warn!(
+                        "The last possible color {:?} for the {:?} lead to the contradiction. The whole branch (depth={}) is invalid.",
+                        color, point, depth);
+                    // self._add_search_result(path, False)
+                    return Ok(false);
+                }
+
+                // rate = board.solution_rate
+                // self._add_search_result(path, rate)
+                if self.board().is_solved_full() {
+                    self.add_solution()?;
+                    warn!(
+                        "The negation of color {:?} for the {:?} lead to full solution. No need to traverse the path {:?} anymore.",
+                          color, point, path);
+                    return Ok(true);
+                }
+            }
+
+            if !success || self.board().is_solved_full() {
+                // immediately try the other colors as well
+                // if all of them goes to the dead end,
+                // then the parent path is a dead end
+
+                let states_to_try: Vec<_> = cell_colors
+                    .iter()
+                    .filter_map(|&other_color| {
+                        if other_color == color {
+                            None
+                        } else {
+                            Some((point, other_color))
+                        }
+                    })
+                    .collect();
+
+                // if all(self.is_explored(path + (direction,)) for direction in states_to_try) {
+                //     warn!("All other colors ({:?}) of {:?} already explored",
+                //           states_to_try, cell)
+                //     return true;
+                // }
+
+                for direction in states_to_try {
+                    //if !directions.contains(&direction) {
+                    directions.push(direction);
+                    //}
+                }
+            }
         }
-        //TODO: implement
         Ok(true)
     }
 
-    fn try_state(
+    /// Trying to search for solutions in the given direction.
+    /// At first it set the given state and get a list of the
+    /// further jobs for finding the contradictions.
+    /// Later that jobs will be used as candidates for a deeper search.
+    fn try_direction(&mut self, path: &[(Point, B::Color)]) -> Result<bool, String> {
+        let depth = path.len();
+        let direction = *path.last().unwrap();
+
+        // add every cell to the jobs queue
+        let mut probe_jobs = self.probe_solver.unsolved_cells();
+        let new_jobs = self.set_guess(direction);
+        match new_jobs {
+            // update with more prioritized cells
+            Ok(new_jobs) => {
+                for (new_job, priority) in new_jobs {
+                    probe_jobs.push(new_job, priority);
+                }
+            }
+            Err(err) => {
+                warn!("Guess {:?} failed: {}", direction, err);
+                //self._add_search_result(path, False)
+                return Ok(false);
+            }
+        }
+
+        if self.limits_reached(depth) {
+            return Ok(true);
+        }
+
+        let impact = self.probe_solver.run::<S>(&mut probe_jobs);
+
+        match impact {
+            Ok(impact) => {
+                let rate = self.board().solution_rate();
+                info!("Reached rate {:.4} on {:?} path", rate, path);
+                //self._add_search_result(path, rate)
+
+                if self.limits_reached(depth) || self.board().is_solved_full() {
+                    return Ok(true);
+                }
+
+                //let cells_left = round((1 - rate) * board.width * board.height);
+                //LOG.info('Unsolved cells left: %d', cells_left)
+
+                let directions = self.choose_directions(&impact);
+                if directions.is_empty() {
+                    Ok(true)
+                } else {
+                    self.search(&directions, path)
+                }
+            }
+            Err(err) => {
+                warn!("Guess {:?} failed on probing stage: {}", direction, err);
+                //self._add_search_result(path, False)
+                Ok(false)
+            }
+        }
+    }
+
+    fn set_guess(
         &mut self,
-        direction: (Point, B::Color),
-        path: &[(Point, B::Color)],
-    ) -> Result<bool, String> {
-        // TODO
-        Ok(true)
+        guess: (Point, B::Color),
+    ) -> Result<Vec<(Point, OrderedFloat<f64>)>, String> {
+        let (point, color) = guess;
+
+        if !self.board().cell(&point).variants().contains(&color) {
+            warn!("The probe is useless: color {:?} already unset", color);
+            return Ok(vec![]);
+        }
+
+        //let save = self.board().make_snapshot();
+
+        let mut probes = vec![];
+        self.board().set_color(&point, &color);
+        for (new_point, priority) in self.probe_solver.propagate_point::<S>(&point)? {
+            probes.push((new_point, priority));
+        }
+        if self.board().is_solved_full() {
+            self.add_solution()?;
+            return Ok(vec![]);
+        }
+
+        Ok(probes)
     }
 
     /// Whether we reached the defined limits:
