@@ -24,6 +24,8 @@
 - do I need RefCell for cells? (use https://crates.io/crates/nalgebra or https://crates.io/crates/rulinalg)
 - remove contradiction mode?
 
+- why different results on different run?
+
 - add backtracking; compare with python (all the others)
 
 - colored; compare with python (all the colored)

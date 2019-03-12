@@ -263,6 +263,10 @@ where
         let mut search_counter = 0u32;
 
         let mut directions = directions.to_vec();
+
+        // push and pop from the end, so the most prioritized items are on the left
+        directions.reverse();
+
         while let Some(direction) = directions.pop() {
             let total_number_of_directions = directions.len() + 1;
             search_counter += 1;
