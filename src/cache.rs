@@ -1,6 +1,7 @@
 use cached::Cached;
-use std::collections::HashMap;
 use std::hash::Hash;
+
+use hashbrown::HashMap;
 
 /// The copy of 'cached' crate's structure
 /// https://github.com/jaemk/cached/blob/master/src/stores.rs#L20
