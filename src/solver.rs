@@ -28,8 +28,8 @@ where
     if !board.borrow().is_solved_full() {
         warn!("Trying to solve with backtracking");
         let mut solver =
-            Solver::<_, P>::with_options(Rc::clone(&board), max_solutions, timeout, max_depth);
-        solver.run::<S>()?;
+            Solver::<_, P, S>::with_options(Rc::clone(&board), max_solutions, timeout, max_depth);
+        solver.run()?;
         solver.print_cache_info();
     }
 

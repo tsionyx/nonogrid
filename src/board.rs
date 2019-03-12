@@ -1,6 +1,7 @@
 use super::utils;
 
 use std::cell::RefCell;
+use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt;
 use std::fmt::Debug;
@@ -37,6 +38,8 @@ where
         + Hash
         + Copy
         + Clone
+        + PartialOrd
+        + Ord
         + Add<Output = Self>
         + Sub<Output = Result<Self, String>>,
 {
@@ -50,7 +53,7 @@ where
         Self: Sized;
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd)]
 pub enum BinaryColor {
     Undefined,
     White,
@@ -116,6 +119,23 @@ impl fmt::Display for BinaryColor {
             BlackOrWhite => '?',
         };
         write!(f, "{}", symbol)
+    }
+}
+
+impl BinaryColor {
+    fn order(&self) -> u8 {
+        match self {
+            BinaryColor::Undefined => 0,
+            BinaryColor::White => 1,
+            BinaryColor::Black => 2,
+            _ => 3,
+        }
+    }
+}
+
+impl Ord for BinaryColor {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.order().cmp(&other.order())
     }
 }
 
@@ -420,6 +440,10 @@ where
                 Rc::new(RefCell::new(row))
             })
             .collect()
+    }
+
+    pub fn restore(&mut self, cells: Vec<Rc<RefCell<Vec<B::Color>>>>) {
+        self.cells = cells;
     }
 }
 

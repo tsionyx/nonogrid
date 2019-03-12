@@ -105,7 +105,7 @@ where
                 match contradictions.as_slice() {
                     [] => {}
                     [(color, None)] => {
-                        contradiction = Some((point, color.clone()));
+                        contradiction = Some((point, *color));
                         break;
                     }
 
