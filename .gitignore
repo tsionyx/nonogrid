@@ -6,3 +6,7 @@
 # IDEA
 /.idea/workspace.xml
 /.idea/misc.xml
+
+# profiles and benchmarks
+*.log
+perf.data*
