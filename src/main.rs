@@ -82,7 +82,7 @@ fn main() {
         if log_enabled!(Level::Warn) {
             let search_tree = backtracking.search_tree.borrow();
             if !search_tree.is_empty() {
-                println!("{}", search_tree);
+                println!("Searching progress: {}", search_tree);
             }
         }
     }

@@ -122,26 +122,78 @@ where
     }
 }
 
+impl<K, V> SearchTree<K, V>
+where
+    K: fmt::Debug,
+    V: Clone + fmt::Display,
+{
+    fn format(&self, spaces: usize, indent_size: usize) -> String {
+        if self.children.is_empty() {
+            self.format_value()
+        } else {
+            self.format_with_children(spaces, indent_size)
+        }
+    }
+
+    fn format_value(&self) -> String {
+        if let Some(value) = self.value.clone() {
+            format!("{:.6}", value)
+        } else {
+            "None".to_string()
+        }
+    }
+
+    fn format_with_children(&self, spaces: usize, indent_size: usize) -> String {
+        let mut res = vec![
+            format!("{}{}", indent_space(spaces * indent_size), '{'),
+            format!(
+                "{}{:?}: {},",
+                indent_space((spaces + 1) * indent_size),
+                "value",
+                self.format_value()
+            ),
+            format!(
+                "{}{:?}: {}",
+                indent_space((spaces + 1) * indent_size),
+                "children",
+                '{'
+            ),
+        ];
+
+        let last_index = self.children.len() - 1;
+
+        for (i, (child_key, child)) in self.children.iter().enumerate() {
+            let child_format = child.borrow().format(spaces + 2, indent_size);
+            let trail_comma = if i == last_index { "" } else { "," };
+            res.push(format!(
+                "{}{:?}: {}{}",
+                indent_space((spaces + 2) * indent_size),
+                child_key,
+                child_format.trim_start(),
+                trail_comma,
+            ));
+        }
+
+        res.extend_from_slice(&[
+            format!("{}{}", indent_space((spaces + 1) * indent_size), '}'),
+            format!("{}{}", indent_space(spaces * indent_size), '}'),
+        ]);
+        res.join("\n")
+    }
+}
+
+fn indent_space(size: usize) -> String {
+    //String::from_utf8(vec![b' '; size]).unwrap()
+    (0..size).map(|_| " ").collect()
+}
+
 impl<K, V> fmt::Display for SearchTree<K, V>
 where
-    K: Eq + Hash + fmt::Debug,
-    V: fmt::Debug,
+    K: fmt::Debug,
+    V: Clone + fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.children.is_empty() {
-            write!(f, "{:?}", self.value)
-        } else {
-            let mut dict = HashMap::new();
-            dict.insert("value", format!("{:?}", self.value));
-
-            let mut children = HashMap::new();
-            for (child_key, child) in self.children.iter() {
-                children.insert(child_key, format!("{}", child.borrow()));
-            }
-            dict.insert("children", format!("{:?}", children));
-
-            write!(f, "{:?}", dict)
-        }
+        write!(f, "{}", self.format(0, 2))
     }
 }
 
