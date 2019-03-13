@@ -112,19 +112,15 @@ where
     where
         S: LineSolver<BlockType = B>,
     {
-        let mut impact = HashMap::new();
-
-        if self.is_solved() {
-            return Ok(impact);
-        }
-
         let start = Instant::now();
         let mut contradictions_number = 0;
         //let mut iteration_probes = HashSet::new();
 
-        loop {
+        let impact = loop {
+            let mut impact = HashMap::new();
+
             if self.is_solved() {
-                break;
+                break impact;
             }
 
             let mut contradiction = None;
@@ -182,9 +178,9 @@ where
                     probes.push(point, priority);
                 }
             } else {
-                break;
+                break impact;
             }
-        }
+        };
 
         let total_time = start.elapsed();
         if contradictions_number > 0 {
