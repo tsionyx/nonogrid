@@ -84,8 +84,8 @@ where
         let fixed_points = self.run_propagation::<S>(point)?;
         let mut new_jobs = vec![];
 
-        for new_point in fixed_points.keys() {
-            for neighbour in self.board().unsolved_neighbours(new_point) {
+        for new_point in fixed_points {
+            for neighbour in self.board().unsolved_neighbours(&new_point) {
                 new_jobs.push((neighbour, OrderedFloat(PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED)));
             }
         }
@@ -208,10 +208,7 @@ where
         self.board.borrow()
     }
 
-    fn run_propagation<S>(
-        &self,
-        point: &Point,
-    ) -> Result<HashMap<Point, B::Color>, String>
+    fn run_propagation<S>(&self, point: &Point) -> Result<Vec<Point>, String>
     where
         S: LineSolver<BlockType = B>,
     {

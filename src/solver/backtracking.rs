@@ -338,7 +338,7 @@ where
                 (point, OrderedFloat(Self::rate_by_impact(values)))
             })
             .collect();
-        points_rate.sort_by_key(|&(_point, rate)| Reverse(rate));
+        points_rate.sort_by_key(|&(point, rate)| (Reverse(rate), point));
         //dbg!(&points_rate[..10]);
 
         points_rate

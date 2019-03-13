@@ -24,7 +24,7 @@
 - do I need RefCell for cells? (use https://crates.io/crates/nalgebra or https://crates.io/crates/rulinalg)
 - remove contradiction mode?
 
-- why different results on different run?
+- play with CHOOSE_STRATEGY and the order of colors for given points
 
 - add backtracking; compare with python (all the others)
 

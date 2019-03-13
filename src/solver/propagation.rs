@@ -3,7 +3,7 @@ use super::super::cache::UnboundCache;
 use super::line::LineSolver;
 
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -64,7 +64,7 @@ where
         self.cache.clone()
     }
 
-    pub fn run<S>(&self) -> Result<HashMap<Point, B::Color>, String>
+    pub fn run<S>(&self) -> Result<Vec<Point>, String>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -156,7 +156,7 @@ where
             add_job(new_job, priority);
         }
 
-        let mut solved_cells = HashMap::new();
+        let mut solved_cells = vec![];
 
         while let Some(((is_column, index), priority)) = Self::get_top_job(&mut line_jobs) {
             let new_jobs = self.solve_row::<S>(index, is_column)?;
@@ -165,13 +165,13 @@ where
                 let x = index;
                 new_jobs
                     .iter()
-                    .map(|((_, y), color)| (Point::new(x, *y), *color))
+                    .map(|((_, y), _color)| Point::new(x, *y))
                     .collect()
             } else {
                 let y = index;
                 new_jobs
                     .iter()
-                    .map(|((_, x), color)| (Point::new(*x, y), *color))
+                    .map(|((_, x), _color)| Point::new(*x, y))
                     .collect()
             };
 
