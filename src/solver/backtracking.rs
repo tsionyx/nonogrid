@@ -95,7 +95,7 @@ where
     }
 
     fn add(this: Rc<RefCell<Self>>, path: &[K], value: Option<V>) {
-        if path.is_empty() {
+        if path.is_empty() && this.borrow_mut().value.is_none() {
             this.borrow_mut().value = value;
             return;
         }
