@@ -15,7 +15,7 @@ pub fn run<B, S, P>(
     max_solutions: Option<usize>,
     timeout: Option<u32>,
     max_depth: Option<usize>,
-) -> Result<(), String>
+) -> Result<Option<Solver<B, P, S>>, String>
 where
     B: Block,
     S: line::LineSolver<BlockType = B>,
@@ -30,8 +30,8 @@ where
         let mut solver =
             Solver::<_, P, S>::with_options(Rc::clone(&board), max_solutions, timeout, max_depth);
         solver.run()?;
-        solver.print_cache_info();
+        return Ok(Some(solver));
     }
 
-    Ok(())
+    Ok(None)
 }

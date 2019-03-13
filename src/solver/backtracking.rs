@@ -30,7 +30,7 @@ where
     max_depth: Option<usize>,
 
     // dynamic variables
-    solutions: Vec<Solution<B>>,
+    pub solutions: Vec<Solution<B>>,
     depth_reached: usize,
     start_time: Option<Instant>,
     explored_paths: HashSet<Vec<(Point, B::Color)>>,

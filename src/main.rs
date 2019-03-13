@@ -59,7 +59,7 @@ fn main() {
         board: Rc::clone(&board),
     };
 
-    solver::run::<_, DynamicSolver<_>, FullProbe1<_>>(
+    let backtracking = solver::run::<_, DynamicSolver<_>, FullProbe1<_>>(
         Rc::clone(&board),
         search_options.0,
         search_options.1,
@@ -67,6 +67,18 @@ fn main() {
     )
     .unwrap();
     println!("{}", r.render());
+
+    if let Some(backtracking) = backtracking {
+        let solutions = &backtracking.solutions;
+        if !solutions.is_empty() && (!board.borrow().is_solved_full() || solutions.len() > 1) {
+            println!("Backtracking found {} solutions:", solutions.len());
+            for solution in solutions.iter() {
+                board.borrow_mut().restore(solution.clone());
+                println!("{}", r.render());
+            }
+        }
+        backtracking.print_cache_info();
+    }
 }
 
 fn board_from_args<B>(matches: &ArgMatches) -> Board<B>
