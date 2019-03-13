@@ -261,7 +261,6 @@ where
             total_time.subsec_micros(),
             self.board().solution_rate(),
         );
-        warn!("Depth reached: {}", self.depth_reached);
 
         Ok(())
     }

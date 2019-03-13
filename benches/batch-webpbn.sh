@@ -41,12 +41,17 @@ function long_solvers() {
     # use this function to get the longest solved puzzles
     # you have to specify log file with LOG=warn and the threshold in seconds
     #
-    # long_solvers batch.log 3  # to show every puzzle that solved more than 3 seconds
+    # $ long_solvers batch.log 3  # to show every puzzle that solved more than 3 seconds
+    #
+    # You can use the total time results from this function
+    # to quickly find information about the solution (depth, rate, etc):
+    # just issue the following command by providing grep with the total time for given puzzle:
+    # $ cat batch.log | grep -F '3599.93' -B4 -A2
 
     log_file=$1
     threshold=$2
     while read t; do
-        id=$(grep -P ${t} ${log_file} -A3 | grep -oP '#\K(\d+)' | awk '{print $1-1}')
+        id=$(grep -F ${t} ${log_file} -A3 | grep -oP '#\K(\d+)' | awk '{print $1-1}')
         echo "$id: $t"
     done < <(grep -oP 'Total: \K(.+)' ${log_file} | awk '$1 > t' t=${threshold})
 }
