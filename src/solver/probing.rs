@@ -81,11 +81,7 @@ where
     where
         S: LineSolver<BlockType = B>,
     {
-        let fixed_points = self.propagate_board::<S>(
-            Rc::clone(&self.board),
-            Some(vec![point.y()]),
-            Some(vec![point.x()]),
-        )?;
+        let fixed_points = self.run_propagation::<S>(point)?;
         let mut new_jobs = vec![];
 
         for new_point in fixed_points.keys() {
@@ -212,17 +208,18 @@ where
         self.board.borrow()
     }
 
-    fn propagate_board<S>(
+    fn run_propagation<S>(
         &self,
-        board: Rc<RefCell<Board<B>>>,
-        rows: Option<Vec<usize>>,
-        columns: Option<Vec<usize>>,
+        point: &Point,
     ) -> Result<HashMap<Point, B::Color>, String>
     where
         S: LineSolver<BlockType = B>,
     {
+        let rows = Some(vec![point.y()]);
+        let columns = Some(vec![point.x()]);
+
         let cached_solver = propagation::Solver::with_options(
-            board,
+            Rc::clone(&self.board),
             rows,
             columns,
             false,
@@ -250,16 +247,11 @@ where
         let vars = self.board().cell(&point).variants();
 
         for assumption in vars {
-            let board_temp = self.board().clone();
-            board_temp.set_color(&point, &assumption);
+            let save = self.board().make_snapshot();
+            self.board.borrow_mut().set_color(&point, &assumption);
 
-            //let diff = self.board().diff(&board_temp);
-
-            let solved = self.propagate_board::<S>(
-                Rc::new(RefCell::new(board_temp)),
-                Some(vec![point.y()]),
-                Some(vec![point.x()]),
-            );
+            let solved = self.run_propagation::<S>(&point);
+            self.board.borrow_mut().restore(save);
 
             if let Ok(new_cells) = solved {
                 if !new_cells.is_empty() {
