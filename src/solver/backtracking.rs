@@ -5,6 +5,7 @@ use super::probing::{Impact, ProbeSolver};
 use std::cell::{Ref, RefCell};
 use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::rc::Rc;
@@ -34,6 +35,7 @@ where
     depth_reached: usize,
     start_time: Option<Instant>,
     explored_paths: HashSet<Vec<(Point, B::Color)>>,
+    pub search_tree: SearchTreeRef<(Point, B::Color), f64>,
 
     _phantom: PhantomData<S>,
 }
@@ -47,6 +49,100 @@ enum ChoosePixel {
     Sqrt,
     MinLogm,
     MinLogd,
+}
+
+type SearchTreeRef<K, V> = Rc<RefCell<SearchTree<K, V>>>;
+
+pub struct SearchTree<K, V> {
+    value: Option<V>,
+    children: Vec<(K, SearchTreeRef<K, V>)>,
+}
+
+impl<K, V> SearchTree<K, V>
+where
+    K: PartialEq + Clone,
+    V: Clone,
+{
+    fn new() -> Self {
+        Self::with_option(None)
+    }
+
+    #[allow(dead_code)]
+    fn with_value(value: V) -> Self {
+        Self::with_option(Some(value))
+    }
+
+    fn with_option(value: Option<V>) -> Self {
+        Self {
+            value,
+            children: vec![],
+        }
+    }
+
+    fn new_children(&mut self, key: K, value: Option<V>) {
+        self.children
+            .push((key, Rc::new(RefCell::new(Self::with_option(value)))));
+    }
+
+    fn get(&self, key: &K) -> Option<Rc<RefCell<Self>>> {
+        self.children.iter().find_map(|(child_key, child)| {
+            if child_key == key {
+                Some(Rc::clone(child))
+            } else {
+                None
+            }
+        })
+    }
+
+    fn add(this: Rc<RefCell<Self>>, path: &[K], value: Option<V>) {
+        if path.is_empty() {
+            this.borrow_mut().value = value;
+            return;
+        }
+
+        let mut current = this;
+        for (i, node) in path.iter().enumerate() {
+            let child = current.borrow().get(node);
+            if child.is_none() {
+                let child_value = if i == path.len() - 1 {
+                    value.clone()
+                } else {
+                    None
+                };
+                current.borrow_mut().new_children(node.clone(), child_value);
+            }
+
+            let child = current.borrow().get(node).unwrap();
+            current = child;
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.value.is_none() && self.children.is_empty()
+    }
+}
+
+impl<K, V> fmt::Display for SearchTree<K, V>
+where
+    K: Eq + Hash + fmt::Debug,
+    V: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.children.is_empty() {
+            write!(f, "{:?}", self.value)
+        } else {
+            let mut dict = HashMap::new();
+            dict.insert("value", format!("{:?}", self.value));
+
+            let mut children = HashMap::new();
+            for (child_key, child) in self.children.iter() {
+                children.insert(child_key, format!("{}", child.borrow()));
+            }
+            dict.insert("children", format!("{:?}", children));
+
+            write!(f, "{:?}", dict)
+        }
+    }
 }
 
 impl<B, P, S> Solver<B, P, S>
@@ -76,6 +172,7 @@ where
             depth_reached: 0,
             start_time: None,
             explored_paths: HashSet::new(),
+            search_tree: Rc::new(RefCell::new(SearchTree::new())),
             _phantom: PhantomData,
         }
     }
@@ -360,7 +457,7 @@ where
                 "Trying direction ({}/{}): {:?} (depth={}, rate={:.4}, previous={:?})",
                 search_counter, total_number_of_directions, &direction, depth, rate, path
             );
-            // self._add_search_result(path, rate)
+            self.add_search_score(path, rate);
 
             let state_result = self.try_direction(&full_path);
             //let is_solved = board.is_solved_full();
@@ -443,6 +540,14 @@ where
         Ok(true)
     }
 
+    fn add_search_score(&mut self, path: &[(Point, B::Color)], score: f64) {
+        SearchTree::add(Rc::clone(&self.search_tree), path, Some(score));
+    }
+
+    fn add_search_deadend(&mut self, path: &[(Point, B::Color)]) {
+        SearchTree::add(Rc::clone(&self.search_tree), path, None);
+    }
+
     /// Trying to search for solutions in the given direction.
     /// At first it set the given state and get a list of the
     /// further jobs for finding the contradictions.
@@ -463,7 +568,7 @@ where
             }
             Err(err) => {
                 warn!("Guess {:?} failed: {}", direction, err);
-                //self._add_search_result(path, False)
+                self.add_search_deadend(path);
                 return Ok(false);
             }
         }
@@ -478,7 +583,7 @@ where
             Ok(impact) => {
                 let rate = self.board().solution_rate();
                 info!("Reached rate {:.4} on {:?} path", rate, path);
-                //self._add_search_result(path, rate)
+                self.add_search_score(path, rate);
 
                 if self.limits_reached(depth) || self.board().is_solved_full() {
                     return Ok(true);
@@ -496,7 +601,7 @@ where
             }
             Err(err) => {
                 warn!("Guess {:?} failed on probing stage: {}", direction, err);
-                //self._add_search_result(path, False)
+                self.add_search_deadend(path);
                 Ok(false)
             }
         }

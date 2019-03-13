@@ -23,6 +23,7 @@ extern crate log;
 extern crate clap;
 
 use clap::{App, ArgGroup, ArgMatches};
+use log::Level;
 
 fn main() {
     env_logger::init();
@@ -78,6 +79,12 @@ fn main() {
             }
         }
         backtracking.print_cache_info();
+        if log_enabled!(Level::Warn) {
+            let search_tree = backtracking.search_tree.borrow();
+            if !search_tree.is_empty() {
+                println!("{}", search_tree);
+            }
+        }
     }
 }
 
