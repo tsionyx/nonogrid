@@ -431,7 +431,10 @@ where
         // going to dive deeper, so increment it (full_path's length)
         self.depth_reached = self.depth_reached.max(depth + 1);
 
-        let mut unconditional = false;
+        // this variable shows whether the board changed after the last probing
+        // when the probing occurs it should immediately set to 'false'
+        // to prevent succeeded useless probing on the same board
+        let mut board_changed = true;
         let mut search_counter = 0u32;
 
         let mut directions = directions.to_vec();
@@ -468,19 +471,19 @@ where
                     point, color
                 );
                 assert!(cell_colors.contains(&color));
-                if unconditional {
+                if !board_changed {
                     warn!("The board does not change since the last unconditional solving, skip.");
                     continue;
                 }
 
                 let impact = self.probe_solver.run_unsolved::<S>();
+                board_changed = false;
+
                 if impact.is_err() {
                     // the whole `path` branch of a search tree is a dead end
                     warn!("The last possible color {:?} for the {:?} lead to the contradiction. The path {:?} is invalid", color, point, path);
                     // self._add_search_result(path, False)
                     return Ok(false);
-                } else {
-                    unconditional = true;
                 }
 
                 // rate = board.solution_rate
@@ -501,7 +504,6 @@ where
                 continue;
             }
 
-            unconditional = false;
             let rate = self.board().solution_rate();
             let guess_save = self.board().make_snapshot();
 
@@ -530,6 +532,7 @@ where
                 );
 
                 let err = self.board.borrow_mut().unset_color(&point, &color);
+                board_changed = true;
                 if err.is_err() {
                     // the whole `path` branch of a search tree is a dead end
                     warn!(
@@ -539,7 +542,13 @@ where
                     return Ok(false);
                 }
 
+                if !board_changed {
+                    warn!("The board does not change since the last unconditional solving, skip.");
+                    continue;
+                }
+
                 let err = self.probe_solver.run_unsolved::<S>();
+                board_changed = false;
                 if err.is_err() {
                     // the whole `path` branch of a search tree is a dead end
                     warn!(
@@ -583,9 +592,9 @@ where
                 // }
 
                 for direction in states_to_try {
-                    //if !directions.contains(&direction) {
-                    directions.push(direction);
-                    //}
+                    if !directions.contains(&direction) {
+                        directions.push(direction);
+                    }
                 }
             }
         }
