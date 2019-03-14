@@ -56,9 +56,7 @@ fn main() {
     let board = Rc::new(RefCell::new(board));
     let search_options = search_options_from_args(&matches);
 
-    let r = ShellRenderer {
-        board: Rc::clone(&board),
-    };
+    let r = ShellRenderer::with_board(Rc::clone(&board));
 
     let backtracking = solver::run::<_, DynamicSolver<_>, FullProbe1<_>>(
         Rc::clone(&board),

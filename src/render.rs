@@ -5,14 +5,19 @@ use std::fmt::Display;
 use std::rc::Rc;
 
 pub trait Renderer {
+    fn with_board(board: Rc<RefCell<Board<BinaryBlock>>>) -> Self;
     fn render(&self) -> String;
 }
 
 pub struct ShellRenderer {
-    pub board: Rc<RefCell<Board<BinaryBlock>>>,
+    board: Rc<RefCell<Board<BinaryBlock>>>,
 }
 
 impl Renderer for ShellRenderer {
+    fn with_board(board: Rc<RefCell<Board<BinaryBlock>>>) -> Self {
+        Self { board }
+    }
+
     fn render(&self) -> String {
         let full_width = self.side_width() + self.board().width();
 
