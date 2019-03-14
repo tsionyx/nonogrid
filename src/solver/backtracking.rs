@@ -357,7 +357,7 @@ where
             .collect::<Vec<_>>()
     }
 
-    const CHOOSE_STRATEGY: ChoosePixel = ChoosePixel::Max;
+    const CHOOSE_STRATEGY: ChoosePixel = ChoosePixel::Sqrt;
 
     fn rate_by_impact(impact: Vec<&(usize, f64)>) -> f64 {
         let sizes_only: Vec<_> = impact
