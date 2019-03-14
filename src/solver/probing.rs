@@ -59,7 +59,7 @@ where
     type BlockType = B;
 
     fn new(board: Rc<RefCell<Board<B>>>) -> Self {
-        Self::with_cache(board, 10_000)
+        Self::with_cache(board, 100_000)
     }
 
     fn unsolved_cells(&self) -> PriorityQueue<Point, OrderedFloat<f64>> {

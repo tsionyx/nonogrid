@@ -1,5 +1,5 @@
 use super::super::board::{Block, Board, Color, Description, Point};
-use super::super::cache::UnboundCache;
+use super::super::cache::GrowableCache;
 use super::line::LineSolver;
 
 use std::cell::RefCell;
@@ -14,13 +14,15 @@ use priority_queue::PriorityQueue;
 
 pub type CacheKey<B> = (Rc<Description<B>>, Rc<Vec<<B as Block>::Color>>);
 pub type CacheValue<B> = Result<Rc<Vec<<B as Block>::Color>>, String>;
-pub type ExternalCache<B> = Rc<RefCell<UnboundCache<CacheKey<B>, CacheValue<B>>>>;
+pub type ExternalCache<B> = Rc<RefCell<GrowableCache<CacheKey<B>, CacheValue<B>>>>;
 
 pub fn new_cache<B>(capacity: usize) -> ExternalCache<B>
 where
     B: Block,
 {
-    Rc::new(RefCell::new(UnboundCache::with_capacity(capacity)))
+    Rc::new(RefCell::new(GrowableCache::with_capacity_and_increase(
+        capacity, 2,
+    )))
 }
 
 pub struct Solver<B>
