@@ -2,7 +2,6 @@ use super::board::{Block, Board, Description};
 
 use std::fs;
 use std::marker::PhantomData;
-use std::rc::Rc;
 
 use self::sxd_xpath::nodeset::{Node, Nodeset};
 use self::sxd_xpath::{evaluate_xpath, Value};
@@ -73,12 +72,11 @@ where
         )
     }
 
-    pub(in super::parser) fn parse_clues(descriptions: &str) -> Vec<Rc<Description<B>>> {
+    pub(in super::parser) fn parse_clues(descriptions: &str) -> Vec<Description<B>> {
         descriptions
             .lines()
             .map(|line| Self::parse_line(line).unwrap_or_else(|| vec![]))
             .flatten()
-            .map(Rc::new)
             .collect()
     }
 }
@@ -143,7 +141,7 @@ where
     pub(in super::parser) fn parse_clues(
         package: &sxd_document::Package,
         type_: &str,
-    ) -> Vec<Rc<Description<B>>> {
+    ) -> Vec<Description<B>> {
         let document = package.as_document();
         let value = evaluate_xpath(&document, &format!(".//clues[@type='{}']/line", type_))
             .expect("XPath evaluation failed");
@@ -155,12 +153,11 @@ where
         }
     }
 
-    fn get_clues(descriptions: &Nodeset) -> Vec<Rc<Description<B>>> {
+    fn get_clues(descriptions: &Nodeset) -> Vec<Description<B>> {
         descriptions
             .document_order()
             .iter()
             .map(Self::parse_line)
-            .map(Rc::new)
             .collect()
     }
 }
@@ -202,7 +199,6 @@ where
 mod tests {
     use super::super::board::{BinaryBlock, Description};
     use super::MyFormat;
-    use std::rc::Rc;
 
     fn block(n: usize) -> BinaryBlock {
         BinaryBlock(n)
@@ -212,7 +208,7 @@ mod tests {
     fn parse_single() {
         assert_eq!(
             MyFormat::parse_clues(&String::from("1")),
-            vec![Rc::new(Description::new(vec![block(1)]))]
+            vec![Description::new(vec![block(1)])]
         )
     }
 
@@ -221,8 +217,8 @@ mod tests {
         assert_eq!(
             MyFormat::parse_clues(&String::from("1\n2")),
             vec![
-                Rc::new(Description::new(vec![block(1)])),
-                Rc::new(Description::new(vec![block(2)]))
+                Description::new(vec![block(1)]),
+                Description::new(vec![block(2)])
             ]
         )
     }
@@ -232,8 +228,8 @@ mod tests {
         assert_eq!(
             MyFormat::parse_clues(&String::from("1, 2")),
             vec![
-                Rc::new(Description::new(vec![block(1)])),
-                Rc::new(Description::new(vec![block(2)]))
+                Description::new(vec![block(1)]),
+                Description::new(vec![block(2)])
             ]
         )
     }
@@ -243,9 +239,9 @@ mod tests {
         assert_eq!(
             MyFormat::parse_clues(&String::from("1, 2,\n3")),
             vec![
-                Rc::new(Description::new(vec![block(1)])),
-                Rc::new(Description::new(vec![block(2)])),
-                Rc::new(Description::new(vec![block(3)])),
+                Description::new(vec![block(1)]),
+                Description::new(vec![block(2)]),
+                Description::new(vec![block(3)]),
             ]
         )
     }
@@ -254,7 +250,7 @@ mod tests {
     fn parse_two_blocks() {
         assert_eq!(
             MyFormat::parse_clues(&String::from("1 2")),
-            vec![Rc::new(Description::new(vec![block(1), block(2)])),]
+            vec![Description::new(vec![block(1), block(2)]),]
         )
     }
 
@@ -262,7 +258,7 @@ mod tests {
     fn parse_quotes() {
         assert_eq!(
             MyFormat::parse_clues(&String::from("'1 2'")),
-            vec![Rc::new(Description::new(vec![block(1), block(2)])),]
+            vec![Description::new(vec![block(1), block(2)]),]
         )
     }
 
@@ -271,8 +267,8 @@ mod tests {
         assert_eq!(
             MyFormat::parse_clues(&String::from("1 2\n\"3 4\"\n")),
             vec![
-                Rc::new(Description::new(vec![block(1), block(2)])),
-                Rc::new(Description::new(vec![block(3), block(4)])),
+                Description::new(vec![block(1), block(2)]),
+                Description::new(vec![block(3), block(4)]),
             ]
         )
     }
@@ -281,7 +277,7 @@ mod tests {
     fn parse_comment_end_of_line() {
         assert_eq!(
             MyFormat::parse_clues(&String::from("1 2  # the comment")),
-            vec![Rc::new(Description::new(vec![block(1), block(2)])),]
+            vec![Description::new(vec![block(1), block(2)]),]
         )
     }
 
@@ -289,7 +285,7 @@ mod tests {
     fn parse_comment_semicolon() {
         assert_eq!(
             MyFormat::parse_clues(&String::from("1 2  ; another comment")),
-            vec![Rc::new(Description::new(vec![block(1), block(2)])),]
+            vec![Description::new(vec![block(1), block(2)]),]
         )
     }
 
@@ -300,9 +296,9 @@ mod tests {
                 "1 2 \n # the multi-line \n # comment \n 3, 4"
             )),
             vec![
-                Rc::new(Description::new(vec![block(1), block(2)])),
-                Rc::new(Description::new(vec![block(3)])),
-                Rc::new(Description::new(vec![block(4)])),
+                Description::new(vec![block(1), block(2)]),
+                Description::new(vec![block(3)]),
+                Description::new(vec![block(4)]),
             ]
         )
     }

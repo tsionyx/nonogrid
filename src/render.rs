@@ -62,7 +62,7 @@ impl ShellRenderer {
     //}
 
     fn side_width(&self) -> usize {
-        Self::descriptions_width(self.board().descriptions(true))
+        Self::descriptions_width(&self.board().descriptions(true))
     }
 
     fn descriptions_width<B: Block + Display>(descriptions: &[Rc<Description<B>>]) -> usize {
@@ -74,7 +74,7 @@ impl ShellRenderer {
     }
 
     fn desc_to_string<B: Block + Display>(desc: &Rc<Description<B>>) -> Vec<String> {
-        desc.vec.iter().map(|block| block.to_string()).collect()
+        (*desc).vec.iter().map(|block| block.to_string()).collect()
     }
 
     fn descriptions_to_matrix<B: Block + Display>(
@@ -91,12 +91,12 @@ impl ShellRenderer {
     }
 
     fn side_lines(&self) -> Vec<Vec<String>> {
-        Self::descriptions_to_matrix(self.board().descriptions(true))
+        Self::descriptions_to_matrix(&self.board().descriptions(true))
     }
 
     fn header_lines(&self) -> Vec<Vec<String>> {
         transpose(&Self::descriptions_to_matrix(
-            self.board().descriptions(false),
+            &self.board().descriptions(false),
         ))
         .unwrap()
     }

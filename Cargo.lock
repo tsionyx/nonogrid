@@ -527,7 +527,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "nonogrid"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cached 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",

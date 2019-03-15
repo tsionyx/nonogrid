@@ -165,7 +165,7 @@ impl Sub for BinaryColor {
 
 pub trait Block
 where
-    Self: Debug + PartialEq + Eq + Hash + Default,
+    Self: Debug + PartialEq + Eq + Hash + Default + Clone,
 {
     type Color: Color;
 
@@ -178,7 +178,7 @@ where
     fn color(&self) -> Self::Color;
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone)]
 pub struct BinaryBlock(pub usize);
 
 impl Block for BinaryBlock {
@@ -220,7 +220,7 @@ impl fmt::Display for BinaryBlock {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Description<T: Block>
 where
     T: Block,
@@ -254,10 +254,7 @@ where
     B: Block,
     B::Color: Copy,
 {
-    pub fn with_descriptions(
-        rows: Vec<Rc<Description<B>>>,
-        columns: Vec<Rc<Description<B>>>,
-    ) -> Board<B> {
+    pub fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Board<B> {
         let height = rows.len();
         let width = columns.len();
 
@@ -268,9 +265,9 @@ where
             .collect();
 
         Board {
-            desc_rows: rows,
-            desc_cols: columns,
             cells,
+            desc_rows: rows.into_iter().map(Rc::new).collect(),
+            desc_cols: columns.into_iter().map(Rc::new).collect(),
         }
     }
 
@@ -497,7 +494,6 @@ where
 mod tests {
     use super::BinaryColor::Undefined;
     use super::{BinaryBlock, Block, Board, Description};
-    use std::rc::Rc;
 
     #[test]
     fn u_letter() {
@@ -515,10 +511,7 @@ mod tests {
             Description::new(vec![BinaryBlock(3)]),
         ];
 
-        let board = Board::with_descriptions(
-            rows.into_iter().map(Rc::new).collect(),
-            columns.into_iter().map(Rc::new).collect(),
-        );
+        let board = Board::with_descriptions(rows, columns);
         assert_eq!(board.cells.len(), 3);
         assert_eq!(*board.cells[0].borrow(), [Undefined, Undefined, Undefined]);
     }
@@ -545,10 +538,7 @@ mod tests {
         ];
         let columns = vec![Description::new(vec![BinaryBlock(1), BinaryBlock(3)])];
 
-        let board = Board::with_descriptions(
-            rows.into_iter().map(Rc::new).collect(),
-            columns.into_iter().map(Rc::new).collect(),
-        );
+        let board = Board::with_descriptions(rows, columns);
         assert_eq!(board.cells.len(), 5);
         assert_eq!(*board.cells[0].borrow(), [Undefined]);
         assert_eq!(board.desc_rows[0].vec, vec![BinaryBlock(1)]);
