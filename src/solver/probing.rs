@@ -1,14 +1,12 @@
 use super::super::board::{Block, Board, Color, Point};
 use super::line::LineSolver;
 use super::propagation;
-use super::propagation::{CacheKey, CacheValue};
 
 use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Instant;
 
-use cached::Cached;
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
 
@@ -17,7 +15,7 @@ pub type Impact<B> = HashMap<(Point, <B as Block>::Color), (usize, f64)>;
 pub trait ProbeSolver {
     type BlockType: Block;
 
-    fn new(board: Rc<RefCell<Board<Self::BlockType>>>) -> Self;
+    fn with_board(board: Rc<RefCell<Board<Self::BlockType>>>) -> Self;
 
     fn unsolved_cells(&self) -> PriorityQueue<Point, OrderedFloat<f64>>;
     fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, OrderedFloat<f64>)>, String>
@@ -37,8 +35,6 @@ pub trait ProbeSolver {
     ) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = Self::BlockType>;
-
-    fn cache(&self) -> Ref<Cached<CacheKey<Self::BlockType>, CacheValue<Self::BlockType>>>;
 }
 
 pub struct FullProbe1<B>
@@ -46,7 +42,6 @@ where
     B: Block,
 {
     board: Rc<RefCell<Board<B>>>,
-    cache: propagation::ExternalCache<B>,
 }
 
 const PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED: f64 = 10.0;
@@ -58,8 +53,9 @@ where
 {
     type BlockType = B;
 
-    fn new(board: Rc<RefCell<Board<B>>>) -> Self {
-        Self::with_cache(board, 100_000)
+    fn with_board(board: Rc<RefCell<Board<B>>>) -> Self {
+        board.borrow_mut().init_cache();
+        Self { board }
     }
 
     fn unsolved_cells(&self) -> PriorityQueue<Point, OrderedFloat<f64>> {
@@ -191,21 +187,12 @@ where
         }
         Ok(impact)
     }
-
-    fn cache(&self) -> Ref<Cached<CacheKey<Self::BlockType>, CacheValue<Self::BlockType>>> {
-        self.cache.borrow()
-    }
 }
 
 impl<B> FullProbe1<B>
 where
     B: Block,
 {
-    pub fn with_cache(board: Rc<RefCell<Board<B>>>, cache_capacity: usize) -> Self {
-        let cache = propagation::new_cache(cache_capacity);
-        Self { board, cache }
-    }
-
     fn board(&self) -> Ref<Board<B>> {
         self.board.borrow()
     }
@@ -217,14 +204,9 @@ where
         let rows = Some(vec![point.y()]);
         let columns = Some(vec![point.x()]);
 
-        let cached_solver = propagation::Solver::with_options(
-            Rc::clone(&self.board),
-            rows,
-            columns,
-            false,
-            Some(Rc::clone(&self.cache)),
-        );
-        cached_solver.run::<S>()
+        let point_solver =
+            propagation::Solver::with_options(Rc::clone(&self.board), rows, columns, false);
+        point_solver.run::<S>()
     }
 
     fn is_solved(&self) -> bool {

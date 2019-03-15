@@ -57,7 +57,7 @@ fn pony() {
         assert_eq!(board.solution_rate(), 0.0);
     }
 
-    let solver = FullProbe1::new(Rc::clone(&board));
+    let solver = FullProbe1::with_board(Rc::clone(&board));
     solver.run_unsolved::<line::DynamicSolver<_>>().unwrap();
 
     {

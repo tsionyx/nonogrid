@@ -1,3 +1,4 @@
+use super::cache::{cache_info, GrowableCache};
 use super::utils;
 
 use std::cmp::Ordering;
@@ -10,6 +11,7 @@ use std::ops::{Add, Sub};
 use std::rc::Rc;
 
 extern crate rulinalg;
+use cached::Cached;
 use rulinalg::matrix::{BaseMatrix, BaseMatrixMut, Column, Matrix, Row, Rows};
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
@@ -241,7 +243,17 @@ where
     }
 }
 
-#[derive(Debug)]
+type CacheKey<B> = Rc<Vec<<B as Block>::Color>>;
+type CacheValue<B> = Result<Vec<<B as Block>::Color>, String>;
+type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
+
+fn new_cache<B>(capacity: usize) -> LineSolverCache<B>
+where
+    B: Block,
+{
+    LineSolverCache::<B>::with_capacity_increase_and_max_size(capacity, 2, capacity * 100)
+}
+
 pub struct Board<B>
 where
     B: Block,
@@ -249,6 +261,8 @@ where
     cells: Matrix<B::Color>,
     desc_rows: Vec<Rc<Description<B>>>,
     desc_cols: Vec<Rc<Description<B>>>,
+    cache_rows: Vec<LineSolverCache<B>>,
+    cache_cols: Vec<LineSolverCache<B>>,
 }
 
 impl<B> Board<B>
@@ -268,6 +282,8 @@ where
             cells,
             desc_rows: rows.into_iter().map(Rc::new).collect(),
             desc_cols: columns.into_iter().map(Rc::new).collect(),
+            cache_rows: vec![],
+            cache_cols: vec![],
         }
     }
 
@@ -400,6 +416,89 @@ where
             })
             .collect()
     }
+
+    pub fn init_cache(&mut self) {
+        let width = self.width();
+        let height = self.height();
+
+        self.cache_rows = (0..height).map(|_| new_cache::<B>(2 * width)).collect();
+        self.cache_cols = (0..width).map(|_| new_cache::<B>(2 * height)).collect();
+    }
+
+    pub fn cached_solution(
+        &mut self,
+        index: usize,
+        is_column: bool,
+        line: Rc<Vec<<B as Block>::Color>>,
+    ) -> Option<Result<Vec<<B as Block>::Color>, String>> {
+        if is_column {
+            // TODO: make with Option
+            if self.cache_cols.is_empty() {
+                return None;
+            }
+
+            let cache = &mut self.cache_cols[index];
+            match cache.cache_get(&line) {
+                None => None,
+                Some(res) => Some(res.to_owned()),
+            }
+        } else {
+            // TODO: make with Option
+            if self.cache_rows.is_empty() {
+                return None;
+            }
+
+            let cache = &mut self.cache_rows[index];
+            match cache.cache_get(&line) {
+                None => None,
+                Some(res) => Some(res.to_owned()),
+            }
+        }
+    }
+
+    pub fn set_cached_solution(
+        &mut self,
+        index: usize,
+        is_column: bool,
+        line: Rc<Vec<<B as Block>::Color>>,
+        solved: Result<Vec<<B as Block>::Color>, String>,
+    ) {
+        if is_column {
+            // TODO: make with Option
+            if self.cache_cols.is_empty() {
+                return;
+            }
+
+            let cache = &mut self.cache_cols[index];
+            cache.cache_set(line, solved);
+        } else {
+            // TODO: make with Option
+            if self.cache_rows.is_empty() {
+                return;
+            }
+
+            let cache = &mut self.cache_rows[index];
+            cache.cache_set(line, solved);
+        }
+    }
+
+    pub fn print_cache_info(&self) {
+        if !self.cache_cols.is_empty() {
+            warn!("Cache columns info");
+            self.cache_cols.iter().for_each(|cache| {
+                let (s, h, r) = cache_info(cache);
+                warn!("Cache size: {}, hits: {}, hit rate: {}", s, h, r);
+            })
+        }
+
+        if !self.cache_rows.is_empty() {
+            warn!("Cache rows info");
+            self.cache_rows.iter().for_each(|cache| {
+                let (s, h, r) = cache_info(cache);
+                warn!("Cache size: {}, hits: {}, hit rate: {}", s, h, r);
+            })
+        }
+    }
 }
 
 impl<B> Board<B>
@@ -469,6 +568,9 @@ where
             cells: self.make_snapshot(),
             desc_rows: self.desc_rows.clone(),
             desc_cols: self.desc_cols.clone(),
+            // ignore caches while cloning
+            cache_rows: vec![],
+            cache_cols: vec![],
         }
     }
 }

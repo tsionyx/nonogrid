@@ -10,9 +10,8 @@ pub trait LineSolver {
         desc: Rc<Description<Self::BlockType>>,
         line: Rc<Vec<<<Self as LineSolver>::BlockType as Block>::Color>>,
     ) -> Self;
-    fn solve(
-        &mut self,
-    ) -> Result<Rc<Vec<<<Self as LineSolver>::BlockType as Block>::Color>>, String>;
+
+    fn solve(&mut self) -> Result<Vec<<<Self as LineSolver>::BlockType as Block>::Color>, String>;
 }
 
 pub trait DynamicColor: Color
@@ -63,7 +62,7 @@ where
         }
     }
 
-    fn solve(&mut self) -> Result<Rc<Vec<B::Color>>, String> {
+    fn solve(&mut self) -> Result<Vec<B::Color>, String> {
         if self.try_solve() {
             let mut solved = &mut self.solved_line;
             if self.additional_space {
@@ -77,7 +76,7 @@ where
 
                 utils::replace(&mut solved, both, init);
             }
-            Ok(Rc::new(solved.to_vec()))
+            Ok(solved.to_vec())
         } else {
             Err("Bad line".to_string())
         }
@@ -416,7 +415,7 @@ mod tests {
     fn solve_basic() {
         let l = vec![Undefined; 3];
         let mut ds = DynamicSolver::new(simple_description(), Rc::new(l));
-        assert_eq!(ds.solve().unwrap(), Rc::new(vec![Black; 3]));
+        assert_eq!(ds.solve().unwrap(), vec![Black; 3]);
     }
 
     #[test]
@@ -428,7 +427,7 @@ mod tests {
             let original_line = line.clone();
 
             let mut ds = DynamicSolver::new(Rc::new(desc), Rc::new(line));
-            assert_eq!(ds.solve().unwrap(), Rc::new(expected));
+            assert_eq!(ds.solve().unwrap(), expected);
             assert_eq!(*ds.line, original_line);
         }
     }

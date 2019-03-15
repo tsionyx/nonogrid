@@ -22,7 +22,6 @@
 
 
 - remove contradiction mode?
-- move cache into board, provide only indexes instead of real descriptions.
 
 - play with CHOOSE_STRATEGY and the order of colors for given points
 

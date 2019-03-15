@@ -1,29 +1,16 @@
-use super::super::board::{Block, Board, Color, Description, Point};
-use super::super::cache::GrowableCache;
+use super::super::board::{Block, Board, Color, Point};
 use super::line::LineSolver;
 
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell};
 use std::collections::HashSet;
 use std::rc::Rc;
 use std::time::Instant;
 
-use cached::Cached;
 use log::Level;
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
 
-pub type CacheKey<B> = (Rc<Description<B>>, Rc<Vec<<B as Block>::Color>>);
-pub type CacheValue<B> = Result<Rc<Vec<<B as Block>::Color>>, String>;
-pub type ExternalCache<B> = Rc<RefCell<GrowableCache<CacheKey<B>, CacheValue<B>>>>;
-
-pub fn new_cache<B>(capacity: usize) -> ExternalCache<B>
-where
-    B: Block,
-{
-    Rc::new(RefCell::new(GrowableCache::with_capacity_and_increase(
-        capacity, 2,
-    )))
-}
+type Line<B> = Vec<<B as Block>::Color>;
 
 pub struct Solver<B>
 where
@@ -33,7 +20,6 @@ where
     rows: Option<Vec<usize>>,
     columns: Option<Vec<usize>>,
     contradiction_mode: bool,
-    cache: Option<ExternalCache<B>>,
 }
 
 type Job = (bool, usize);
@@ -43,7 +29,7 @@ where
     B: Block,
 {
     pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
-        Self::with_options(board, None, None, false, None)
+        Self::with_options(board, None, None, false)
     }
 
     pub fn with_options(
@@ -51,19 +37,17 @@ where
         rows: Option<Vec<usize>>,
         columns: Option<Vec<usize>>,
         contradiction_mode: bool,
-        cache: Option<ExternalCache<B>>,
     ) -> Self {
         Self {
             board,
             rows,
             columns,
             contradiction_mode,
-            cache,
         }
     }
 
-    fn cache(&self) -> Option<ExternalCache<B>> {
-        self.cache.clone()
+    fn board(&self) -> Ref<Board<B>> {
+        self.board.borrow()
     }
 
     pub fn run<S>(&self) -> Result<Vec<Point>, String>
@@ -72,7 +56,7 @@ where
     {
         let (rows, columns) = {
             // for safe borrowing
-            let board = self.board.borrow();
+            let board = self.board();
             (
                 self.rows
                     .clone()
@@ -87,7 +71,7 @@ where
         // Do not call if only a handful of lines has to be solved
         if rows.len() > 2 || columns.len() > 2 {
             // do not shortcut in contradiction_mode
-            if !self.contradiction_mode && self.board.borrow().is_solved_full() {
+            if !self.contradiction_mode && self.board().is_solved_full() {
                 //return 0, ()
             }
         }
@@ -239,54 +223,24 @@ where
     where
         S: LineSolver<BlockType = B>,
     {
-        use rulinalg::matrix::BaseMatrix;
-
         let start = Instant::now();
 
-        let (line, updated) = {
-            let (line_desc, line, name) = {
-                let board = self.board.borrow();
-                if is_column {
-                    (
-                        Rc::clone(&board.descriptions(false)[index]),
-                        board.get_column(index).iter().cloned().collect::<Vec<_>>(),
-                        "column",
-                    )
-                } else {
-                    (
-                        Rc::clone(&board.descriptions(true)[index]),
-                        board.get_row(index).iter().cloned().collect::<Vec<_>>(),
-                        "row",
-                    )
-                }
-            };
+        //let pre_solution_rate = Board::<B>::line_solution_rate(&line);
+        //if pre_solution_rate == 1 {
+        //    // do not check solved lines in trusted mode
+        //    if ! contradiction_mode {
+        //        return vec![];
+        //     }
+        //}
 
-            //let pre_solution_rate = Board::<B>::line_solution_rate(&line);
-            //if pre_solution_rate == 1 {
-            //    // do not check solved lines in trusted mode
-            //    if ! contradiction_mode {
-            //        return vec![];
-            //     }
-            //}
-
-            debug!(
-                "Solving {} {}: {:?}. Partial: {:?}",
-                index, name, line_desc, line
-            );
-
-            let line = Rc::new(line);
-            let solution = self.solve::<S>(line_desc, Rc::clone(&line))?;
-            (line, solution)
-        };
+        let (line, updated) = self.solve::<S>(index, is_column)?;
 
         // let new_solution_rate = Board::<B>::line_solution_rate(&updated);
 
         let mut new_jobs = vec![];
         // if new_solution_rate > pre_solution_rate
 
-        if *line != *updated {
-            let updated = (*updated).to_owned();
-
+        if *line != updated {
             debug!("Original: {:?}", line);
             debug!("Updated: {:?}", &updated);
 
@@ -332,30 +286,59 @@ where
         Ok(new_jobs)
     }
 
-    fn solve<S>(
-        &self,
-        line_desc: Rc<Description<B>>,
-        line: Rc<Vec<<B as Block>::Color>>,
-    ) -> CacheValue<B>
+    fn solve<S>(&self, index: usize, is_column: bool) -> Result<(Rc<Line<B>>, Line<B>), String>
     where
         S: LineSolver<BlockType = B>,
     {
-        let key = (Rc::clone(&line_desc), Rc::clone(&line));
+        use rulinalg::matrix::BaseMatrix;
 
-        if let Some(cache) = self.cache() {
-            let mut cache = cache.borrow_mut();
-            let res = cache.cache_get(&key);
-            if let Some(value) = res {
-                return value.to_owned();
+        let (line_desc, line, name) = {
+            let board = self.board();
+            if is_column {
+                (
+                    Rc::clone(&board.descriptions(false)[index]),
+                    board.get_column(index).iter().cloned().collect::<Vec<_>>(),
+                    "column",
+                )
+            } else {
+                (
+                    Rc::clone(&board.descriptions(true)[index]),
+                    board.get_row(index).iter().cloned().collect::<Vec<_>>(),
+                    "row",
+                )
             }
-        }
+        };
+        let line = Rc::new(line);
 
-        let mut line_solver = S::new(line_desc, line);
-        let value = line_solver.solve();
+        let solution = self
+            .board
+            .borrow_mut()
+            .cached_solution(index, is_column, Rc::clone(&line));
 
-        if let Some(cache) = self.cache() {
-            cache.borrow_mut().cache_set(key, value.clone());
+        let value = match solution {
+            Some(value) => value,
+            None => {
+                debug!(
+                    "Solving {}-th {}: {:?}. Partial: {:?}",
+                    index, name, line_desc, &line
+                );
+
+                let mut line_solver = S::new(Rc::clone(&line_desc), Rc::clone(&line));
+                let value = line_solver.solve();
+
+                self.board.borrow_mut().set_cached_solution(
+                    index,
+                    is_column,
+                    Rc::clone(&line),
+                    value.clone(),
+                );
+                value
+            }
+        };
+
+        match value {
+            Ok(value) => Ok((line, value)),
+            Err(msg) => Err(msg),
         }
-        value
     }
 }
