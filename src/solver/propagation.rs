@@ -246,13 +246,13 @@ where
                 let board = self.board.borrow();
                 if is_column {
                     (
-                        Rc::clone(&board.desc_cols[index]),
+                        Rc::clone(&board.descriptions(false)[index]),
                         board.get_column(index),
                         "column",
                     )
                 } else {
                     (
-                        Rc::clone(&board.desc_rows[index]),
+                        Rc::clone(&board.descriptions(true)[index]),
                         board.get_row(index),
                         "row",
                     )

@@ -1,6 +1,6 @@
 use super::utils;
 
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt;
@@ -244,9 +244,9 @@ pub struct Board<B>
 where
     B: Block,
 {
-    pub cells: Vec<Rc<RefCell<Vec<B::Color>>>>,
-    pub desc_rows: Vec<Rc<Description<B>>>,
-    pub desc_cols: Vec<Rc<Description<B>>>,
+    cells: Vec<Rc<RefCell<Vec<B::Color>>>>,
+    desc_rows: Vec<Rc<Description<B>>>,
+    desc_cols: Vec<Rc<Description<B>>>,
 }
 
 impl<B> Board<B>
@@ -271,6 +271,18 @@ where
             desc_rows: rows,
             desc_cols: columns,
             cells,
+        }
+    }
+
+    pub fn cells(&self) -> Vec<Ref<Vec<B::Color>>> {
+        self.cells.iter().map(|row| row.borrow()).collect()
+    }
+
+    pub fn descriptions(&self, rows: bool) -> &Vec<Rc<Description<B>>> {
+        if rows {
+            &self.desc_rows
+        } else {
+            &self.desc_cols
         }
     }
 
