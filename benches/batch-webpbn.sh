@@ -7,6 +7,8 @@ mkdir -p puzzles
 
 export RUST_LOG=nonogrid=warn
 export RUST_BACKTRACE=1
+# 5-10% speedup with this tip https://vfoley.xyz/rust-compilation-tip/
+export RUSTFLAGS="-C target-cpu=native"
 cargo build --release
 
 echo "Start at $(date)"
@@ -46,12 +48,12 @@ function long_solvers() {
     # You can use the total time results from this function
     # to quickly find information about the solution (depth, rate, etc):
     # just issue the following command by providing grep with the total time for given puzzle:
-    # $ cat batch.log | grep -F '3599.93' -B4 -A2
+    # $ cat batch.log | grep -F '3599.93' -B4 -A2 -m1
 
     log_file=$1
     threshold=$2
     while read t; do
-        id=$(grep -F ${t} ${log_file} -A3 | grep -oP '#\K(\d+)' | awk '{print $1-1}')
+        id=$(grep -m1 -F ${t} ${log_file} -A3 | grep -oP '#\K(\d+)' | awk '{print $1-1}')
         echo "$id: $t"
     done < <(grep -oP 'Total: \K(.+)' ${log_file} | awk '$1 > t' t=${threshold})
 }
