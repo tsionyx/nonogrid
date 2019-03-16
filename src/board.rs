@@ -1,6 +1,5 @@
 use super::utils;
 
-use std::cell::{Ref, RefCell};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt;
@@ -9,6 +8,9 @@ use std::hash::Hash;
 use std::marker::Sized;
 use std::ops::{Add, Sub};
 use std::rc::Rc;
+
+extern crate rulinalg;
+use rulinalg::matrix::{BaseMatrix, BaseMatrixMut, Column, Matrix, Row, Rows};
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 pub struct Point {
@@ -244,7 +246,7 @@ pub struct Board<B>
 where
     B: Block,
 {
-    cells: Vec<Rc<RefCell<Vec<B::Color>>>>,
+    cells: Matrix<B::Color>,
     desc_rows: Vec<Rc<Description<B>>>,
     desc_cols: Vec<Rc<Description<B>>>,
 }
@@ -260,9 +262,7 @@ where
 
         let init = B::Color::initial();
 
-        let cells = (0..height)
-            .map(|_| Rc::new(RefCell::new(vec![init; width])))
-            .collect();
+        let cells = Matrix::new(height, width, vec![init; height * width]);
 
         Board {
             cells,
@@ -271,8 +271,8 @@ where
         }
     }
 
-    pub fn cells(&self) -> Vec<Ref<Vec<B::Color>>> {
-        self.cells.iter().map(|row| row.borrow()).collect()
+    pub fn cells(&self) -> Rows<B::Color> {
+        self.cells.row_iter()
     }
 
     pub fn descriptions(&self, rows: bool) -> &Vec<Rc<Description<B>>> {
@@ -292,34 +292,34 @@ where
     }
 
     pub fn is_solved_full(&self) -> bool {
-        self.cells
-            .iter()
-            .all(|row| row.borrow().iter().all(|cell| cell.is_solved()))
+        self.cells()
+            .all(|row| row.iter().all(|cell| cell.is_solved()))
     }
 
-    pub fn get_row(&self, index: usize) -> Vec<B::Color> {
-        self.cells[index].borrow().clone()
+    pub fn get_row(&self, index: usize) -> Row<B::Color> {
+        self.cells.row(index)
     }
 
-    pub fn get_column(&self, index: usize) -> Vec<B::Color> {
-        self.cells.iter().map(|row| row.borrow()[index]).collect()
+    pub fn get_column(&self, index: usize) -> Column<B::Color> {
+        self.cells.col(index)
     }
 
     pub fn set_row(&mut self, index: usize, new: Vec<B::Color>) {
-        self.cells[index] = Rc::new(RefCell::new(new));
+        let mat_block = self.cells.sub_slice_mut([index, 0], 1, self.width());
+        let new = Matrix::new(1, self.width(), new);
+        mat_block.set_to(new);
     }
 
     pub fn set_column(&mut self, index: usize, new: Vec<B::Color>) {
-        self.cells.iter().zip(new).for_each(|(row, new_cell)| {
-            row.borrow_mut()[index] = new_cell;
-        });
+        let mat_block = self.cells.sub_slice_mut([0, index], self.height(), 1);
+        let new = Matrix::new(self.height(), 1, new);
+        mat_block.set_to(new);
     }
 
     /// How many cells in a line are known to be of particular color
-    pub fn line_solution_rate(line: &[B::Color]) -> f64 {
-        let size = line.len();
-
+    pub fn line_solution_rate<M: BaseMatrix<B::Color>>(line: &M) -> f64 {
         let solved: f64 = line.iter().map(|cell| cell.solution_rate()).sum();
+        let size = line.rows() * line.cols();
 
         solved / size as f64
     }
@@ -336,19 +336,13 @@ where
 
     /// How many cells in the whole grid are known to be of particular color
     pub fn solution_rate(&self) -> f64 {
-        self.cells
-            .iter()
-            .map(|row| Self::line_solution_rate(&row.borrow()))
-            .sum::<f64>()
-            / (self.height() as f64)
+        Self::line_solution_rate(&self.cells)
     }
 
     pub fn unsolved_cells(&self) -> Vec<Point> {
-        self.cells
-            .iter()
+        self.cells()
             .enumerate()
             .map(|(y, row)| {
-                let row = row.borrow();
                 row.iter()
                     .enumerate()
                     .filter_map(move |(x, cell)| {
@@ -366,7 +360,7 @@ where
 
     pub fn cell(&self, point: &Point) -> B::Color {
         let Point { x, y } = *point;
-        self.cells[y].borrow()[x]
+        self.cells[[y, x]]
     }
 
     /// For the given cell yield
@@ -416,14 +410,11 @@ where
     /// Standard diff semantic as result:
     /// - first returned points which set in current board and unset in the other
     /// - second returned points which unset in current board and set in the other
-    pub fn diff(&self, other: &[Rc<RefCell<Vec<B::Color>>>]) -> (Vec<Point>, Vec<Point>) {
+    pub fn diff(&self, other: &Matrix<B::Color>) -> (Vec<Point>, Vec<Point>) {
         let mut removed = vec![];
         let mut added = vec![];
 
-        for (y, (row, other_row)) in self.cells.iter().zip(other).enumerate() {
-            let row = row.borrow();
-            let other_row = other_row.borrow();
-
+        for (y, (row, other_row)) in self.cells().zip(other.row_iter()).enumerate() {
             for (x, (cell, other_cell)) in row.iter().zip(other_row.iter()).enumerate() {
                 if cell != other_cell {
                     let p = Point::new(x, y);
@@ -441,17 +432,11 @@ where
         (removed, added)
     }
 
-    pub fn make_snapshot(&self) -> Vec<Rc<RefCell<Vec<B::Color>>>> {
-        self.cells
-            .iter()
-            .map(|row| {
-                let row = row.borrow().to_vec();
-                Rc::new(RefCell::new(row))
-            })
-            .collect()
+    pub fn make_snapshot(&self) -> Matrix<B::Color> {
+        self.cells.clone()
     }
 
-    pub fn restore(&mut self, cells: Vec<Rc<RefCell<Vec<B::Color>>>>) {
+    pub fn restore(&mut self, cells: Matrix<B::Color>) {
         self.cells = cells;
     }
 }
@@ -461,18 +446,16 @@ where
     B: Block,
     B::Color: Copy,
 {
-    pub fn set_color(&self, point: &Point, color: &B::Color) {
+    pub fn set_color(&mut self, point: &Point, color: &B::Color) {
         let old_value = self.cell(point);
         let Point { x, y } = *point;
-        let mut row = self.cells[y].borrow_mut();
-        row[x] = old_value + *color;
+        self.cells[[y, x]] = old_value + *color;
     }
 
-    pub fn unset_color(&self, point: &Point, color: &B::Color) -> Result<(), String> {
+    pub fn unset_color(&mut self, point: &Point, color: &B::Color) -> Result<(), String> {
         let old_value = self.cell(point);
         let Point { x, y } = *point;
-        let mut row = self.cells[y].borrow_mut();
-        row[x] = (old_value - *color)?;
+        self.cells[[y, x]] = (old_value - *color)?;
         Ok(())
     }
 }
@@ -495,6 +478,8 @@ mod tests {
     use super::BinaryColor::Undefined;
     use super::{BinaryBlock, Block, Board, Description};
 
+    use rulinalg::matrix::BaseMatrix;
+
     #[test]
     fn u_letter() {
         // X   X
@@ -512,8 +497,11 @@ mod tests {
         ];
 
         let board = Board::with_descriptions(rows, columns);
-        assert_eq!(board.cells.len(), 3);
-        assert_eq!(*board.cells[0].borrow(), [Undefined, Undefined, Undefined]);
+        assert_eq!(board.cells.rows(), 3);
+        assert_eq!(
+            *board.cells.row(0).iter().cloned().collect::<Vec<_>>(),
+            [Undefined, Undefined, Undefined]
+        );
     }
 
     #[test]
@@ -539,8 +527,11 @@ mod tests {
         let columns = vec![Description::new(vec![BinaryBlock(1), BinaryBlock(3)])];
 
         let board = Board::with_descriptions(rows, columns);
-        assert_eq!(board.cells.len(), 5);
-        assert_eq!(*board.cells[0].borrow(), [Undefined]);
+        assert_eq!(board.cells.rows(), 5);
+        assert_eq!(
+            *board.cells.row(0).iter().cloned().collect::<Vec<_>>(),
+            [Undefined]
+        );
         assert_eq!(board.desc_rows[0].vec, vec![BinaryBlock(1)]);
         assert_eq!(board.desc_rows[1].vec, vec![]);
         assert_eq!(board.desc_rows[2].vec, vec![BinaryBlock(1)]);

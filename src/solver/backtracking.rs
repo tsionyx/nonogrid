@@ -14,7 +14,9 @@ use std::time::Instant;
 use cached::Cached;
 use ordered_float::OrderedFloat;
 
-type Solution<B> = Vec<Rc<RefCell<Vec<<B as Block>::Color>>>>;
+use rulinalg::matrix::Matrix;
+
+type Solution<B> = Matrix<<B as Block>::Color>;
 
 pub struct Solver<B, P, S>
 where
@@ -681,7 +683,7 @@ where
         //let save = self.board().make_snapshot();
 
         let mut probes = vec![];
-        self.board().set_color(&point, &color);
+        self.board.borrow_mut().set_color(&point, &color);
         for (new_point, priority) in self.probe_solver.propagate_point::<S>(&point)? {
             probes.push((new_point, priority));
         }

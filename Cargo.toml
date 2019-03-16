@@ -18,6 +18,7 @@ sxd-xpath = "0.4.2"
 reqwest = {version="0.9.10", optional=true}
 cached = "0.8.0"
 hashbrown = "0.1"
+rulinalg="0.4.2"
 
 [features]
 web = ["reqwest"]

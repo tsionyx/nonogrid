@@ -239,6 +239,8 @@ where
     where
         S: LineSolver<BlockType = B>,
     {
+        use rulinalg::matrix::BaseMatrix;
+
         let start = Instant::now();
 
         let (line, updated) = {
@@ -247,13 +249,13 @@ where
                 if is_column {
                     (
                         Rc::clone(&board.descriptions(false)[index]),
-                        board.get_column(index),
+                        board.get_column(index).iter().cloned().collect::<Vec<_>>(),
                         "column",
                     )
                 } else {
                     (
                         Rc::clone(&board.descriptions(true)[index]),
-                        board.get_row(index),
+                        board.get_row(index).iter().cloned().collect::<Vec<_>>(),
                         "row",
                     )
                 }

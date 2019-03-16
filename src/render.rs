@@ -102,9 +102,10 @@ impl ShellRenderer {
     }
 
     fn grid_lines(&self) -> Vec<Vec<String>> {
+        use rulinalg::matrix::BaseMatrix;
+
         self.board()
             .cells()
-            .iter()
             .map(|row| row.iter().map(|cell| cell.to_string()).collect())
             .collect()
     }

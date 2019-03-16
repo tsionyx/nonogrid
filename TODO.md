@@ -21,7 +21,6 @@
 | -p 2040     | 204/?                        | 1.922..2.349       | 2.384..3.500      | 0.095..0.124        | 15..25      |
 
 
-- do I need RefCell for cells? (use https://crates.io/crates/nalgebra or https://crates.io/crates/rulinalg)
 - remove contradiction mode?
 - move cache into board, provide only indexes instead of real descriptions.
 

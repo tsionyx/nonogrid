@@ -10,6 +10,8 @@ extern crate log;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use rulinalg::matrix::BaseMatrix;
+
 #[test]
 fn hello() {
     let board = MyFormat::<BinaryBlock>::read_board("examples/hello.toml");
@@ -26,9 +28,16 @@ fn hello() {
 
     let b = BinaryColor::Black;
     let w = BinaryColor::White;
-    assert_eq!(board.get_column(0), vec![b; 7]);
     assert_eq!(
-        board.get_column(board.width() - 1),
+        board.get_column(0).iter().cloned().collect::<Vec<_>>(),
+        vec![b; 7]
+    );
+    assert_eq!(
+        board
+            .get_column(board.width() - 1)
+            .iter()
+            .cloned()
+            .collect::<Vec<_>>(),
         vec![b, b, b, b, b, w, b]
     );
 }
