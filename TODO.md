@@ -32,3 +32,12 @@
 - web-assembly and JS rendering(SVG?)
 
 - other formats (nonograms.org)?
+
+- reduce memory consumption for multiple caches
+
+| puzzle | cache                    | invalidations | memory size peek, Mb | solve time, sec |
+|:------:|--------------------------|---------------|----------------------|----------------:|
+| 9892   | multiplier=5000          | 0             |                 1243 | 248.49
+| 9892   | multiplier=3000          | 6             |                  998 | 289.47
+| 9892   | multiplier=1000          | 45            |                  572 | 305.40
+| 9892   | initial=100_000 (single) | 6             |                  325 | 277.02

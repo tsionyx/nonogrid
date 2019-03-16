@@ -54,7 +54,7 @@ where
     type BlockType = B;
 
     fn with_board(board: Rc<RefCell<Board<B>>>) -> Self {
-        board.borrow_mut().init_cache(20);
+        board.borrow_mut().init_cache(1000);
         Self { board }
     }
 
