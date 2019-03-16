@@ -417,12 +417,36 @@ where
             .collect()
     }
 
-    pub fn init_cache(&mut self) {
+    pub fn init_cache(&mut self, multiplier: usize) {
         let width = self.width();
         let height = self.height();
 
-        self.cache_rows = (0..height).map(|_| new_cache::<B>(2 * width)).collect();
-        self.cache_cols = (0..width).map(|_| new_cache::<B>(2 * height)).collect();
+        self.cache_rows = (0..height)
+            .map(|row_index| {
+                let multiplier = (multiplier * width) as f64;
+                let rate = self.row_solution_rate(row_index);
+
+                // the more solved the row, the less space allocate
+                let size = ((1.0 - rate) * multiplier).round() as usize;
+
+                debug!("Initial cache size for {} row: {}", row_index, size);
+                // allow ability to insert something
+                new_cache::<B>(size.max(1))
+            })
+            .collect();
+        self.cache_cols = (0..width)
+            .map(|col_index| {
+                let multiplier = (multiplier * height) as f64;
+                let rate = self.column_solution_rate(col_index);
+
+                // the more solved the row, the less space allocate
+                let size = ((1.0 - rate) * multiplier).round() as usize;
+
+                debug!("Initial cache size for {} column: {}", col_index, size);
+                // allow ability to insert something
+                new_cache::<B>(size.max(1))
+            })
+            .collect();
     }
 
     pub fn cached_solution(
@@ -481,23 +505,34 @@ where
             cache.cache_set(line, solved);
         }
     }
-
     pub fn print_cache_info(&self) {
-        if !self.cache_cols.is_empty() {
-            warn!("Cache columns info");
-            self.cache_cols.iter().for_each(|cache| {
-                let (s, h, r) = cache_info(cache);
-                warn!("Cache size: {}, hits: {}, hit rate: {}", s, h, r);
-            })
-        }
-
         if !self.cache_rows.is_empty() {
             warn!("Cache rows info");
-            self.cache_rows.iter().for_each(|cache| {
-                let (s, h, r) = cache_info(cache);
-                warn!("Cache size: {}, hits: {}, hit rate: {}", s, h, r);
-            })
+            self.caches_info(&self.cache_rows);
         }
+
+        if !self.cache_cols.is_empty() {
+            warn!("Cache columns info");
+            self.caches_info(&self.cache_cols);
+        }
+    }
+
+    fn caches_info(&self, caches: &[LineSolverCache<B>]) {
+        caches.iter().enumerate().for_each(|(i, cache)| {
+            let (size, hits, hit_rate) = cache_info(cache);
+            let desc = if size == 0 && hits == 0 {
+                "empty".to_string()
+            } else {
+                format!(
+                    "size: {:>7}, hits: {:>10}, hit rate: {:.4}%",
+                    size,
+                    hits,
+                    hit_rate * 100.0
+                )
+            };
+
+            warn!("{:>3}. {}", i, desc);
+        });
     }
 }
 
