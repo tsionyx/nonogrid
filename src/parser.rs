@@ -45,6 +45,16 @@ where
     fn parse(board_str: &str) -> Board<B>;
 }
 
+#[derive(Debug, PartialEq)]
+pub enum PuzzleScheme {
+    BlackAndWhite,
+    MultiColor,
+}
+
+pub trait InferScheme {
+    fn infer_scheme(board_str: &str) -> PuzzleScheme;
+}
+
 #[derive(Debug, Deserialize)]
 struct Clues {
     rows: String,
@@ -76,6 +86,20 @@ where
             Self::parse_clues(&clues.rows),
             Self::parse_clues(&clues.columns),
         )
+    }
+}
+
+impl InferScheme for MyFormat {
+    fn infer_scheme(board_str: &str) -> PuzzleScheme {
+        let this = Self::with_content(board_str).unwrap();
+        if let Some(colors) = this.colors {
+            let has_colors = colors.defs.map(|defs| !defs.is_empty()).unwrap_or(false);
+            if has_colors {
+                return PuzzleScheme::MultiColor;
+            }
+        }
+
+        PuzzleScheme::BlackAndWhite
     }
 }
 
@@ -151,6 +175,33 @@ where
     }
 }
 
+impl InferScheme for WebPbn {
+    fn infer_scheme(board_str: &str) -> PuzzleScheme {
+        let package = Self::xml_package(board_str);
+        let document = package.as_document();
+        let value = evaluate_xpath(&document, ".//color").expect("XPath evaluation failed");
+
+        if let Value::Nodeset(ns) = value {
+            let mut colors: Vec<_> = ns
+                .iter()
+                .map(|color_node| {
+                    if let Node::Element(e) = color_node {
+                        e.attribute("name").unwrap().value()
+                    } else {
+                        ""
+                    }
+                })
+                .collect();
+            colors.sort();
+            if colors != ["black", "white"] {
+                return PuzzleScheme::MultiColor;
+            }
+        }
+
+        PuzzleScheme::BlackAndWhite
+    }
+}
+
 impl WebPbn {
     const BASE_URL: &'static str = "http://webpbn.com";
 
@@ -204,7 +255,7 @@ impl WebPbn {
 #[cfg(test)]
 mod tests {
     use super::super::board::{BinaryBlock, Description};
-    use super::MyFormat;
+    use super::{InferScheme, MyFormat, PuzzleScheme};
 
     fn block(n: usize) -> BinaryBlock {
         BinaryBlock(n)
@@ -307,5 +358,57 @@ mod tests {
                 Description::new(vec![block(4)]),
             ]
         )
+    }
+
+    #[test]
+    fn infer_black_and_white_no_colors_section() {
+        let s = r"
+        [clues]
+        rows = '1'
+        columns = '1'
+        ";
+
+        assert_eq!(MyFormat::infer_scheme(s), PuzzleScheme::BlackAndWhite)
+    }
+
+    #[test]
+    fn infer_black_and_white_empty_colors_section() {
+        let s = r"
+        [clues]
+        rows = '1'
+        columns = '1'
+
+        [colors]
+        ";
+
+        assert_eq!(MyFormat::infer_scheme(s), PuzzleScheme::BlackAndWhite)
+    }
+
+    #[test]
+    fn infer_black_and_white_empty_defs_in_colors_section() {
+        let s = r"
+        [clues]
+        rows = '1'
+        columns = '1'
+
+        [colors]
+        defs = []
+        ";
+
+        assert_eq!(MyFormat::infer_scheme(s), PuzzleScheme::BlackAndWhite)
+    }
+
+    #[test]
+    fn infer_multi_color() {
+        let s = r"
+        [clues]
+        rows = '1'
+        columns = '1'
+
+        [colors]
+        defs = ['g=(0, 204, 0) %']
+        ";
+
+        assert_eq!(MyFormat::infer_scheme(s), PuzzleScheme::MultiColor)
     }
 }
