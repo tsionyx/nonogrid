@@ -15,9 +15,11 @@
 # e.g:
 #
 # [colors]
-# p = (pink) %
-# g = (0, 255, 0) *
-# r = (FF0000) &
+# defs = [
+#   "p = (pink) %",
+#   "g = (0, 255, 0) *",
+#   "r = (FF0000) &",
+# ]
 #
 #
 # The clues (nonogram description) listed in the [clues] section
@@ -125,3 +127,4 @@ rows = """1 1 1
 
 # The section can be empty or simply skipped
 [colors]
+defs = []

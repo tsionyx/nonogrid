@@ -19,7 +19,9 @@ struct Clues {
 }
 
 #[derive(Debug, Deserialize)]
-struct Colors {}
+struct Colors {
+    defs: Option<Vec<String>>,
+}
 
 #[derive(Debug, Deserialize)]
 pub struct MyFormat<B> {
