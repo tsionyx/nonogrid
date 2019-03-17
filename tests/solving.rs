@@ -1,6 +1,6 @@
 use nonogrid::{
     board::{BinaryBlock, BinaryColor},
-    parser::{BoardParser, MyFormat},
+    parser::{BoardParser, LocalReader, MyFormat},
     solver::{line, probing::*, propagation},
 };
 
@@ -12,7 +12,9 @@ use std::rc::Rc;
 
 #[test]
 fn hello() {
-    let board = MyFormat::<BinaryBlock>::read_board("examples/hello.toml");
+    let board = <MyFormat as BoardParser<BinaryBlock>>::parse(
+        &MyFormat::read_local("examples/hello.toml").unwrap(),
+    );
     let board = Rc::new(RefCell::new(board));
 
     warn!("Solving with simple line propagation");
@@ -35,7 +37,9 @@ fn hello() {
 
 #[test]
 fn pony() {
-    let board = MyFormat::<BinaryBlock>::read_board("examples/MLP.toml");
+    let board = <MyFormat as BoardParser<BinaryBlock>>::parse(
+        &MyFormat::read_local("examples/MLP.toml").unwrap(),
+    );
     let board = Rc::new(RefCell::new(board));
 
     warn!("Solving with simple line propagation");

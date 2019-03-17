@@ -6,7 +6,7 @@ mod solver;
 mod utils;
 
 use board::{Block, Board};
-use parser::BoardParser;
+use parser::{BoardParser, LocalReader, NetworkReader};
 use render::{Renderer, ShellRenderer};
 use solver::line::DynamicSolver;
 use solver::probing::FullProbe1;
@@ -95,12 +95,17 @@ where
     let webpbn_id = matches.value_of("webpbn-online");
 
     if let Some(webpbn_path) = webpbn_path {
-        parser::WebPbn::read_board(webpbn_path)
+        let s = parser::WebPbn::read_local(webpbn_path).unwrap();
+        parser::WebPbn::parse(&s)
     } else if let Some(webpbn_id) = webpbn_id {
         value_t_or_exit!(matches, "webpbn-online", u16);
-        parser::WebPbn::get_board(webpbn_id)
+        let s = parser::WebPbn::read_remote(webpbn_id).unwrap();
+        parser::WebPbn::parse(&s)
+    } else if let Some(my_path) = my_path {
+        let s = parser::MyFormat::read_local(my_path).unwrap();
+        parser::MyFormat::parse(&s)
     } else {
-        parser::MyFormat::read_board(my_path.unwrap())
+        panic!("No valid source found")
     }
 }
 

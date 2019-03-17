@@ -1,7 +1,6 @@
 use super::board::{Block, Board, Description};
 
 use std::fs;
-use std::marker::PhantomData;
 
 use self::sxd_xpath::nodeset::{Node, Nodeset};
 use self::sxd_xpath::{evaluate_xpath, Value};
@@ -11,6 +10,40 @@ extern crate reqwest;
 extern crate sxd_document;
 extern crate sxd_xpath;
 extern crate toml;
+
+pub trait LocalReader {
+    fn read_local(file_name: &str) -> Result<String, String> {
+        fs::read_to_string(file_name).map_err(|err| format!("{:?}", err))
+    }
+}
+
+pub trait NetworkReader {
+    fn read_remote(file_name: &str) -> Result<String, String>;
+
+    #[cfg(feature = "web")]
+    fn http_content(url: String) -> Result<String, String> {
+        info!("Requesting {} ...", &url);
+        let mut response = reqwest::get(url.as_str()).map_err(|err| format!("{:?}", err))?;
+        response.text().map_err(|err| format!("{:?}", err))
+    }
+
+    #[cfg(not(feature = "web"))]
+    fn http_content(url: String) -> Result<String, String> {
+        info!("Requesting {} ...", &url);
+        Err(format!(
+            "Cannot request url {}: no support for web client (hint: add --features=web)",
+            url
+        ))
+    }
+}
+
+pub trait BoardParser<B>
+where
+    B: Block,
+{
+    //type BlockType: Block;
+    fn parse(board_str: &str) -> Board<B>;
+}
 
 #[derive(Debug, Deserialize)]
 struct Clues {
@@ -24,29 +57,37 @@ struct Colors {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct MyFormat<B> {
+pub struct MyFormat {
     clues: Clues,
     colors: Option<Colors>,
-
-    dummy: Option<PhantomData<B>>,
 }
 
-pub trait BoardParser {
-    type BlockType: Block;
-    fn read_board(resource_name: &str) -> Board<Self::BlockType>;
-}
+impl LocalReader for MyFormat {}
 
-impl<B> MyFormat<B>
+impl<B> BoardParser<B> for MyFormat
 where
     B: Block,
 {
-    pub fn from_file(file_name: &str) -> Result<Self, toml::de::Error> {
-        let contents =
-            fs::read_to_string(file_name).expect("Something went wrong reading the file");
-        toml::from_str(&*contents)
+    fn parse(board_str: &str) -> Board<B> {
+        let clues = Self::with_content(board_str)
+            .expect("Something wrong with format")
+            .clues;
+        Board::with_descriptions(
+            Self::parse_clues(&clues.rows),
+            Self::parse_clues(&clues.columns),
+        )
+    }
+}
+
+impl MyFormat {
+    pub fn with_content(content: &str) -> Result<Self, toml::de::Error> {
+        toml::from_str(content)
     }
 
-    fn parse_line(descriptions: &str) -> Option<Vec<Description<B>>> {
+    fn parse_line<B>(descriptions: &str) -> Option<Vec<Description<B>>>
+    where
+        B: Block,
+    {
         let descriptions = descriptions.trim();
         let parts: Vec<&str> = descriptions.split(|c| c == '#' || c == ';').collect();
 
@@ -74,7 +115,10 @@ where
         )
     }
 
-    pub(in super::parser) fn parse_clues(descriptions: &str) -> Vec<Description<B>> {
+    pub(in super::parser) fn parse_clues<B>(descriptions: &str) -> Vec<Description<B>>
+    where
+        B: Block,
+    {
         descriptions
             .lines()
             .map(|line| Self::parse_line(line).unwrap_or_else(|| vec![]))
@@ -83,35 +127,23 @@ where
     }
 }
 
-impl<B> BoardParser for MyFormat<B>
-where
-    B: Block,
-{
-    type BlockType = B;
+pub struct WebPbn {}
 
-    fn read_board(resource_name: &str) -> Board<Self::BlockType> {
-        let clues = Self::from_file(resource_name)
-            .expect("Something wrong with format")
-            .clues;
-        Board::with_descriptions(
-            Self::parse_clues(&clues.rows),
-            Self::parse_clues(&clues.columns),
-        )
+impl LocalReader for WebPbn {}
+
+impl NetworkReader for WebPbn {
+    fn read_remote(file_name: &str) -> Result<String, String> {
+        let url = format!("{}/XMLpuz.cgi?id={}", Self::BASE_URL, file_name);
+        Self::http_content(url)
     }
 }
 
-pub struct WebPbn<B> {
-    dummy: PhantomData<B>,
-}
-
-impl<B> BoardParser for WebPbn<B>
+impl<B> BoardParser<B> for WebPbn
 where
     B: Block,
 {
-    type BlockType = B;
-
-    fn read_board(resource_name: &str) -> Board<Self::BlockType> {
-        let package = Self::from_file(resource_name);
+    fn parse(board_str: &str) -> Board<B> {
+        let package = Self::xml_package(board_str);
         Board::with_descriptions(
             Self::parse_clues(&package, "rows"),
             Self::parse_clues(&package, "columns"),
@@ -119,18 +151,17 @@ where
     }
 }
 
-impl<B> WebPbn<B>
-where
-    B: Block,
-{
-    pub fn from_file(file_name: &str) -> sxd_document::Package {
-        let contents =
-            fs::read_to_string(file_name).expect("Something went wrong reading the file");
+impl WebPbn {
+    const BASE_URL: &'static str = "http://webpbn.com";
 
-        sxd_document::parser::parse(&contents).expect("failed to parse XML")
+    pub fn xml_package(content: &str) -> sxd_document::Package {
+        sxd_document::parser::parse(content).expect("failed to parse XML")
     }
 
-    fn parse_line(description: &Node) -> Description<B> {
+    fn parse_line<B>(description: &Node) -> Description<B>
+    where
+        B: Block,
+    {
         Description::new(
             description
                 .children()
@@ -140,10 +171,24 @@ where
         )
     }
 
-    pub(in super::parser) fn parse_clues(
+    fn get_clues<B>(descriptions: &Nodeset) -> Vec<Description<B>>
+    where
+        B: Block,
+    {
+        descriptions
+            .document_order()
+            .iter()
+            .map(Self::parse_line)
+            .collect()
+    }
+
+    pub(in super::parser) fn parse_clues<B>(
         package: &sxd_document::Package,
         type_: &str,
-    ) -> Vec<Description<B>> {
+    ) -> Vec<Description<B>>
+    where
+        B: Block,
+    {
         let document = package.as_document();
         let value = evaluate_xpath(&document, &format!(".//clues[@type='{}']/line", type_))
             .expect("XPath evaluation failed");
@@ -153,47 +198,6 @@ where
         } else {
             vec![]
         }
-    }
-
-    fn get_clues(descriptions: &Nodeset) -> Vec<Description<B>> {
-        descriptions
-            .document_order()
-            .iter()
-            .map(Self::parse_line)
-            .collect()
-    }
-}
-
-impl<B> WebPbn<B>
-where
-    B: Block,
-{
-    const BASE_URL: &'static str = "http://webpbn.com";
-
-    #[cfg(feature = "web")]
-    fn get_puzzle_xml(id: &str) -> reqwest::Result<String> {
-        let url = format!("{}/XMLpuz.cgi?id={}", Self::BASE_URL, id);
-        info!("Requesting {} ...", &url);
-        reqwest::get(url.as_str())?.text()
-    }
-    #[cfg(not(feature = "web"))]
-    fn get_puzzle_xml(id: &str) -> Result<&str, String> {
-        let url = format!("{}/XMLpuz.cgi?id={}", Self::BASE_URL, id);
-        info!("Requesting {} ...", &url);
-        Err(format!(
-            "Cannot request url {}: no support for web client (hint: add --features=web)",
-            url
-        ))
-    }
-
-    pub fn get_board(resource_name: &str) -> Board<B> {
-        let xml_content = Self::get_puzzle_xml(resource_name).unwrap();
-        let package = sxd_document::parser::parse(&xml_content).expect("failed to parse XML");
-
-        Board::with_descriptions(
-            Self::parse_clues(&package, "rows"),
-            Self::parse_clues(&package, "columns"),
-        )
     }
 }
 
