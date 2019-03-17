@@ -6,6 +6,7 @@
 
 - add backtracking; compare with python (all the others)
 
+- replace Color with ColorScheme, move Block inside ColorScheme
 - colored; compare with python (all the colored)
 
 - web-assembly and JS rendering(SVG?)

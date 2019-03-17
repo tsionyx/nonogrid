@@ -5,13 +5,14 @@ mod render;
 mod solver;
 mod utils;
 
-use board::{Block, Board};
-use parser::{BoardParser, LocalReader, NetworkReader};
+use board::{BinaryBlock, Block, Board};
+use parser::{BoardParser, InferScheme, LocalReader, NetworkReader, PuzzleScheme};
 use render::{Renderer, ShellRenderer};
-use solver::line::DynamicSolver;
+use solver::line::{DynamicColor, DynamicSolver};
 use solver::probing::FullProbe1;
 
 use std::cell::RefCell;
+use std::fmt::Display;
 use std::rc::Rc;
 use std::str::FromStr;
 
@@ -52,9 +53,24 @@ fn main() {
         )
         .get_matches();
 
-    let board = board_from_args(&matches);
-    let board = Rc::new(RefCell::new(board));
     let search_options = search_options_from_args(&matches);
+    let (source, path) = source_from_args(&matches);
+    let text = source.get_board_text(&path).unwrap();
+    let scheme = source.infer_scheme(&text);
+
+    match scheme {
+        PuzzleScheme::BlackAndWhite => run::<BinaryBlock>(&text, source, search_options),
+        PuzzleScheme::MultiColor => unimplemented!(),
+    }
+}
+
+fn run<B>(board_str: &str, source: Source, search_options: SearchOptions)
+where
+    B: Block + Display,
+    B::Color: DynamicColor + Display,
+{
+    let board = source.get_board::<B>(board_str);
+    let board = Rc::new(RefCell::new(board));
 
     let r = ShellRenderer::with_board(Rc::clone(&board));
 
@@ -86,30 +102,25 @@ fn main() {
     }
 }
 
-fn board_from_args<B>(matches: &ArgMatches) -> Board<B>
-where
-    B: Block,
-{
+fn source_from_args(matches: &ArgMatches) -> (Source, String) {
     let my_path = matches.value_of("my");
     let webpbn_path = matches.value_of("webpbn");
     let webpbn_id = matches.value_of("webpbn-online");
 
     if let Some(webpbn_path) = webpbn_path {
-        let s = parser::WebPbn::read_local(webpbn_path).unwrap();
-        parser::WebPbn::parse(&s)
+        return (Source::WebPbn, webpbn_path.to_string());
     } else if let Some(webpbn_id) = webpbn_id {
         value_t_or_exit!(matches, "webpbn-online", u16);
-        let s = parser::WebPbn::read_remote(webpbn_id).unwrap();
-        parser::WebPbn::parse(&s)
+        return (Source::WebPbnOnline, webpbn_id.to_string());
     } else if let Some(my_path) = my_path {
-        let s = parser::MyFormat::read_local(my_path).unwrap();
-        parser::MyFormat::parse(&s)
-    } else {
-        panic!("No valid source found")
+        return (Source::Own, my_path.to_string());
     }
+    panic!("No valid source found");
 }
 
-fn search_options_from_args(matches: &ArgMatches) -> (Option<usize>, Option<u32>, Option<usize>) {
+type SearchOptions = (Option<usize>, Option<u32>, Option<usize>);
+
+fn search_options_from_args(matches: &ArgMatches) -> SearchOptions {
     (
         parse_arg::<usize>(&matches, "max-solutions"),
         parse_arg::<u32>(&matches, "timeout"),
@@ -127,4 +138,37 @@ where
     }
 
     None
+}
+
+enum Source {
+    Own,
+    WebPbn,
+    WebPbnOnline,
+}
+
+impl Source {
+    fn get_board_text(&self, resource_name: &str) -> Result<String, String> {
+        match self {
+            Source::Own => parser::MyFormat::read_local(resource_name),
+            Source::WebPbn => parser::WebPbn::read_local(resource_name),
+            Source::WebPbnOnline => parser::WebPbn::read_remote(resource_name),
+        }
+    }
+
+    fn infer_scheme(&self, board_str: &str) -> PuzzleScheme {
+        match self {
+            Source::Own => parser::MyFormat::infer_scheme(board_str),
+            Source::WebPbn | Source::WebPbnOnline => parser::WebPbn::infer_scheme(board_str),
+        }
+    }
+
+    fn get_board<B>(&self, board_str: &str) -> Board<B>
+    where
+        B: Block,
+    {
+        match self {
+            Source::Own => parser::MyFormat::parse(board_str),
+            Source::WebPbn | Source::WebPbnOnline => parser::WebPbn::parse(board_str),
+        }
+    }
 }
