@@ -1,6 +1,7 @@
 use super::block::{Block, Description};
 use super::board::Board;
 
+use std::collections::HashMap;
 use std::fs;
 
 use self::sxd_xpath::nodeset::{Node, Nodeset};
@@ -178,28 +179,14 @@ where
 
 impl InferScheme for WebPbn {
     fn infer_scheme(board_str: &str) -> PuzzleScheme {
-        let package = Self::xml_package(board_str);
-        let document = package.as_document();
-        let value = evaluate_xpath(&document, ".//color").expect("XPath evaluation failed");
-
-        if let Value::Nodeset(ns) = value {
-            let mut colors: Vec<_> = ns
-                .iter()
-                .map(|color_node| {
-                    if let Node::Element(e) = color_node {
-                        e.attribute("name").unwrap().value()
-                    } else {
-                        ""
-                    }
-                })
-                .collect();
-            colors.sort();
-            if colors != ["black", "white"] {
-                return PuzzleScheme::MultiColor;
-            }
+        let colors = Self::get_colors(board_str);
+        let mut names: Vec<_> = colors.keys().collect();
+        names.sort();
+        if names.is_empty() || names == ["black", "white"] {
+            return PuzzleScheme::BlackAndWhite;
         }
 
-        PuzzleScheme::BlackAndWhite
+        PuzzleScheme::MultiColor
     }
 }
 
@@ -249,6 +236,30 @@ impl WebPbn {
             Self::get_clues(&ns)
         } else {
             vec![]
+        }
+    }
+
+    pub fn get_colors(board_str: &str) -> HashMap<String, (char, String)> {
+        let package = Self::xml_package(board_str);
+        let document = package.as_document();
+        let value = evaluate_xpath(&document, ".//color").expect("XPath evaluation failed");
+
+        if let Value::Nodeset(ns) = value {
+            ns.iter()
+                .filter_map(|color_node| {
+                    let value = color_node.string_value();
+                    if let Node::Element(e) = color_node {
+                        let name = e.attribute("name").unwrap().value();
+                        let symbol = e.attribute("char").unwrap().value();
+                        let symbol: char = symbol.as_bytes()[0] as char;
+                        Some((name.to_string(), (symbol, value)))
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        } else {
+            HashMap::new()
         }
     }
 }
