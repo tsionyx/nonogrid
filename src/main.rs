@@ -8,8 +8,7 @@ mod utils;
 
 use block::binary::BinaryBlock;
 use block::Block;
-use board::Board;
-use parser::{BoardParser, InferScheme, LocalReader, NetworkReader, PuzzleScheme};
+use parser::{BoardParser, LocalReader, NetworkReader, PuzzleScheme};
 use render::{Renderer, ShellRenderer};
 use solver::line::{DynamicColor, DynamicSolver};
 use solver::probing::FullProbe1;
@@ -58,21 +57,38 @@ fn main() {
 
     let search_options = search_options_from_args(&matches);
     let (source, path) = source_from_args(&matches);
-    let text = source.get_board_text(&path).unwrap();
-    let scheme = source.infer_scheme(&text);
 
-    match scheme {
-        PuzzleScheme::BlackAndWhite => run::<BinaryBlock>(&text, source, search_options),
-        PuzzleScheme::MultiColor => unimplemented!(),
+    // FIXME: lack of dynamic dispatching entails this shit.
+    //        Box<dyn BoardParser> also does not work due to
+    //        error[E0038]: the trait `parser::BoardParser` cannot be made into an object
+    //        note: method `parse` has generic type parameters
+    if let Source::Own = source {
+        let board_parser = parser::MyFormat::read_local(&path).unwrap();
+        match board_parser.infer_scheme() {
+            PuzzleScheme::BlackAndWhite => run::<BinaryBlock, _>(&board_parser, search_options),
+            PuzzleScheme::MultiColor => unimplemented!(),
+        }
+    } else {
+        let board_parser = match source {
+            Source::WebPbn => parser::WebPbn::read_local(&path),
+            Source::WebPbnOnline => parser::WebPbn::read_remote(&path),
+            _ => panic!("No parser matched"),
+        }
+        .unwrap();
+        match board_parser.infer_scheme() {
+            PuzzleScheme::BlackAndWhite => run::<BinaryBlock, _>(&board_parser, search_options),
+            PuzzleScheme::MultiColor => unimplemented!(),
+        }
     }
 }
 
-fn run<B>(board_str: &str, source: Source, search_options: SearchOptions)
+fn run<B, P>(board_parser: &P, search_options: SearchOptions)
 where
     B: Block + Display,
     B::Color: DynamicColor + Display,
+    P: BoardParser,
 {
-    let board = source.get_board::<B>(board_str);
+    let board = board_parser.parse::<B>();
     let board = Rc::new(RefCell::new(board));
 
     let r = ShellRenderer::with_board(Rc::clone(&board));
@@ -147,31 +163,4 @@ enum Source {
     Own,
     WebPbn,
     WebPbnOnline,
-}
-
-impl Source {
-    fn get_board_text(&self, resource_name: &str) -> Result<String, String> {
-        match self {
-            Source::Own => parser::MyFormat::read_local(resource_name),
-            Source::WebPbn => parser::WebPbn::read_local(resource_name),
-            Source::WebPbnOnline => parser::WebPbn::read_remote(resource_name),
-        }
-    }
-
-    fn infer_scheme(&self, board_str: &str) -> PuzzleScheme {
-        match self {
-            Source::Own => parser::MyFormat::infer_scheme(board_str),
-            Source::WebPbn | Source::WebPbnOnline => parser::WebPbn::infer_scheme(board_str),
-        }
-    }
-
-    fn get_board<B>(&self, board_str: &str) -> Board<B>
-    where
-        B: Block,
-    {
-        match self {
-            Source::Own => parser::MyFormat::parse(board_str),
-            Source::WebPbn | Source::WebPbnOnline => parser::WebPbn::parse(board_str),
-        }
-    }
 }

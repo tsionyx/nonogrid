@@ -14,13 +14,26 @@ extern crate sxd_xpath;
 extern crate toml;
 
 pub trait LocalReader {
-    fn read_local(file_name: &str) -> Result<String, String> {
+    fn read_local(file_name: &str) -> Result<Self, String>
+    where
+        Self: Sized,
+    {
+        let content = Self::file_content(file_name)?;
+        Self::from_string(content)
+    }
+    fn file_content(file_name: &str) -> Result<String, String> {
         fs::read_to_string(file_name).map_err(|err| format!("{:?}", err))
     }
+
+    fn from_string(content: String) -> Result<Self, String>
+    where
+        Self: Sized;
 }
 
 pub trait NetworkReader {
-    fn read_remote(file_name: &str) -> Result<String, String>;
+    fn read_remote(file_name: &str) -> Result<Self, String>
+    where
+        Self: Sized;
 
     #[cfg(feature = "web")]
     fn http_content(url: String) -> Result<String, String> {
@@ -39,22 +52,18 @@ pub trait NetworkReader {
     }
 }
 
-pub trait BoardParser<B>
-where
-    B: Block,
-{
-    //type BlockType: Block;
-    fn parse(board_str: &str) -> Board<B>;
+pub trait BoardParser {
+    fn parse<B>(&self) -> Board<B>
+    where
+        B: Block;
+
+    fn infer_scheme(&self) -> PuzzleScheme;
 }
 
 #[derive(Debug, PartialEq)]
 pub enum PuzzleScheme {
     BlackAndWhite,
     MultiColor,
-}
-
-pub trait InferScheme {
-    fn infer_scheme(board_str: &str) -> PuzzleScheme;
 }
 
 #[derive(Debug, Deserialize)]
@@ -69,35 +78,49 @@ struct Colors {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct MyFormat {
+struct NonoToml {
     clues: Clues,
     colors: Option<Colors>,
 }
 
-impl LocalReader for MyFormat {}
+pub struct MyFormat {
+    structure: NonoToml,
+    //board_str: String,
+}
 
-impl<B> BoardParser<B> for MyFormat
-where
-    B: Block,
-{
-    fn parse(board_str: &str) -> Board<B> {
-        let clues = Self::with_content(board_str)
-            .expect("Something wrong with format")
-            .clues;
+impl LocalReader for MyFormat {
+    fn from_string(content: String) -> Result<Self, String>
+    where
+        Self: Sized,
+    {
+        let nono =
+            toml::from_str(&content).map_err(|toml_de_error| format!("{:?}", toml_de_error))?;
+
+        Ok(Self {
+            structure: nono,
+            //board_str: content,
+        })
+    }
+}
+
+impl BoardParser for MyFormat {
+    fn parse<B>(&self) -> Board<B>
+    where
+        B: Block,
+    {
+        let clues = &self.structure.clues;
         Board::with_descriptions(
             Self::parse_clues(&clues.rows),
             Self::parse_clues(&clues.columns),
         )
     }
-}
 
-impl InferScheme for MyFormat {
-    fn infer_scheme(board_str: &str) -> PuzzleScheme {
-        let this = Self::with_content(board_str).unwrap();
-        if let Some(colors) = this.colors {
-            let has_colors = colors.defs.map(|defs| !defs.is_empty()).unwrap_or(false);
-            if has_colors {
-                return PuzzleScheme::MultiColor;
+    fn infer_scheme(&self) -> PuzzleScheme {
+        if let Some(colors) = &self.structure.colors {
+            if let Some(defs) = &colors.defs {
+                if !defs.is_empty() {
+                    return PuzzleScheme::MultiColor;
+                }
             }
         }
 
@@ -106,10 +129,6 @@ impl InferScheme for MyFormat {
 }
 
 impl MyFormat {
-    pub fn with_content(content: &str) -> Result<Self, toml::de::Error> {
-        toml::from_str(content)
-    }
-
     fn parse_line<B>(descriptions: &str) -> Option<Vec<Description<B>>>
     where
         B: Block,
@@ -153,33 +172,51 @@ impl MyFormat {
     }
 }
 
-pub struct WebPbn {}
+pub struct WebPbn {
+    package: sxd_document::Package,
+    //board_str: String,
+}
 
-impl LocalReader for WebPbn {}
+impl LocalReader for WebPbn {
+    fn from_string(content: String) -> Result<Self, String>
+    where
+        Self: Sized,
+    {
+        let package = sxd_document::parser::parse(&content)
+            .map_err(|sxd_parser_error| format!("{:?}", sxd_parser_error))?;
+
+        Ok(Self {
+            package,
+            //board_str: content,
+        })
+    }
+}
 
 impl NetworkReader for WebPbn {
-    fn read_remote(file_name: &str) -> Result<String, String> {
+    fn read_remote(file_name: &str) -> Result<Self, String> {
         let url = format!("{}/XMLpuz.cgi?id={}", Self::BASE_URL, file_name);
-        Self::http_content(url)
+
+        let content = Self::http_content(url)?;
+        let package = sxd_document::parser::parse(&content)
+            .map_err(|sxd_parser_error| format!("{:?}", sxd_parser_error))?;
+
+        Ok(Self {
+            package,
+            //board_str: content,
+        })
     }
 }
 
-impl<B> BoardParser<B> for WebPbn
-where
-    B: Block,
-{
-    fn parse(board_str: &str) -> Board<B> {
-        let package = Self::xml_package(board_str);
-        Board::with_descriptions(
-            Self::parse_clues(&package, "rows"),
-            Self::parse_clues(&package, "columns"),
-        )
+impl BoardParser for WebPbn {
+    fn parse<B>(&self) -> Board<B>
+    where
+        B: Block,
+    {
+        Board::with_descriptions(self.parse_clues("rows"), self.parse_clues("columns"))
     }
-}
 
-impl InferScheme for WebPbn {
-    fn infer_scheme(board_str: &str) -> PuzzleScheme {
-        let colors = Self::get_colors(board_str);
+    fn infer_scheme(&self) -> PuzzleScheme {
+        let colors = self.get_colors();
         let mut names: Vec<_> = colors.keys().collect();
         names.sort();
         if names.is_empty() || names == ["black", "white"] {
@@ -192,10 +229,6 @@ impl InferScheme for WebPbn {
 
 impl WebPbn {
     const BASE_URL: &'static str = "http://webpbn.com";
-
-    pub fn xml_package(content: &str) -> sxd_document::Package {
-        sxd_document::parser::parse(content).expect("failed to parse XML")
-    }
 
     fn parse_line<B>(description: &Node) -> Description<B>
     where
@@ -221,14 +254,11 @@ impl WebPbn {
             .collect()
     }
 
-    pub(in super::parser) fn parse_clues<B>(
-        package: &sxd_document::Package,
-        type_: &str,
-    ) -> Vec<Description<B>>
+    pub(in super::parser) fn parse_clues<B>(&self, type_: &str) -> Vec<Description<B>>
     where
         B: Block,
     {
-        let document = package.as_document();
+        let document = self.package.as_document();
         let value = evaluate_xpath(&document, &format!(".//clues[@type='{}']/line", type_))
             .expect("XPath evaluation failed");
 
@@ -239,9 +269,8 @@ impl WebPbn {
         }
     }
 
-    pub fn get_colors(board_str: &str) -> HashMap<String, (char, String)> {
-        let package = Self::xml_package(board_str);
-        let document = package.as_document();
+    pub fn get_colors(&self) -> HashMap<String, (char, String)> {
+        let document = self.package.as_document();
         let value = evaluate_xpath(&document, ".//color").expect("XPath evaluation failed");
 
         if let Value::Nodeset(ns) = value {
@@ -268,7 +297,7 @@ impl WebPbn {
 mod tests {
     use super::super::block::binary::BinaryBlock;
     use super::super::block::Description;
-    use super::{InferScheme, MyFormat, PuzzleScheme};
+    use super::{BoardParser, LocalReader, MyFormat, PuzzleScheme};
 
     fn block(n: usize) -> BinaryBlock {
         BinaryBlock(n)
@@ -381,7 +410,10 @@ mod tests {
         columns = '1'
         ";
 
-        assert_eq!(MyFormat::infer_scheme(s), PuzzleScheme::BlackAndWhite)
+        assert_eq!(
+            MyFormat::from_string(s.to_string()).unwrap().infer_scheme(),
+            PuzzleScheme::BlackAndWhite
+        )
     }
 
     #[test]
@@ -394,7 +426,10 @@ mod tests {
         [colors]
         ";
 
-        assert_eq!(MyFormat::infer_scheme(s), PuzzleScheme::BlackAndWhite)
+        assert_eq!(
+            MyFormat::from_string(s.to_string()).unwrap().infer_scheme(),
+            PuzzleScheme::BlackAndWhite
+        )
     }
 
     #[test]
@@ -408,7 +443,10 @@ mod tests {
         defs = []
         ";
 
-        assert_eq!(MyFormat::infer_scheme(s), PuzzleScheme::BlackAndWhite)
+        assert_eq!(
+            MyFormat::from_string(s.to_string()).unwrap().infer_scheme(),
+            PuzzleScheme::BlackAndWhite
+        )
     }
 
     #[test]
@@ -422,6 +460,9 @@ mod tests {
         defs = ['g=(0, 204, 0) %']
         ";
 
-        assert_eq!(MyFormat::infer_scheme(s), PuzzleScheme::MultiColor)
+        assert_eq!(
+            MyFormat::from_string(s.to_string()).unwrap().infer_scheme(),
+            PuzzleScheme::MultiColor
+        )
     }
 }

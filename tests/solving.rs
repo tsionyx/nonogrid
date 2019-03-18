@@ -12,9 +12,8 @@ use std::rc::Rc;
 
 #[test]
 fn hello() {
-    let board = <MyFormat as BoardParser<BinaryBlock>>::parse(
-        &MyFormat::read_local("examples/hello.toml").unwrap(),
-    );
+    let f = MyFormat::read_local("examples/hello.toml").unwrap();
+    let board = f.parse::<BinaryBlock>();
     let board = Rc::new(RefCell::new(board));
 
     warn!("Solving with simple line propagation");
@@ -37,9 +36,8 @@ fn hello() {
 
 #[test]
 fn pony() {
-    let board = <MyFormat as BoardParser<BinaryBlock>>::parse(
-        &MyFormat::read_local("examples/MLP.toml").unwrap(),
-    );
+    let f = MyFormat::read_local("examples/MLP.toml").unwrap();
+    let board = f.parse::<BinaryBlock>();
     let board = Rc::new(RefCell::new(board));
 
     warn!("Solving with simple line propagation");
