@@ -1,20 +1,30 @@
-use super::board::{BinaryBlock, Block, Board, Description};
+use super::board::{Block, Board, Description};
 use super::utils::{pad, pad_with, transpose};
 use std::cell::{Ref, RefCell};
 use std::fmt::Display;
 use std::rc::Rc;
 
-pub trait Renderer {
-    fn with_board(board: Rc<RefCell<Board<BinaryBlock>>>) -> Self;
+pub trait Renderer<B>
+where
+    B: Block,
+{
+    fn with_board(board: Rc<RefCell<Board<B>>>) -> Self;
     fn render(&self) -> String;
 }
 
-pub struct ShellRenderer {
-    board: Rc<RefCell<Board<BinaryBlock>>>,
+pub struct ShellRenderer<B>
+where
+    B: Block,
+{
+    board: Rc<RefCell<Board<B>>>,
 }
 
-impl Renderer for ShellRenderer {
-    fn with_board(board: Rc<RefCell<Board<BinaryBlock>>>) -> Self {
+impl<B> Renderer<B> for ShellRenderer<B>
+where
+    B: Block + Display,
+    B::Color: Display,
+{
+    fn with_board(board: Rc<RefCell<Board<B>>>) -> Self {
         Self { board }
     }
 
@@ -53,8 +63,11 @@ impl Renderer for ShellRenderer {
     }
 }
 
-impl ShellRenderer {
-    fn board(&self) -> Ref<Board<BinaryBlock>> {
+impl<B> ShellRenderer<B>
+where
+    B: Block + Display,
+{
+    fn board(&self) -> Ref<Board<B>> {
         self.board.borrow()
     }
     //fn header_height(&self) -> usize {
@@ -65,7 +78,7 @@ impl ShellRenderer {
         Self::descriptions_width(&self.board().descriptions(true))
     }
 
-    fn descriptions_width<B: Block + Display>(descriptions: &[Rc<Description<B>>]) -> usize {
+    fn descriptions_width(descriptions: &[Rc<Description<B>>]) -> usize {
         descriptions
             .iter()
             .map(|desc| desc.vec.len())
@@ -73,13 +86,11 @@ impl ShellRenderer {
             .unwrap_or(0)
     }
 
-    fn desc_to_string<B: Block + Display>(desc: &Rc<Description<B>>) -> Vec<String> {
+    fn desc_to_string(desc: &Rc<Description<B>>) -> Vec<String> {
         (*desc).vec.iter().map(|block| block.to_string()).collect()
     }
 
-    fn descriptions_to_matrix<B: Block + Display>(
-        descriptions: &[Rc<Description<B>>],
-    ) -> Vec<Vec<String>> {
+    fn descriptions_to_matrix(descriptions: &[Rc<Description<B>>]) -> Vec<Vec<String>> {
         let mut rows: Vec<Vec<String>> = descriptions.iter().map(Self::desc_to_string).collect();
 
         let width = Self::descriptions_width(descriptions);
@@ -101,7 +112,10 @@ impl ShellRenderer {
         .unwrap()
     }
 
-    fn grid_lines(&self) -> Vec<Vec<String>> {
+    fn grid_lines(&self) -> Vec<Vec<String>>
+    where
+        B::Color: Display,
+    {
         self.board()
             .cells()
             .iter()
