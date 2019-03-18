@@ -1,5 +1,5 @@
 use nonogrid::{
-    board::{BinaryBlock, BinaryColor},
+    block::binary::{BinaryBlock, BinaryColor},
     parser::{BoardParser, LocalReader, MyFormat},
     solver::{line, probing::*, propagation},
 };

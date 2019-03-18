@@ -1,13 +1,6 @@
-use super::utils;
+use super::block::{Block, Color, Description};
 
 use std::cell::{Ref, RefCell};
-use std::cmp::Ordering;
-use std::collections::HashSet;
-use std::fmt;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::marker::Sized;
-use std::ops::{Add, Sub};
 use std::rc::Rc;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
@@ -27,215 +20,6 @@ impl Point {
 
     pub fn y(&self) -> usize {
         self.y
-    }
-}
-
-pub trait Color
-where
-    Self: Debug
-        + PartialEq
-        + Eq
-        + Hash
-        + Copy
-        + Clone
-        + PartialOrd
-        + Ord
-        + Add<Output = Self>
-        + Sub<Output = Result<Self, String>>,
-{
-    fn initial() -> Self;
-    fn blank() -> Self;
-    fn is_solved(&self) -> bool;
-    fn solution_rate(&self) -> f64;
-    fn is_updated_with(&self, new: &Self) -> Result<bool, String>;
-    fn variants(&self) -> HashSet<Self>
-    where
-        Self: Sized;
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd)]
-pub enum BinaryColor {
-    Undefined,
-    White,
-    Black,
-    // especially for DynamicSolver
-    BlackOrWhite,
-}
-
-impl Color for BinaryColor {
-    fn initial() -> Self {
-        BinaryColor::Undefined
-    }
-    fn blank() -> Self {
-        BinaryColor::White
-    }
-
-    fn is_solved(&self) -> bool {
-        self == &BinaryColor::Black || self == &BinaryColor::White
-    }
-
-    fn solution_rate(&self) -> f64 {
-        if self.is_solved() {
-            1.0
-        } else {
-            0.0
-        }
-    }
-
-    fn is_updated_with(&self, new: &Self) -> Result<bool, String> {
-        if self == new {
-            return Ok(false);
-        }
-
-        if self != &BinaryColor::Undefined {
-            return Err("Can only update undefined".to_string());
-        }
-        if !new.is_solved() {
-            return Err("Cannot update already solved".to_string());
-        }
-
-        Ok(true)
-    }
-
-    fn variants(&self) -> HashSet<Self> {
-        if self.is_solved() {
-            vec![*self]
-        } else {
-            vec![BinaryColor::White, BinaryColor::Black]
-        }
-        .into_iter()
-        .collect()
-    }
-}
-
-impl fmt::Display for BinaryColor {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use BinaryColor::*;
-
-        let symbol = match self {
-            Undefined => '?',
-            White => '.',
-            Black => '\u{2b1b}',
-            BlackOrWhite => '?',
-        };
-        write!(f, "{}", symbol)
-    }
-}
-
-impl BinaryColor {
-    fn order(self) -> u8 {
-        match self {
-            BinaryColor::Undefined => 0,
-            BinaryColor::White => 1,
-            BinaryColor::Black => 2,
-            _ => 3,
-        }
-    }
-}
-
-impl Ord for BinaryColor {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.order().cmp(&other.order())
-    }
-}
-
-impl Add for BinaryColor {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        rhs
-    }
-}
-
-impl Sub for BinaryColor {
-    type Output = Result<Self, String>;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        if self.is_solved() {
-            return Err(format!("Cannot unset already set cell {:?}", &self));
-        }
-
-        Ok(match rhs {
-            BinaryColor::Black => BinaryColor::White,
-            BinaryColor::White => BinaryColor::Black,
-            _ => self,
-        })
-    }
-}
-
-pub trait Block
-where
-    Self: Debug + PartialEq + Eq + Hash + Default + Clone,
-{
-    type Color: Color;
-
-    fn from_str(s: &str) -> Self;
-    fn partial_sums(desc: &[Self]) -> Vec<usize>
-    where
-        Self: Sized;
-
-    fn size(&self) -> usize;
-    fn color(&self) -> Self::Color;
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Default, Clone)]
-pub struct BinaryBlock(pub usize);
-
-impl Block for BinaryBlock {
-    type Color = BinaryColor;
-
-    fn from_str(s: &str) -> Self {
-        Self(s.parse::<usize>().unwrap())
-    }
-
-    fn partial_sums(desc: &[Self]) -> Vec<usize> {
-        if desc.is_empty() {
-            return vec![];
-        }
-
-        desc.iter()
-            .fold(Vec::with_capacity(desc.len()), |mut acc, block| {
-                if acc.is_empty() {
-                    vec![block.0]
-                } else {
-                    let last = acc.last().unwrap();
-                    acc.push(last + block.0 + 1);
-                    acc
-                }
-            })
-    }
-
-    fn size(&self) -> usize {
-        self.0
-    }
-
-    fn color(&self) -> Self::Color {
-        BinaryColor::Black
-    }
-}
-
-impl fmt::Display for BinaryBlock {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub struct Description<T: Block>
-where
-    T: Block,
-{
-    pub vec: Vec<T>,
-}
-
-impl<T> Description<T>
-where
-    T: Block,
-{
-    pub fn new(mut vec: Vec<T>) -> Description<T> {
-        // remove zero blocks
-        utils::remove(&mut vec, T::default());
-        Description { vec }
     }
 }
 
@@ -492,8 +276,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::BinaryColor::Undefined;
-    use super::{BinaryBlock, Block, Board, Description};
+    use super::super::block::binary::BinaryBlock;
+    use super::super::block::binary::BinaryColor::Undefined;
+    use super::super::block::{Block, Description};
+    use super::Board;
 
     #[test]
     fn u_letter() {

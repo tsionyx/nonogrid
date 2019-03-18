@@ -1,3 +1,4 @@
+pub mod block;
 pub mod board;
 mod cache;
 pub mod parser;

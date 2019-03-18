@@ -1,4 +1,5 @@
-use super::super::board::{Block, Board, Color, Description, Point};
+use super::super::block::{Block, Color, Description};
+use super::super::board::{Board, Point};
 use super::super::cache::GrowableCache;
 use super::line::LineSolver;
 

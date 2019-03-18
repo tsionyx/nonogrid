@@ -1,4 +1,5 @@
-use super::super::board::{Block, Board, Color, Point};
+use super::super::block::{Block, Color};
+use super::super::board::{Board, Point};
 use super::line::LineSolver;
 use super::probing::{Impact, ProbeSolver};
 
@@ -203,6 +204,7 @@ where
     P: ProbeSolver<BlockType = B>,
     S: LineSolver<BlockType = B>,
 {
+    #[allow(dead_code)]
     pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
         Self::with_options(board, None, None, None)
     }

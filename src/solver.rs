@@ -3,7 +3,8 @@ pub mod line;
 pub mod probing;
 pub mod propagation;
 
-use super::board::{Block, Board};
+use super::block::Block;
+use super::board::Board;
 use super::solver::backtracking::Solver;
 use super::solver::probing::ProbeSolver;
 

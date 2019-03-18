@@ -1,5 +1,5 @@
-use super::super::board::BinaryColor;
-use super::super::board::{Block, Color, Description};
+use super::super::block::binary::BinaryColor;
+use super::super::block::{Block, Color, Description};
 use super::super::utils;
 use std::rc::Rc;
 
@@ -324,8 +324,9 @@ impl DynamicColor for BinaryColor {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::board::BinaryColor::{Black, Undefined, White};
-    use super::super::super::board::{BinaryBlock, BinaryColor, Description};
+    use super::super::super::block::binary::BinaryColor::{Black, Undefined, White};
+    use super::super::super::block::binary::{BinaryBlock, BinaryColor};
+    use super::super::super::block::Description;
     use super::{DynamicSolver, LineSolver};
     use std::rc::Rc;
 

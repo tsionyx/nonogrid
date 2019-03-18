@@ -1,3 +1,4 @@
+mod block;
 mod board;
 mod cache;
 mod parser;
@@ -5,7 +6,9 @@ mod render;
 mod solver;
 mod utils;
 
-use board::{BinaryBlock, Block, Board};
+use block::binary::BinaryBlock;
+use block::Block;
+use board::Board;
 use parser::{BoardParser, InferScheme, LocalReader, NetworkReader, PuzzleScheme};
 use render::{Renderer, ShellRenderer};
 use solver::line::{DynamicColor, DynamicSolver};

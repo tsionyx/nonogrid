@@ -1,4 +1,5 @@
-use super::super::board::{Block, Board, Color, Point};
+use super::super::block::{Block, Color};
+use super::super::board::{Board, Point};
 use super::line::LineSolver;
 use super::propagation;
 use super::propagation::{CacheKey, CacheValue};

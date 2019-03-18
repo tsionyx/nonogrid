@@ -1,4 +1,5 @@
-use super::board::{Block, Board, Description};
+use super::block::{Block, Description};
+use super::board::Board;
 
 use std::fs;
 
@@ -254,7 +255,8 @@ impl WebPbn {
 
 #[cfg(test)]
 mod tests {
-    use super::super::board::{BinaryBlock, Description};
+    use super::super::block::binary::BinaryBlock;
+    use super::super::block::Description;
     use super::{InferScheme, MyFormat, PuzzleScheme};
 
     fn block(n: usize) -> BinaryBlock {

@@ -1,4 +1,5 @@
-use super::board::{Block, Board, Description};
+use super::block::{Block, Description};
+use super::board::Board;
 use super::utils::{pad, pad_with, transpose};
 use std::cell::{Ref, RefCell};
 use std::fmt::Display;
