@@ -51,7 +51,7 @@ where
         let height = rows.len();
         let width = columns.len();
 
-        let init = B::Color::initial();
+        let init = B::Color::default();
 
         let cells = (0..height)
             .map(|_| Rc::new(RefCell::new(vec![init; width])))

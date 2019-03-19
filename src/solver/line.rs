@@ -73,7 +73,7 @@ where
             let both = B::Color::both_colors();
             if both.is_some() {
                 let both = both.unwrap();
-                let init = B::Color::initial();
+                let init = B::Color::default();
 
                 utils::replace(&mut solved, both, init);
             }

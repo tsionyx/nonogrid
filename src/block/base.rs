@@ -12,6 +12,7 @@ where
         + PartialEq
         + Eq
         + Hash
+        + Default
         + Copy
         + Clone
         + PartialOrd
@@ -19,7 +20,6 @@ where
         + Add<Output = Self>
         + Sub<Output = Result<Self, String>>,
 {
-    fn initial() -> Self;
     fn blank() -> Self;
     fn is_solved(&self) -> bool;
     fn solution_rate(&self) -> f64;

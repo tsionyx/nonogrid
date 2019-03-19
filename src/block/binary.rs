@@ -14,10 +14,13 @@ pub enum BinaryColor {
     BlackOrWhite,
 }
 
-impl Color for BinaryColor {
-    fn initial() -> Self {
+impl Default for BinaryColor {
+    fn default() -> Self {
         BinaryColor::Undefined
     }
+}
+
+impl Color for BinaryColor {
     fn blank() -> Self {
         BinaryColor::White
     }
