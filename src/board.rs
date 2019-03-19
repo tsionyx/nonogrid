@@ -1,5 +1,6 @@
-use super::block::base::color::ColorPalette;
-use super::block::{Block, Color, Description};
+use super::block::base::color::{ColorId, ColorPalette};
+use super::block::base::{Block, Color, Description};
+use super::utils::dedup;
 
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
@@ -32,6 +33,7 @@ where
     desc_rows: Vec<Rc<Description<B>>>,
     desc_cols: Vec<Rc<Description<B>>>,
     palette: Option<ColorPalette>,
+    all_colors: Vec<ColorId>,
 }
 
 impl<B> Board<B>
@@ -51,18 +53,32 @@ where
         let height = rows.len();
         let width = columns.len();
 
-        let init = B::Color::default();
+        let all_colors = Self::all_colors(&rows);
+        let init = B::Color::from_color_ids(&all_colors);
 
         let cells = (0..height)
             .map(|_| Rc::new(RefCell::new(vec![init; width])))
             .collect();
 
+        let desc_rows = rows.into_iter().map(Rc::new).collect();
+        let desc_cols = columns.into_iter().map(Rc::new).collect();
         Board {
             cells,
-            desc_rows: rows.into_iter().map(Rc::new).collect(),
-            desc_cols: columns.into_iter().map(Rc::new).collect(),
+            desc_rows,
+            desc_cols,
             palette,
+            all_colors,
         }
+    }
+
+    fn all_colors(descriptions: &[Description<B>]) -> Vec<ColorId> {
+        let mut colors: Vec<_> = descriptions
+            .iter()
+            .flat_map(|row| row.vec.iter().map(|block| block.color().as_color_id()))
+            .collect();
+
+        colors.push(ColorPalette::WHITE_ID);
+        dedup(colors)
     }
 
     pub fn cells(&self) -> Vec<Ref<Vec<B::Color>>> {
@@ -110,29 +126,30 @@ where
     }
 
     /// How many cells in a line are known to be of particular color
-    pub fn line_solution_rate(line: &[B::Color]) -> f64 {
+    pub fn line_solution_rate(&self, line: &[B::Color]) -> f64 {
         let size = line.len();
+        let colors = &self.all_colors;
 
-        let solved: f64 = line.iter().map(|cell| cell.solution_rate()).sum();
+        let solved: f64 = line.iter().map(|cell| cell.solution_rate(colors)).sum();
 
         solved / size as f64
     }
 
     /// How many cells in the row with given index are known to be of particular color
     pub fn row_solution_rate(&self, index: usize) -> f64 {
-        Self::line_solution_rate(&self.get_row(index))
+        self.line_solution_rate(&self.get_row(index))
     }
 
     /// How many cells in the column with given index are known to be of particular color
     pub fn column_solution_rate(&self, index: usize) -> f64 {
-        Self::line_solution_rate(&self.get_column(index))
+        self.line_solution_rate(&self.get_column(index))
     }
 
     /// How many cells in the whole grid are known to be of particular color
     pub fn solution_rate(&self) -> f64 {
         self.cells
             .iter()
-            .map(|row| Self::line_solution_rate(&row.borrow()))
+            .map(|row| self.line_solution_rate(&row.borrow()))
             .sum::<f64>()
             / (self.height() as f64)
     }
@@ -281,6 +298,7 @@ where
             desc_rows: self.desc_rows.clone(),
             desc_cols: self.desc_cols.clone(),
             palette: self.palette.clone(),
+            all_colors: self.all_colors.clone(),
         }
     }
 }

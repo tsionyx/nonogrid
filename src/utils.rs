@@ -1,4 +1,7 @@
 use std::cmp::Reverse;
+use std::hash::Hash;
+
+use hashbrown::HashSet;
 
 pub fn pad(s: &str, max_size: usize, right: bool) -> String {
     if right {
@@ -81,6 +84,14 @@ where
     for index in removed_indexes {
         vec.remove(index);
     }
+}
+
+pub fn dedup<T>(vec: Vec<T>) -> Vec<T>
+where
+    T: Eq + Hash + Clone,
+{
+    let set: HashSet<_> = vec.clone().into_iter().collect();
+    set.into_iter().collect()
 }
 
 #[cfg(test)]

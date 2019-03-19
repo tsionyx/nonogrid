@@ -1,3 +1,4 @@
+use super::super::block::base::color::ColorId;
 use super::super::utils;
 
 use std::collections::HashSet;
@@ -22,11 +23,14 @@ where
 {
     fn blank() -> Self;
     fn is_solved(&self) -> bool;
-    fn solution_rate(&self) -> f64;
+    fn solution_rate(&self, all_colors: &[ColorId]) -> f64;
     fn is_updated_with(&self, new: &Self) -> Result<bool, String>;
     fn variants(&self) -> HashSet<Self>
     where
         Self: Sized;
+
+    fn as_color_id(&self) -> ColorId;
+    fn from_color_ids(ids: &[ColorId]) -> Self;
 }
 
 pub trait Block
@@ -35,7 +39,7 @@ where
 {
     type Color: Color;
 
-    fn from_str_and_color(s: &str, color: Option<color::ColorId>) -> Self;
+    fn from_str_and_color(s: &str, color: Option<ColorId>) -> Self;
     fn partial_sums(desc: &[Self]) -> Vec<usize>
     where
         Self: Sized;
@@ -124,7 +128,7 @@ pub mod color {
 
     #[derive(Clone)]
     pub struct ColorDesc {
-        id: ColorId,
+        pub id: ColorId,
         name: String,
         value: ColorValue,
         // to use in ShellRenderer
@@ -193,6 +197,16 @@ pub mod color {
 
         pub fn id_by_name(&self, name: &str) -> Option<ColorId> {
             self.vec.get(name).map(|desc| desc.id)
+        }
+
+        pub fn desc_by_id(&self, id: ColorId) -> Option<ColorDesc> {
+            self.vec.iter().find_map(|(_name, color_desc)| {
+                if color_desc.id == id {
+                    Some(color_desc.clone())
+                } else {
+                    None
+                }
+            })
         }
 
         fn add(&mut self, color: ColorDesc) {

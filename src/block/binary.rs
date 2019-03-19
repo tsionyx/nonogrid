@@ -1,4 +1,5 @@
-use super::base::{color, Block, Color};
+use super::base::color::{ColorId, ColorPalette};
+use super::base::{Block, Color};
 
 use std::cmp::Ordering;
 use std::collections::HashSet;
@@ -29,7 +30,7 @@ impl Color for BinaryColor {
         self == &BinaryColor::Black || self == &BinaryColor::White
     }
 
-    fn solution_rate(&self) -> f64 {
+    fn solution_rate(&self, _all_colors: &[ColorId]) -> f64 {
         if self.is_solved() {
             1.0
         } else {
@@ -60,6 +61,18 @@ impl Color for BinaryColor {
         }
         .into_iter()
         .collect()
+    }
+
+    fn as_color_id(&self) -> ColorId {
+        ColorPalette::WHITE_ID
+    }
+
+    fn from_color_ids(ids: &[ColorId]) -> Self {
+        if ids == [ColorPalette::WHITE_ID] {
+            BinaryColor::Undefined
+        } else {
+            BinaryColor::Black
+        }
     }
 }
 
@@ -124,7 +137,7 @@ pub struct BinaryBlock(pub usize);
 impl Block for BinaryBlock {
     type Color = BinaryColor;
 
-    fn from_str_and_color(s: &str, _color: Option<color::ColorId>) -> Self {
+    fn from_str_and_color(s: &str, _color: Option<ColorId>) -> Self {
         Self(s.parse::<usize>().unwrap())
     }
 
