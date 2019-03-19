@@ -7,6 +7,7 @@ mod solver;
 mod utils;
 
 use block::binary::BinaryBlock;
+use block::multicolor::ColoredBlock;
 use block::Block;
 use parser::{BoardParser, LocalReader, NetworkReader, PuzzleScheme};
 use render::{Renderer, ShellRenderer};
@@ -66,7 +67,7 @@ fn main() {
         let board_parser = parser::MyFormat::read_local(&path).unwrap();
         match board_parser.infer_scheme() {
             PuzzleScheme::BlackAndWhite => run::<BinaryBlock, _>(&board_parser, search_options),
-            PuzzleScheme::MultiColor => unimplemented!(),
+            PuzzleScheme::MultiColor => run::<ColoredBlock, _>(&board_parser, search_options),
         }
     } else {
         let board_parser = match source {
@@ -77,7 +78,7 @@ fn main() {
         .unwrap();
         match board_parser.infer_scheme() {
             PuzzleScheme::BlackAndWhite => run::<BinaryBlock, _>(&board_parser, search_options),
-            PuzzleScheme::MultiColor => unimplemented!(),
+            PuzzleScheme::MultiColor => run::<ColoredBlock, _>(&board_parser, search_options),
         }
     }
 }

@@ -1,4 +1,6 @@
+use super::super::block::base::color::ColorPalette;
 use super::super::block::binary::BinaryColor;
+use super::super::block::multicolor::MultiColor;
 use super::super::block::{Block, Color, Description};
 use super::super::utils;
 use std::rc::Rc;
@@ -71,8 +73,7 @@ where
             }
 
             let both = B::Color::both_colors();
-            if both.is_some() {
-                let both = both.unwrap();
+            if let Some(both) = both {
                 let init = B::Color::default();
 
                 utils::replace(&mut solved, both, init);
@@ -319,6 +320,28 @@ impl DynamicColor for BinaryColor {
                 }
             }
         }
+    }
+}
+
+impl DynamicColor for MultiColor {
+    fn set_additional_blank(line: Rc<Vec<Self>>) -> (Rc<Vec<Self>>, bool) {
+        (line, false)
+    }
+
+    fn both_colors() -> Option<Self> {
+        None
+    }
+
+    fn can_be_blank(&self) -> bool {
+        (self.0 & ColorPalette::WHITE_ID) == ColorPalette::WHITE_ID
+    }
+
+    fn can_be(&self, color: &Self) -> bool {
+        self.0 & color.0 != 0
+    }
+
+    fn add_color(&self, color: Self) -> Self {
+        Self(self.0 | color.0)
     }
 }
 

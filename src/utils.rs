@@ -86,6 +86,28 @@ where
     }
 }
 
+pub fn two_powers(mut num: u32) -> Vec<u32> {
+    let mut res = vec![];
+    while num > 0 {
+        let rest = num & (num - 1);
+        res.push(num - rest);
+        num = rest
+    }
+    res
+}
+
+pub fn from_two_powers(numbers: &[u32]) -> u32 {
+    numbers.iter().fold(0, |acc, &x| acc | x)
+}
+
+pub fn is_power_of_2(x: u32) -> bool {
+    if x == 0 {
+        return false;
+    }
+
+    x & (x - 1) == 0
+}
+
 pub fn dedup<T>(vec: Vec<T>) -> Vec<T>
 where
     T: Eq + Hash + Clone,

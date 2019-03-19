@@ -81,6 +81,22 @@ where
         dedup(colors)
     }
 
+    //fn fix_palette(&mut self) {
+    //    if self.palette.is_none() {
+    //        return;
+    //    }
+    //
+    //    let desc_colors = dedup(self.desc_rows.iter().flat_map(|row| {
+    //        row.vec.iter().map(|block| block.color())
+    //    }).collect());
+    //
+    //    if let Some(palette) = &self.palette {
+    //        for id in palette.ids() {
+    //            if desc_colors.contains()
+    //        }
+    //    }
+    //}
+
     pub fn cells(&self) -> Vec<Ref<Vec<B::Color>>> {
         self.cells.iter().map(|row| row.borrow()).collect()
     }
