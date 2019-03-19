@@ -1,11 +1,12 @@
 use super::super::block::base::color::ColorId;
 use super::super::utils;
 
-use std::collections::HashSet;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::Sized;
 use std::ops::{Add, Sub};
+
+use hashbrown::HashSet;
 
 pub trait Color
 where

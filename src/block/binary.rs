@@ -2,9 +2,10 @@ use super::base::color::{ColorId, ColorPalette};
 use super::base::{Block, Color};
 
 use std::cmp::Ordering;
-use std::collections::HashSet;
 use std::fmt;
 use std::ops::{Add, Sub};
+
+use hashbrown::HashSet;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd)]
 pub enum BinaryColor {

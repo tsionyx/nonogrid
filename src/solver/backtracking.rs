@@ -5,7 +5,6 @@ use super::probing::{Impact, ProbeSolver};
 
 use std::cell::{Ref, RefCell};
 use std::cmp::Reverse;
-use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -13,6 +12,7 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use cached::Cached;
+use hashbrown::{HashMap, HashSet};
 use ordered_float::OrderedFloat;
 
 type Solution<B> = Vec<Rc<RefCell<Vec<<B as Block>::Color>>>>;
