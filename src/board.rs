@@ -1,3 +1,4 @@
+use super::block::base::color::ColorPalette;
 use super::block::{Block, Color, Description};
 
 use std::cell::{Ref, RefCell};
@@ -23,7 +24,6 @@ impl Point {
     }
 }
 
-#[derive(Debug)]
 pub struct Board<B>
 where
     B: Block,
@@ -31,6 +31,7 @@ where
     cells: Vec<Rc<RefCell<Vec<B::Color>>>>,
     desc_rows: Vec<Rc<Description<B>>>,
     desc_cols: Vec<Rc<Description<B>>>,
+    palette: Option<ColorPalette>,
 }
 
 impl<B> Board<B>
@@ -39,6 +40,14 @@ where
     B::Color: Copy,
 {
     pub fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Board<B> {
+        Self::with_descriptions_and_palette(rows, columns, None)
+    }
+
+    pub fn with_descriptions_and_palette(
+        rows: Vec<Description<B>>,
+        columns: Vec<Description<B>>,
+        palette: Option<ColorPalette>,
+    ) -> Board<B> {
         let height = rows.len();
         let width = columns.len();
 
@@ -52,6 +61,7 @@ where
             cells,
             desc_rows: rows.into_iter().map(Rc::new).collect(),
             desc_cols: columns.into_iter().map(Rc::new).collect(),
+            palette,
         }
     }
 
@@ -270,6 +280,7 @@ where
             cells: self.make_snapshot(),
             desc_rows: self.desc_rows.clone(),
             desc_cols: self.desc_cols.clone(),
+            palette: self.palette.clone(),
         }
     }
 }

@@ -1,7 +1,7 @@
+use super::block::base::color::{ColorPalette, ColorValue};
 use super::block::{Block, Description};
 use super::board::Board;
 
-use std::collections::HashMap;
 use std::fs;
 
 use self::sxd_xpath::nodeset::{Node, Nodeset};
@@ -60,6 +60,11 @@ pub trait BoardParser {
     fn infer_scheme(&self) -> PuzzleScheme;
 }
 
+pub trait Paletted {
+    fn get_colors(&self) -> Vec<(String, char, String)>;
+    fn get_palette(&self) -> ColorPalette;
+}
+
 #[derive(Debug, PartialEq)]
 pub enum PuzzleScheme {
     BlackAndWhite,
@@ -109,9 +114,11 @@ impl BoardParser for MyFormat {
         B: Block,
     {
         let clues = &self.structure.clues;
-        Board::with_descriptions(
-            Self::parse_clues(&clues.rows),
-            Self::parse_clues(&clues.columns),
+        let palette = self.get_palette();
+        Board::with_descriptions_and_palette(
+            Self::parse_clues(&clues.rows, &palette),
+            Self::parse_clues(&clues.columns, &palette),
+            Some(palette),
         )
     }
 
@@ -129,7 +136,28 @@ impl BoardParser for MyFormat {
 }
 
 impl MyFormat {
-    fn parse_line<B>(descriptions: &str) -> Option<Vec<Description<B>>>
+    fn parse_block<B>(block: &str, palette: &ColorPalette) -> B
+    where
+        B: Block,
+    {
+        let mut as_chars = block.chars();
+        let value_color_pos = as_chars.position(|c| !c.is_digit(10));
+        let (value, block_color) = if let Some(pos) = value_color_pos {
+            let (value, color) = block.split_at(pos);
+            (value, Some(color.to_string()))
+        } else {
+            (block, palette.get_default())
+        };
+
+        let color_id = if let Some(name) = &block_color {
+            palette.id_by_name(name)
+        } else {
+            None
+        };
+        B::from_str_and_color(value, color_id)
+    }
+
+    fn parse_line<B>(descriptions: &str, palette: &ColorPalette) -> Option<Vec<Description<B>>>
     where
         B: Block,
     {
@@ -152,7 +180,9 @@ impl MyFormat {
                         None
                     } else {
                         Some(Description::new(
-                            row.split_whitespace().map(B::from_str).collect(),
+                            row.split_whitespace()
+                                .map(|block| Self::parse_block(block, palette))
+                                .collect(),
                         ))
                     }
                 })
@@ -160,15 +190,65 @@ impl MyFormat {
         )
     }
 
-    pub(in super::parser) fn parse_clues<B>(descriptions: &str) -> Vec<Description<B>>
+    pub(in super::parser) fn parse_clues<B>(
+        descriptions: &str,
+        palette: &ColorPalette,
+    ) -> Vec<Description<B>>
     where
         B: Block,
     {
         descriptions
             .lines()
-            .map(|line| Self::parse_line(line).unwrap_or_else(|| vec![]))
+            .map(|line| Self::parse_line(line, palette).unwrap_or_else(|| vec![]))
             .flatten()
             .collect()
+    }
+
+    ///```
+    /// use nonogrid::parser::MyFormat;
+    ///
+    /// let s = "b = (blue) *";
+    /// let colors = MyFormat::parse_color_def(s);
+    /// assert_eq!(colors, ("b".to_string(), '*', "blue".to_string()));
+    /// ```
+    pub fn parse_color_def(color_def: &str) -> (String, char, String) {
+        let parts: Vec<_> = color_def.split('=').map(|part| part.trim()).collect();
+        let name = parts[0];
+        let mut desc = parts[1].to_string();
+        let symbol = desc.pop().unwrap();
+
+        desc = desc
+            .trim()
+            .trim_matches(|c| c == '(' || c == ')')
+            .to_string();
+        (name.to_string(), symbol, desc)
+    }
+}
+
+impl Paletted for MyFormat {
+    fn get_colors(&self) -> Vec<(String, char, String)> {
+        if let Some(colors) = &self.structure.colors {
+            if let Some(defs) = &colors.defs {
+                let mut colors: Vec<_> =
+                    defs.iter().map(|def| Self::parse_color_def(def)).collect();
+                colors.sort_by_key(|(name, ..)| name.clone());
+                return colors;
+            }
+        }
+
+        vec![]
+    }
+
+    fn get_palette(&self) -> ColorPalette {
+        let mut palette = ColorPalette::with_white_and_black("W", "B");
+
+        let colors = self.get_colors();
+        colors.iter().for_each(|(name, symbol, value)| {
+            let val = ColorValue::parse(value);
+            palette.color_with_name_value_and_symbol(name, val, *symbol);
+        });
+
+        palette
     }
 }
 
@@ -212,12 +292,16 @@ impl BoardParser for WebPbn {
     where
         B: Block,
     {
-        Board::with_descriptions(self.parse_clues("rows"), self.parse_clues("columns"))
+        Board::with_descriptions_and_palette(
+            self.parse_clues("rows"),
+            self.parse_clues("columns"),
+            Some(self.get_palette()),
+        )
     }
 
     fn infer_scheme(&self) -> PuzzleScheme {
         let colors = self.get_colors();
-        let mut names: Vec<_> = colors.keys().collect();
+        let mut names: Vec<_> = colors.iter().map(|(name, ..)| name).collect();
         names.sort();
         if names.is_empty() || names == ["black", "white"] {
             return PuzzleScheme::BlackAndWhite;
@@ -230,7 +314,30 @@ impl BoardParser for WebPbn {
 impl WebPbn {
     const BASE_URL: &'static str = "http://webpbn.com";
 
-    fn parse_line<B>(description: &Node) -> Description<B>
+    fn parse_block<B>(block: &Node, palette: &ColorPalette) -> B
+    where
+        B: Block,
+    {
+        let value = &block.string_value();
+
+        let block_color = if let Node::Element(e) = block {
+            if let Some(color) = e.attribute("color") {
+                Some(color.value().to_string())
+            } else {
+                palette.get_default()
+            }
+        } else {
+            None
+        };
+        let color_id = if let Some(name) = &block_color {
+            palette.id_by_name(name)
+        } else {
+            None
+        };
+        B::from_str_and_color(value, color_id)
+    }
+
+    fn parse_line<B>(description: &Node, palette: &ColorPalette) -> Description<B>
     where
         B: Block,
     {
@@ -238,19 +345,19 @@ impl WebPbn {
             description
                 .children()
                 .iter()
-                .map(|child| B::from_str(&child.string_value()))
+                .map(|child| Self::parse_block(child, palette))
                 .collect(),
         )
     }
 
-    fn get_clues<B>(descriptions: &Nodeset) -> Vec<Description<B>>
+    fn get_clues<B>(descriptions: &Nodeset, palette: ColorPalette) -> Vec<Description<B>>
     where
         B: Block,
     {
         descriptions
             .document_order()
             .iter()
-            .map(Self::parse_line)
+            .map(|line_node| Self::parse_line(line_node, &palette))
             .collect()
     }
 
@@ -263,50 +370,83 @@ impl WebPbn {
             .expect("XPath evaluation failed");
 
         if let Value::Nodeset(ns) = value {
-            Self::get_clues(&ns)
+            Self::get_clues(&ns, self.get_palette())
         } else {
             vec![]
         }
     }
+}
 
-    pub fn get_colors(&self) -> HashMap<String, (char, String)> {
+impl Paletted for WebPbn {
+    fn get_colors(&self) -> Vec<(String, char, String)> {
         let document = self.package.as_document();
         let value = evaluate_xpath(&document, ".//color").expect("XPath evaluation failed");
 
         if let Value::Nodeset(ns) = value {
-            ns.iter()
+            let mut colors: Vec<_> = ns
+                .iter()
                 .filter_map(|color_node| {
                     let value = color_node.string_value();
                     if let Node::Element(e) = color_node {
                         let name = e.attribute("name").unwrap().value();
                         let symbol = e.attribute("char").unwrap().value();
                         let symbol: char = symbol.as_bytes()[0] as char;
-                        Some((name.to_string(), (symbol, value)))
+                        Some((name.to_string(), symbol, value))
                     } else {
                         None
                     }
                 })
-                .collect()
+                .collect();
+            colors.sort_by_key(|(name, ..)| name.clone());
+            colors
         } else {
-            HashMap::new()
+            vec![]
         }
+    }
+
+    fn get_palette(&self) -> ColorPalette {
+        let mut palette = ColorPalette::with_white_and_black("white", "black");
+
+        let colors = self.get_colors();
+        colors.iter().for_each(|(name, symbol, value)| {
+            let val = ColorValue::parse(value);
+            palette.color_with_name_value_and_symbol(name, val, *symbol);
+        });
+
+        let document = self.package.as_document();
+        let value =
+            evaluate_xpath(&document, ".//puzzle[@type='grid']").expect("XPath evaluation failed");
+        if let Value::Nodeset(ns) = value {
+            let first_node = ns.iter().next();
+            if let Some(Node::Element(e)) = first_node {
+                if let Some(default_color) = e.attribute("defaultcolor") {
+                    palette.set_default(default_color.value());
+                }
+            }
+        }
+        palette
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::block::base::color::ColorPalette;
     use super::super::block::binary::BinaryBlock;
     use super::super::block::Description;
-    use super::{BoardParser, LocalReader, MyFormat, PuzzleScheme};
+    use super::{BoardParser, LocalReader, MyFormat, Paletted, PuzzleScheme};
 
     fn block(n: usize) -> BinaryBlock {
         BinaryBlock(n)
     }
 
+    fn palette() -> ColorPalette {
+        ColorPalette::with_white_and_black("W", "B")
+    }
+
     #[test]
     fn parse_single() {
         assert_eq!(
-            MyFormat::parse_clues(&String::from("1")),
+            MyFormat::parse_clues(&String::from("1"), &palette()),
             vec![Description::new(vec![block(1)])]
         )
     }
@@ -314,7 +454,7 @@ mod tests {
     #[test]
     fn parse_two_lines() {
         assert_eq!(
-            MyFormat::parse_clues(&String::from("1\n2")),
+            MyFormat::parse_clues(&String::from("1\n2"), &palette()),
             vec![
                 Description::new(vec![block(1)]),
                 Description::new(vec![block(2)])
@@ -325,7 +465,7 @@ mod tests {
     #[test]
     fn parse_two_rows_same_line() {
         assert_eq!(
-            MyFormat::parse_clues(&String::from("1, 2")),
+            MyFormat::parse_clues(&String::from("1, 2"), &palette()),
             vec![
                 Description::new(vec![block(1)]),
                 Description::new(vec![block(2)])
@@ -336,7 +476,7 @@ mod tests {
     #[test]
     fn parse_two_rows_with_commas() {
         assert_eq!(
-            MyFormat::parse_clues(&String::from("1, 2,\n3")),
+            MyFormat::parse_clues(&String::from("1, 2,\n3"), &palette()),
             vec![
                 Description::new(vec![block(1)]),
                 Description::new(vec![block(2)]),
@@ -348,7 +488,7 @@ mod tests {
     #[test]
     fn parse_two_blocks() {
         assert_eq!(
-            MyFormat::parse_clues(&String::from("1 2")),
+            MyFormat::parse_clues(&String::from("1 2"), &palette()),
             vec![Description::new(vec![block(1), block(2)]),]
         )
     }
@@ -356,7 +496,7 @@ mod tests {
     #[test]
     fn parse_quotes() {
         assert_eq!(
-            MyFormat::parse_clues(&String::from("'1 2'")),
+            MyFormat::parse_clues(&String::from("'1 2'"), &palette()),
             vec![Description::new(vec![block(1), block(2)]),]
         )
     }
@@ -364,7 +504,7 @@ mod tests {
     #[test]
     fn parse_double_quotes() {
         assert_eq!(
-            MyFormat::parse_clues(&String::from("1 2\n\"3 4\"\n")),
+            MyFormat::parse_clues(&String::from("1 2\n\"3 4\"\n"), &palette()),
             vec![
                 Description::new(vec![block(1), block(2)]),
                 Description::new(vec![block(3), block(4)]),
@@ -375,7 +515,7 @@ mod tests {
     #[test]
     fn parse_comment_end_of_line() {
         assert_eq!(
-            MyFormat::parse_clues(&String::from("1 2  # the comment")),
+            MyFormat::parse_clues(&String::from("1 2  # the comment"), &palette()),
             vec![Description::new(vec![block(1), block(2)]),]
         )
     }
@@ -383,7 +523,7 @@ mod tests {
     #[test]
     fn parse_comment_semicolon() {
         assert_eq!(
-            MyFormat::parse_clues(&String::from("1 2  ; another comment")),
+            MyFormat::parse_clues(&String::from("1 2  ; another comment"), &palette()),
             vec![Description::new(vec![block(1), block(2)]),]
         )
     }
@@ -391,9 +531,10 @@ mod tests {
     #[test]
     fn parse_comments_in_the_middle() {
         assert_eq!(
-            MyFormat::parse_clues(&String::from(
-                "1 2 \n # the multi-line \n # comment \n 3, 4"
-            )),
+            MyFormat::parse_clues(
+                &String::from("1 2 \n # the multi-line \n # comment \n 3, 4"),
+                &palette()
+            ),
             vec![
                 Description::new(vec![block(1), block(2)]),
                 Description::new(vec![block(3)]),
@@ -464,5 +605,23 @@ mod tests {
             MyFormat::from_string(s.to_string()).unwrap().infer_scheme(),
             PuzzleScheme::MultiColor
         )
+    }
+
+    #[test]
+    fn parse_colors() {
+        let s = r"
+        [clues]
+        rows = '1'
+        columns = '1g'
+
+        [colors]
+        defs = ['g=(0, 204, 0) %']
+        ";
+
+        let f = MyFormat::from_string(s.to_string()).unwrap();
+        let mut colors = vec![];
+        colors.push(("g".to_string(), '%', "0, 204, 0".to_string()));
+
+        assert_eq!(f.get_colors(), colors,)
     }
 }

@@ -1,4 +1,4 @@
-use super::base::{Block, Color};
+use super::base::{color, Block, Color};
 
 use std::cmp::Ordering;
 use std::collections::HashSet;
@@ -121,7 +121,7 @@ pub struct BinaryBlock(pub usize);
 impl Block for BinaryBlock {
     type Color = BinaryColor;
 
-    fn from_str(s: &str) -> Self {
+    fn from_str_and_color(s: &str, _color: Option<color::ColorId>) -> Self {
         Self(s.parse::<usize>().unwrap())
     }
 
