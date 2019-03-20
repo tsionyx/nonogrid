@@ -120,7 +120,7 @@ where
                 break impact;
             }
 
-            let mut contradiction = None;
+            let mut false_probes = None;
             let mut probe_counter = 0u32;
 
             while let Some((point, priority)) = probes.pop() {
@@ -140,22 +140,14 @@ where
                     .into_iter()
                     .partition(|(_color, size)| size.is_none());
 
-                match contradictions.as_slice() {
-                    [] => {}
-                    [(color, None)] => {
-                        contradiction = Some((point, *color));
-                        break;
-                    }
+                if !contradictions.is_empty() {
+                    let bad_colors: Vec<_> = contradictions
+                        .iter()
+                        .map(|(color, _should_be_none)| *color)
+                        .collect();
 
-                    too_many => {
-                        if too_many.len() > 1 {
-                            warn!("Contradictions for {:?}: {:?}", &point, too_many);
-                            return Err(format!(
-                                "Too many contradictions found for {:?}: {:?}",
-                                &point, too_many
-                            ));
-                        }
-                    }
+                    false_probes = Some((point, bad_colors));
+                    break;
                 }
 
                 for (color, updated) in non_contradictions {
@@ -166,11 +158,13 @@ where
                 //iteration_probes.insert(point);
             }
 
-            if let Some((contradiction, color)) = contradiction {
+            if let Some((contradiction, colors)) = false_probes {
                 contradictions_number += 1;
                 //iteration_probes.clear();
 
-                self.board().unset_color(&contradiction, &color)?;
+                for color in colors {
+                    self.board().unset_color(&contradiction, &color)?;
+                }
                 for (point, priority) in self.propagate_point::<S>(&contradiction)? {
                     probes.push(point, priority);
                 }
@@ -243,6 +237,7 @@ where
         }
 
         let vars = self.board().cell(&point).variants();
+        debug!("Probing {:?} for variants: {:?}", point, &vars);
 
         for assumption in vars {
             let save = self.board().make_snapshot();
@@ -263,6 +258,7 @@ where
             }
         }
 
+        debug!("Found impact: {:?}", changes);
         changes
     }
 }

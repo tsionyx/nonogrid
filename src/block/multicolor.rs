@@ -112,7 +112,10 @@ impl Sub for MultiColor {
 
     fn sub(self, rhs: Self) -> Self::Output {
         if self.is_solved() {
-            return Err(format!("Cannot unset already set cell {:?}", &self));
+            return Err(format!(
+                "Cannot unset {:?} from already set cell {:?}",
+                &rhs, &self
+            ));
         }
 
         let colors = self.variants_as_ids();
