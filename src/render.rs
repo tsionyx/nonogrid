@@ -1,4 +1,4 @@
-use super::block::base::color::ColorId;
+use super::block::base::color::{ColorDesc, ColorId};
 use super::block::{Block, Description};
 use super::board::Board;
 use super::utils::{pad, pad_with, transpose};
@@ -6,6 +6,8 @@ use super::utils::{pad, pad_with, transpose};
 use std::cell::{Ref, RefCell};
 use std::fmt::Display;
 use std::rc::Rc;
+
+use colored::{Color, ColoredString, Colorize};
 
 pub trait Renderer<B>
 where
@@ -39,7 +41,17 @@ where
             pad_with(row, "#".to_string(), full_width, false);
         }
 
-        let mut side = self.side_lines();
+        let header: Vec<_> = header
+            .into_iter()
+            .map(|row| row.into_iter().map(|s| s.normal()).collect::<Vec<_>>())
+            .collect();
+
+        let side = self.side_lines();
+        let mut side: Vec<_> = side
+            .into_iter()
+            .map(|row| row.into_iter().map(|s| s.normal()).collect::<Vec<_>>())
+            .collect();
+
         let grid = self.grid_lines();
         let grid: Vec<_> = side
             .iter_mut()
@@ -115,7 +127,18 @@ where
         .unwrap()
     }
 
-    fn cell_symbol(&self, cell: &B::Color) -> String
+    fn from_desc(color_desc: &ColorDesc) -> ColoredString {
+        let symbol = color_desc.symbol();
+        let color_res: Result<Color, _> = color_desc.name().parse();
+        if let Ok(color) = color_res {
+            //symbol.color(color)
+            " ".on_color(color)
+        } else {
+            symbol.normal()
+        }
+    }
+
+    fn cell_symbol(&self, cell: &B::Color) -> ColoredString
     where
         B::Color: Display,
     {
@@ -124,15 +147,15 @@ where
 
         if let Ok(color_id) = color_id {
             let color_desc = self.board().desc_by_id(color_id);
-            if let Some(color_desc) = color_desc {
-                return color_desc.symbol();
+            if let Some(color_desc) = &color_desc {
+                return Self::from_desc(color_desc);
             }
         }
 
-        symbol
+        symbol.normal()
     }
 
-    fn grid_lines(&self) -> Vec<Vec<String>>
+    fn grid_lines(&self) -> Vec<Vec<ColoredString>>
     where
         B::Color: Display,
     {

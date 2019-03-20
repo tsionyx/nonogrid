@@ -1,9 +1,13 @@
 use std::cmp::Reverse;
+use std::fmt::Display;
 use std::hash::Hash;
 
 use hashbrown::HashSet;
 
-pub fn pad(s: &str, max_size: usize, right: bool) -> String {
+pub fn pad<T>(s: &T, max_size: usize, right: bool) -> String
+where
+    T: Display,
+{
     if right {
         format!("{:<width$}", s, width = max_size)
     } else {
@@ -151,35 +155,35 @@ mod tests {
     #[test]
     fn pad_string_left() {
         let s = "hello";
-        let s2 = pad(s, 7, false);
+        let s2 = pad(&s.to_string(), 7, false);
         assert_eq!(s2, "  hello")
     }
 
     #[test]
     fn pad_string_right() {
         let s = "world";
-        let s2 = pad(s, 7, true);
+        let s2 = pad(&s.to_string(), 7, true);
         assert_eq!(s2, "world  ")
     }
 
     #[test]
     fn do_not_pad_string_left() {
         let s = "hello";
-        let s2 = pad(s, 4, false);
+        let s2 = pad(&s.to_string(), 4, false);
         assert_eq!(s2, "hello")
     }
 
     #[test]
     fn do_not_pad_string_right() {
         let s = "world";
-        let s2 = pad(s, 5, true);
+        let s2 = pad(&s.to_string(), 5, true);
         assert_eq!(s2, "world")
     }
 
     #[test]
     fn pad_non_ascii_right() {
         let s = "Привет";
-        let s2 = pad(s, 8, true);
+        let s2 = pad(&s.to_string(), 8, true);
         assert_eq!(s2, "Привет  ")
     }
 
