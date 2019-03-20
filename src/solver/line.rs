@@ -30,6 +30,7 @@ where
     fn can_be_blank(&self) -> bool;
     fn can_be(&self, color: &Self) -> bool;
     fn add_color(&self, color: Self) -> Self;
+    fn solved_copy(&self) -> Self;
 }
 
 pub struct DynamicSolver<B: Block, S = <B as Block>::Color> {
@@ -53,7 +54,7 @@ where
 
         let block_sums = Self::calc_block_sum(&*desc);
         let solution_matrix = Self::build_solution_matrix(&*desc, &line);
-        let solved_line = line.to_vec();
+        let solved_line = line.iter().map(|cell| cell.solved_copy()).collect();
 
         Self {
             desc,
@@ -228,7 +229,7 @@ where
     fn trail_with_space(&self, block: usize) -> bool {
         if block < self.desc.vec.len() {
             let current_color = self.block_at(block - 1).color();
-            let next_color = self.block_at(block - 1).color();
+            let next_color = self.block_at(block).color();
 
             if next_color == current_color {
                 return true;
@@ -321,6 +322,10 @@ impl DynamicColor for BinaryColor {
             }
         }
     }
+
+    fn solved_copy(&self) -> Self {
+        *self
+    }
 }
 
 impl DynamicColor for MultiColor {
@@ -342,6 +347,10 @@ impl DynamicColor for MultiColor {
 
     fn add_color(&self, color: Self) -> Self {
         Self(self.0 | color.0)
+    }
+
+    fn solved_copy(&self) -> Self {
+        MultiColor(0)
     }
 }
 
