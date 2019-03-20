@@ -132,7 +132,7 @@ impl fmt::Display for MultiColor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let colors: Vec<_> = self.variants_as_ids().into_iter().collect();
         let symbol = if colors.len() == 1 {
-            format!("{}", f64::from(colors[0]).log2().round() as usize)
+            format!("{}", colors[0])
         } else {
             "?".to_string()
         };

@@ -1,6 +1,8 @@
+use super::block::base::color::ColorId;
 use super::block::{Block, Description};
 use super::board::Board;
 use super::utils::{pad, pad_with, transpose};
+
 use std::cell::{Ref, RefCell};
 use std::fmt::Display;
 use std::rc::Rc;
@@ -113,6 +115,23 @@ where
         .unwrap()
     }
 
+    fn cell_symbol(&self, cell: &B::Color) -> String
+    where
+        B::Color: Display,
+    {
+        let symbol = cell.to_string();
+        let color_id = symbol.parse::<ColorId>();
+
+        if let Ok(color_id) = color_id {
+            let color_desc = self.board().desc_by_id(color_id);
+            if let Some(color_desc) = color_desc {
+                return color_desc.symbol();
+            }
+        }
+
+        symbol
+    }
+
     fn grid_lines(&self) -> Vec<Vec<String>>
     where
         B::Color: Display,
@@ -120,7 +139,7 @@ where
         self.board()
             .cells()
             .iter()
-            .map(|row| row.iter().map(|cell| cell.to_string()).collect())
+            .map(|row| row.iter().map(|cell| self.cell_symbol(cell)).collect())
             .collect()
     }
 }

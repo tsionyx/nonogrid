@@ -129,11 +129,21 @@ pub mod color {
 
     #[derive(Clone)]
     pub struct ColorDesc {
-        pub id: ColorId,
+        id: ColorId,
         name: String,
         value: ColorValue,
-        // to use in ShellRenderer
         symbol: char,
+    }
+
+    impl ColorDesc {
+        /// used in ShellRenderer
+        pub fn symbol(&self) -> String {
+            self.symbol.to_string()
+        }
+
+        pub fn name(&self) -> &str {
+            self.name.as_str()
+        }
     }
 
     #[derive(Clone)]
