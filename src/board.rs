@@ -41,6 +41,7 @@ where
     B: Block,
     B::Color: Copy,
 {
+    #[allow(dead_code)]
     pub fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Board<B> {
         Self::with_descriptions_and_palette(rows, columns, None)
     }

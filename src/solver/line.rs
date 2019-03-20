@@ -466,3 +466,148 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod tests_solve_color {
+    use super::super::super::block::base::color::{ColorId, ColorPalette};
+    use super::super::super::block::base::Description;
+    use super::super::super::block::multicolor::{ColoredBlock, MultiColor};
+    use super::{DynamicSolver, LineSolver};
+
+    use std::rc::Rc;
+
+    fn w() -> ColorId {
+        ColorPalette::WHITE_ID
+    }
+
+    fn unsolved_line(size: usize) -> Vec<MultiColor> {
+        id_to_color_line(&vec![127; size])
+    }
+
+    fn id_to_color_line(line: &[ColorId]) -> Vec<MultiColor> {
+        line.iter().cloned().map(MultiColor).collect()
+    }
+
+    fn desc_from_slice(desc: &[ColoredBlock]) -> Rc<Description<ColoredBlock>> {
+        Rc::new(Description::new(desc.to_vec()))
+    }
+
+    fn check_solve(desc: &[ColoredBlock], initial: &[MultiColor], solved: &[ColorId]) {
+        let desc = desc_from_slice(desc);
+        let mut ds = DynamicSolver::new(desc, Rc::new(initial.to_vec()));
+        assert_eq!(ds.solve().unwrap(), Rc::new(id_to_color_line(solved)));
+    }
+
+    #[test]
+    fn empty_1_cell() {
+        check_solve(&[], &unsolved_line(1), &[w()]);
+    }
+
+    #[test]
+    fn empty_3_cells() {
+        check_solve(&[], &unsolved_line(3), &vec![w(); 3])
+    }
+
+    #[test]
+    fn simplest() {
+        check_solve(
+            &[ColoredBlock::from_size_and_color(1, 4)],
+            &unsolved_line(1),
+            &vec![4],
+        );
+    }
+
+    #[test]
+    fn two_different_cells() {
+        check_solve(
+            &[
+                ColoredBlock::from_size_and_color(1, 4),
+                ColoredBlock::from_size_and_color(1, 8),
+            ],
+            &unsolved_line(2),
+            &[4, 8],
+        );
+    }
+
+    #[test]
+    fn undefined() {
+        check_solve(
+            &[ColoredBlock::from_size_and_color(1, 4)],
+            &unsolved_line(2),
+            &vec![4 + w(); 2],
+        );
+    }
+
+    #[test]
+    fn same_color() {
+        check_solve(
+            &vec![ColoredBlock::from_size_and_color(1, 4); 2],
+            &unsolved_line(3),
+            &vec![4, w(), 4],
+        );
+    }
+
+    #[test]
+    fn different_colors() {
+        check_solve(
+            &[
+                ColoredBlock::from_size_and_color(1, 4),
+                ColoredBlock::from_size_and_color(1, 8),
+            ],
+            &unsolved_line(3),
+            &[4 + w(), 4 + 8 + w(), 8 + w()],
+        );
+    }
+
+    #[test]
+    fn long() {
+        check_solve(
+            &[
+                ColoredBlock::from_size_and_color(2, 4),
+                ColoredBlock::from_size_and_color(1, 4),
+                ColoredBlock::from_size_and_color(1, 8),
+            ],
+            &unsolved_line(5),
+            &[4, 4, w(), 4, 8],
+        );
+    }
+
+    #[test]
+    fn long_undefined() {
+        check_solve(
+            &[
+                ColoredBlock::from_size_and_color(2, 4),
+                ColoredBlock::from_size_and_color(1, 4),
+                ColoredBlock::from_size_and_color(1, 8),
+            ],
+            &unsolved_line(6),
+            &[4 + w(), 4, 4 + w(), 4 + w(), 4 + 8 + w(), 8 + w()],
+        );
+    }
+
+    #[test]
+    fn first_non_space() {
+        let mut line = unsolved_line(3);
+        line.insert(0, MultiColor(4));
+        check_solve(
+            &[
+                ColoredBlock::from_size_and_color(2, 4),
+                ColoredBlock::from_size_and_color(1, 8),
+            ],
+            &line,
+            &[4, 4, 8 + w(), 8 + w()],
+        );
+    }
+
+    #[test]
+    fn bad() {
+        let desc = desc_from_slice(&[
+            ColoredBlock::from_size_and_color(2, 4),
+            ColoredBlock::from_size_and_color(1, 4),
+            ColoredBlock::from_size_and_color(1, 8),
+        ]);
+
+        let mut ds = DynamicSolver::new(desc, Rc::new(unsolved_line(4)));
+        assert_eq!(ds.solve(), Err("Bad line".to_string()));
+    }
+}

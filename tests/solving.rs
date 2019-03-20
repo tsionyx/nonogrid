@@ -1,6 +1,9 @@
+#[cfg(feature = "web")]
+use nonogrid::parser::{NetworkReader, WebPbn};
 use nonogrid::{
     block::binary::{BinaryBlock, BinaryColor},
-    parser::{BoardParser, LocalReader, MyFormat},
+    block::multicolor::ColoredBlock,
+    parser::{BoardParser, LocalReader, MyFormat, PuzzleScheme},
     solver::{line, probing::*, propagation},
 };
 
@@ -58,4 +61,39 @@ fn pony() {
         assert!(board.is_solved_full());
         assert_eq!(board.solution_rate(), 1.0);
     }
+}
+
+#[test]
+fn uk_flag() {
+    let p = MyFormat::read_local("examples/UK.toml").unwrap();
+    assert_eq!(p.infer_scheme(), PuzzleScheme::MultiColor);
+
+    let board = p.parse::<ColoredBlock>();
+    let board = Rc::new(RefCell::new(board));
+
+    warn!("Solving with simple line propagation");
+    let solver = propagation::Solver::new(Rc::clone(&board));
+    solver.run::<line::DynamicSolver<_>>().unwrap();
+
+    let board = board.borrow();
+    assert!(board.is_solved_full());
+    assert_eq!(board.solution_rate(), 1.0);
+}
+
+#[test]
+#[cfg(feature = "web")]
+fn webpbn_18() {
+    let p = WebPbn::read_remote("18").unwrap();
+    assert_eq!(p.infer_scheme(), PuzzleScheme::MultiColor);
+
+    let board = p.parse::<ColoredBlock>();
+    let board = Rc::new(RefCell::new(board));
+
+    warn!("Solving with simple line propagation");
+    let solver = propagation::Solver::new(Rc::clone(&board));
+    solver.run::<line::DynamicSolver<_>>().unwrap();
+
+    let board = board.borrow();
+    assert!(board.is_solved_full());
+    assert_eq!(board.solution_rate(), 1.0);
 }

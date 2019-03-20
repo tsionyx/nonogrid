@@ -146,6 +146,13 @@ pub struct ColoredBlock {
     color: ColorId,
 }
 
+impl ColoredBlock {
+    #[allow(dead_code)]
+    pub fn from_size_and_color(size: usize, color: ColorId) -> Self {
+        Self { size, color }
+    }
+}
+
 impl Block for ColoredBlock {
     type Color = MultiColor;
 
