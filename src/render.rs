@@ -41,7 +41,7 @@ where
 
         let mut side = self.side_lines();
         let grid = self.grid_lines();
-        let grid: Vec<Vec<String>> = side
+        let grid: Vec<_> = side
             .iter_mut()
             .zip(grid)
             .map(|(s, g)| {
@@ -94,7 +94,7 @@ where
     }
 
     fn descriptions_to_matrix(descriptions: &[Rc<Description<B>>]) -> Vec<Vec<String>> {
-        let mut rows: Vec<Vec<String>> = descriptions.iter().map(Self::desc_to_string).collect();
+        let mut rows: Vec<_> = descriptions.iter().map(Self::desc_to_string).collect();
 
         let width = Self::descriptions_width(descriptions);
 

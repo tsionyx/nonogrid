@@ -92,7 +92,7 @@ where
     B::Color: DynamicColor,
 {
     fn calc_block_sum(desc: &Description<B>) -> Vec<usize> {
-        let mut min_indexes: Vec<usize> = B::partial_sums(&desc.vec)
+        let mut min_indexes: Vec<_> = B::partial_sums(&desc.vec)
             .iter()
             .map(|size| size - 1)
             .collect();

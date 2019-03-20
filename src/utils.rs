@@ -29,7 +29,7 @@ pub fn transpose<T: Clone>(input: &[Vec<T>]) -> Result<Vec<Vec<T>>, String> {
         return Ok(vec![]);
     }
 
-    let sizes: Vec<usize> = input.iter().map(|row| row.len()).collect();
+    let sizes: Vec<_> = input.iter().map(|row| row.len()).collect();
     let min_size = sizes.iter().min().unwrap_or(&0);
     let max_size = sizes.iter().max().unwrap_or(&0);
 
@@ -54,7 +54,7 @@ where
         return;
     }
 
-    let replaced_indexes: Vec<usize> = vec
+    let replaced_indexes: Vec<_> = vec
         .iter()
         .enumerate()
         .filter_map(|(index, val)| if val == &what { Some(index) } else { None })
@@ -74,7 +74,7 @@ where
         return;
     }
 
-    let mut removed_indexes: Vec<usize> = vec
+    let mut removed_indexes: Vec<_> = vec
         .iter()
         .enumerate()
         .filter_map(|(index, val)| if val == &what { Some(index) } else { None })
