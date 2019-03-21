@@ -55,5 +55,7 @@ function long_solvers() {
     while read t; do
         id=$(grep -m1 -F ${t} ${log_file} -A3 | grep -oP '#\K(\d+)' | awk '{print $1-1}')
         echo "$id: $t"
+        #grep -m1 -F ${t} ${log_file} -B4 -A3
+        #echo -e '-----------------\n'
     done < <(grep -oP 'Total: \K(.+)' ${log_file} | awk '$1 > t' t=${threshold})
 }

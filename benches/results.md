@@ -64,6 +64,35 @@
 | 26520     | +               | 27            | 0         | 0.0836     |
 
 
-`+` means the solving time exceeds 3600 seconds and was interrupted
+# Colored puzzles
+
+### Sqrt strategy, single cache, more than 30 seconds
+
+| puzzle_id | solve time, sec | depth, levels | solutions | final rate | colors (w/o blank) |
+|-----------|----------------:|--------------:|:---------:|-----------:|--------------------|
+| **672**   | +               | 60            | 0         | 0.7638     | 3                  |
+| 3085      | +               | 25            | 0         | 0.8888     | 3                  |
+| 3114      | 661.76          | 18            | 2         | 0.8159     | 3                  |
+| **3149**  | +               | 42            | 0         | 0.7862     | 4                  |
+| **3620**  | +               | 19            | 0         | 0.8581     | 4                  |
+| 10585     | +               | 27            | 0         | 0.8585     | 4                  |
+| 11546     | 48.88           | 36            | 2         | 0.6069     | 4                  |
+| 12831     | +               | 22            | 0         | 0.9075     | 4                  |
+| 14717     | +               | 32            | 0         | 0.8398     | 3                  |
+| 15101     | +               | 33            | 0         | 0.8762     | 4                  |
+| 16552     | +               | 25            | 0         | 0.9640     | 4                  |
+| 16838     | +               | 28            | 0         | 0.6915     | 2                  |
+| 16878     | +               | 34            | 0         | 0.8505     | 2                  |
+| 18290     | +               | 30            | 0         | 0.3750     | 4                  |
+| 25158     | 45.85           | 18            | 2         | 0.8551     | 4                  |
+| 26810     | +               | 22            | 0         | 0.7952     | 4                  |
+| 29436     | +               | 22            | 0         | 0.8440     | 4                  |
+| 29826     | 79.75           | 24            | 2         | 0.8673     | 3                  |
+| 30640     | +               | 26            | 0         | 0.9678     | 4                  |
+| 31697     | +               | 107           | 0         | 0.6100     | 2                  | FIXME: memory allocation of 1365758582 bytes failed
+| 31812     | 119.70          | 465           | 2         | 0.7273     | 3                  |
+
+
+`+` means the solving time exceeds 1 hour and was interrupted (`--timeout=3600`)
 
 **Bold** puzzles are from http://webpbn.com/survey/ (_italic_ puzzles are mentioned there too).
