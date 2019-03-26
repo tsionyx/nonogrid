@@ -63,10 +63,6 @@ where
         }
     }
 
-    fn cache(&self) -> Option<ExternalCache<B>> {
-        self.cache.clone()
-    }
-
     pub fn run<S>(&self) -> Result<Vec<Point>, String>
     where
         S: LineSolver<BlockType = B>,
@@ -341,7 +337,7 @@ where
     {
         let key = (Rc::clone(&line_desc), Rc::clone(&line));
 
-        if let Some(cache) = self.cache() {
+        if let Some(cache) = &self.cache {
             let mut cache = cache.borrow_mut();
             let res = cache.cache_get(&key);
             if let Some(value) = res {
@@ -352,7 +348,7 @@ where
         let mut line_solver = S::new(line_desc, line);
         let value = line_solver.solve();
 
-        if let Some(cache) = self.cache() {
+        if let Some(cache) = &self.cache {
             cache.borrow_mut().cache_set(key, value.clone());
         }
         value
