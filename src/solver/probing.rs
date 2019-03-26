@@ -163,7 +163,9 @@ where
                 //iteration_probes.clear();
 
                 for color in colors {
-                    self.board().unset_color(&contradiction, &color)?;
+                    self.board
+                        .borrow_mut()
+                        .unset_color(&contradiction, &color)?;
                 }
                 for (point, priority) in self.propagate_point::<S>(&contradiction)? {
                     probes.push(point, priority);

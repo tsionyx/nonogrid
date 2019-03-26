@@ -160,8 +160,7 @@ where
         B::Color: Display,
     {
         self.board()
-            .cells()
-            .iter()
+            .iter_rows()
             .map(|row| row.iter().map(|cell| self.cell_symbol(cell)).collect())
             .collect()
     }

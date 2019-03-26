@@ -2,7 +2,6 @@ use super::block::base::color::{ColorDesc, ColorId, ColorPalette};
 use super::block::base::{Block, Color, Description};
 use super::utils::dedup;
 
-use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
@@ -29,7 +28,7 @@ pub struct Board<B>
 where
     B: Block,
 {
-    cells: Vec<Rc<RefCell<Vec<B::Color>>>>,
+    cells: Vec<B::Color>,
     desc_rows: Vec<Rc<Description<B>>>,
     desc_cols: Vec<Rc<Description<B>>>,
     palette: Option<ColorPalette>,
@@ -56,10 +55,7 @@ where
 
         let all_colors = Self::all_colors(&rows);
         let init = B::Color::from_color_ids(&all_colors);
-
-        let cells = (0..height)
-            .map(|_| Rc::new(RefCell::new(vec![init; width])))
-            .collect();
+        let cells = vec![init; width * height];
 
         let desc_rows = rows.into_iter().map(Rc::new).collect();
         let desc_cols = columns.into_iter().map(Rc::new).collect();
@@ -90,8 +86,8 @@ where
         }
     }
 
-    pub fn cells(&self) -> Vec<Ref<Vec<B::Color>>> {
-        self.cells.iter().map(|row| row.borrow()).collect()
+    pub fn iter_rows(&self) -> impl Iterator<Item = &[B::Color]> {
+        self.cells.chunks(self.width())
     }
 
     pub fn descriptions(&self, rows: bool) -> &Vec<Rc<Description<B>>> {
@@ -111,27 +107,46 @@ where
     }
 
     pub fn is_solved_full(&self) -> bool {
-        self.cells
-            .iter()
-            .all(|row| row.borrow().iter().all(|cell| cell.is_solved()))
+        self.cells.iter().all(|cell| cell.is_solved())
     }
 
     pub fn get_row(&self, index: usize) -> Vec<B::Color> {
-        self.cells[index].borrow().clone()
+        //let width = self.width();
+        //let start_index = width * index;
+        //self.cells.iter().skip(start_index).take(width)
+        self.iter_rows().nth(index).unwrap().to_vec()
     }
 
     pub fn get_column(&self, index: usize) -> Vec<B::Color> {
-        self.cells.iter().map(|row| row.borrow()[index]).collect()
+        self.cells
+            .iter()
+            .skip(index)
+            .step_by(self.width())
+            .cloned()
+            .collect()
+    }
+
+    fn linear_index(&self, row_index: usize, column_index: usize) -> usize {
+        let width = self.width();
+        row_index * width + column_index
     }
 
     pub fn set_row(&mut self, index: usize, new: Vec<B::Color>) {
-        self.cells[index] = Rc::new(RefCell::new(new));
+        let row_start = self.linear_index(index, 0);
+        (row_start..).zip(new).for_each(|(linear_index, new_cell)| {
+            self.cells[linear_index] = new_cell;
+        });
     }
 
     pub fn set_column(&mut self, index: usize, new: Vec<B::Color>) {
-        self.cells.iter().zip(new).for_each(|(row, new_cell)| {
-            row.borrow_mut()[index] = new_cell;
-        });
+        let width = self.width();
+        let column_indexes = (index..).step_by(width);
+
+        column_indexes
+            .zip(new)
+            .for_each(|(linear_index, new_cell)| {
+                self.cells[linear_index] = new_cell;
+            });
     }
 
     /// How many cells in a line are known to be of particular color
@@ -156,19 +171,13 @@ where
 
     /// How many cells in the whole grid are known to be of particular color
     pub fn solution_rate(&self) -> f64 {
-        self.cells
-            .iter()
-            .map(|row| self.line_solution_rate(&row.borrow()))
-            .sum::<f64>()
-            / (self.height() as f64)
+        self.line_solution_rate(&self.cells)
     }
 
     pub fn unsolved_cells(&self) -> Vec<Point> {
-        self.cells
-            .iter()
+        self.iter_rows()
             .enumerate()
             .flat_map(|(y, row)| {
-                let row = row.borrow();
                 row.iter()
                     .enumerate()
                     .filter_map(move |(x, cell)| {
@@ -185,7 +194,7 @@ where
 
     pub fn cell(&self, point: &Point) -> B::Color {
         let Point { x, y } = *point;
-        self.cells[y].borrow()[x]
+        self.cells[self.linear_index(y, x)]
     }
 
     /// For the given cell yield
@@ -235,14 +244,12 @@ where
     /// Standard diff semantic as result:
     /// - first returned points which set in current board and unset in the other
     /// - second returned points which unset in current board and set in the other
-    pub fn diff(&self, other: &[Rc<RefCell<Vec<B::Color>>>]) -> (Vec<Point>, Vec<Point>) {
+    pub fn diff(&self, other: &[B::Color]) -> (Vec<Point>, Vec<Point>) {
         let mut removed = vec![];
         let mut added = vec![];
 
-        for (y, (row, other_row)) in self.cells.iter().zip(other).enumerate() {
-            let row = row.borrow();
-            let other_row = other_row.borrow();
-
+        let other = other.chunks(self.width());
+        for (y, (row, other_row)) in self.iter_rows().zip(other).enumerate() {
             for (x, (cell, other_cell)) in row.iter().zip(other_row.iter()).enumerate() {
                 if cell != other_cell {
                     let p = Point::new(x, y);
@@ -260,17 +267,11 @@ where
         (removed, added)
     }
 
-    pub fn make_snapshot(&self) -> Vec<Rc<RefCell<Vec<B::Color>>>> {
-        self.cells
-            .iter()
-            .map(|row| {
-                let row = row.borrow().to_vec();
-                Rc::new(RefCell::new(row))
-            })
-            .collect()
+    pub fn make_snapshot(&self) -> Vec<B::Color> {
+        self.cells.clone()
     }
 
-    pub fn restore(&mut self, cells: Vec<Rc<RefCell<Vec<B::Color>>>>) {
+    pub fn restore(&mut self, cells: Vec<B::Color>) {
         self.cells = cells;
     }
 }
@@ -280,18 +281,18 @@ where
     B: Block,
     B::Color: Copy,
 {
-    pub fn set_color(&self, point: &Point, color: &B::Color) {
+    pub fn set_color(&mut self, point: &Point, color: &B::Color) {
         let old_value = self.cell(point);
         let Point { x, y } = *point;
-        let mut row = self.cells[y].borrow_mut();
-        row[x] = old_value + *color;
+        let index = self.linear_index(y, x);
+        self.cells[index] = old_value + *color;
     }
 
-    pub fn unset_color(&self, point: &Point, color: &B::Color) -> Result<(), String> {
+    pub fn unset_color(&mut self, point: &Point, color: &B::Color) -> Result<(), String> {
         let old_value = self.cell(point);
         let Point { x, y } = *point;
-        let mut row = self.cells[y].borrow_mut();
-        row[x] = (old_value - *color)?;
+        let index = self.linear_index(y, x);
+        self.cells[index] = (old_value - *color)?;
         Ok(())
     }
 }
@@ -335,8 +336,8 @@ mod tests {
         ];
 
         let board = Board::with_descriptions(rows, columns);
-        assert_eq!(board.cells.len(), 3);
-        assert_eq!(*board.cells[0].borrow(), [Undefined, Undefined, Undefined]);
+        assert_eq!(board.cells.len(), 9);
+        assert_eq!(board.get_row(0), &[Undefined, Undefined, Undefined]);
     }
 
     #[test]
@@ -363,7 +364,7 @@ mod tests {
 
         let board = Board::with_descriptions(rows, columns);
         assert_eq!(board.cells.len(), 5);
-        assert_eq!(*board.cells[0].borrow(), [Undefined]);
+        assert_eq!(board.get_row(0), &[Undefined]);
         assert_eq!(board.desc_rows[0].vec, vec![BinaryBlock(1)]);
         assert_eq!(board.desc_rows[1].vec, vec![]);
         assert_eq!(board.desc_rows[2].vec, vec![BinaryBlock(1)]);
