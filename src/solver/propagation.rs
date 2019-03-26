@@ -14,7 +14,7 @@ use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
 
 pub type CacheKey<B> = (Rc<Description<B>>, Rc<Vec<<B as Block>::Color>>);
-pub type CacheValue<B> = Result<Rc<Vec<<B as Block>::Color>>, String>;
+pub type CacheValue<B> = Result<Vec<<B as Block>::Color>, String>;
 pub type ExternalCache<B> = Rc<RefCell<GrowableCache<CacheKey<B>, CacheValue<B>>>>;
 
 pub fn new_cache<B>(capacity: usize) -> ExternalCache<B>
@@ -279,9 +279,8 @@ where
         let mut new_jobs = vec![];
         // if new_solution_rate > pre_solution_rate
 
-        if *line != *updated {
-            let updated = updated.as_slice();
-
+        let updated = updated.as_slice();
+        if line.as_slice() != updated {
             debug!("Original: {:?}", line);
             debug!("Updated: {:?}", updated);
 
