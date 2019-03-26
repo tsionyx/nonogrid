@@ -344,7 +344,14 @@ impl WebPbn {
             description
                 .children()
                 .iter()
-                .map(|child| Self::parse_block(child, palette))
+                .filter_map(|child| {
+                    if let Node::Text(_text) = child {
+                        // ignore newlines and whitespaces
+                        None
+                    } else {
+                        Some(Self::parse_block(child, palette))
+                    }
+                })
                 .collect(),
         )
     }
