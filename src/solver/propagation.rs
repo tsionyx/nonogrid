@@ -280,14 +280,14 @@ where
         // if new_solution_rate > pre_solution_rate
 
         if *line != *updated {
-            let updated = (*updated).to_owned();
+            let updated = updated.as_slice();
 
             debug!("Original: {:?}", line);
-            debug!("Updated: {:?}", &updated);
+            debug!("Updated: {:?}", updated);
 
             new_jobs = line
                 .iter()
-                .zip(&updated)
+                .zip(updated)
                 .enumerate()
                 .filter_map(|(i, (pre, post))| {
                     if pre.is_updated_with(post).unwrap() {

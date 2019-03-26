@@ -131,20 +131,22 @@ where
         row_index * width + column_index
     }
 
-    pub fn set_row(&mut self, index: usize, new: Vec<B::Color>) {
+    pub fn set_row(&mut self, index: usize, new: &[B::Color]) {
         let row_start = self.linear_index(index, 0);
-        (row_start..).zip(new).for_each(|(linear_index, new_cell)| {
-            self.cells[linear_index] = new_cell;
-        });
+        (row_start..)
+            .zip(new)
+            .for_each(|(linear_index, &new_cell)| {
+                self.cells[linear_index] = new_cell;
+            });
     }
 
-    pub fn set_column(&mut self, index: usize, new: Vec<B::Color>) {
+    pub fn set_column(&mut self, index: usize, new: &[B::Color]) {
         let width = self.width();
         let column_indexes = (index..).step_by(width);
 
         column_indexes
             .zip(new)
-            .for_each(|(linear_index, new_cell)| {
+            .for_each(|(linear_index, &new_cell)| {
                 self.cells[linear_index] = new_cell;
             });
     }
