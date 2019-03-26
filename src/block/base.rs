@@ -61,10 +61,10 @@ impl<T> Description<T>
 where
     T: Block,
 {
-    pub fn new(mut vec: Vec<T>) -> Description<T> {
+    pub fn new(mut vec: Vec<T>) -> Self {
         // remove zero blocks
-        utils::remove(&mut vec, T::default());
-        Description { vec }
+        utils::remove(&mut vec, &T::default());
+        Self { vec }
     }
 }
 
@@ -175,7 +175,7 @@ pub mod color {
         }
 
         fn with_colors(colors: HashMap<String, ColorDesc>) -> Self {
-            let symbols: HashSet<_> = (0u8..0xFF)
+            let symbols: HashSet<_> = (0_u8..0xFF)
                 .filter_map(|x| {
                     let ch = x as char;
                     if ch.is_ascii_punctuation() {
@@ -249,7 +249,7 @@ pub mod color {
             symbol: char,
         ) {
             let current_max = self.vec.iter().map(|(_name, color)| color.id).max();
-            let id = current_max.map(|val| val * 2).unwrap_or(1);
+            let id = current_max.map_or(1, |val| val * 2);
             self.color_with_name_value_symbol_and_id(name, value, symbol, id)
         }
 

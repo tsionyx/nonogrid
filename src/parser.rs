@@ -199,8 +199,7 @@ impl MyFormat {
     {
         descriptions
             .lines()
-            .map(|line| Self::parse_line(line, palette).unwrap_or_else(|| vec![]))
-            .flatten()
+            .flat_map(|line| Self::parse_line(line, palette).unwrap_or_else(|| vec![]))
             .collect()
     }
 
@@ -350,14 +349,14 @@ impl WebPbn {
         )
     }
 
-    fn get_clues<B>(descriptions: &Nodeset, palette: ColorPalette) -> Vec<Description<B>>
+    fn get_clues<B>(descriptions: &Nodeset, palette: &ColorPalette) -> Vec<Description<B>>
     where
         B: Block,
     {
         descriptions
             .document_order()
             .iter()
-            .map(|line_node| Self::parse_line(line_node, &palette))
+            .map(|line_node| Self::parse_line(line_node, palette))
             .collect()
     }
 
@@ -370,7 +369,7 @@ impl WebPbn {
             .expect("XPath evaluation failed");
 
         if let Value::Nodeset(ns) = value {
-            Self::get_clues(&ns, self.get_palette())
+            Self::get_clues(&ns, &self.get_palette())
         } else {
             vec![]
         }

@@ -95,7 +95,7 @@ where
         // has_blots = board.has_blots
 
         let start = Instant::now();
-        let mut lines_solved = 0u32;
+        let mut lines_solved = 0_u32;
 
         // every job is a tuple (is_column, index)
         //

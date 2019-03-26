@@ -121,7 +121,7 @@ where
             }
 
             let mut false_probes = None;
-            let mut probe_counter = 0u32;
+            let mut probe_counter = 0_u32;
 
             while let Some((point, priority)) = probes.pop() {
                 probe_counter += 1;

@@ -336,7 +336,7 @@ where
             .iter()
             .map(|(point, color_to_impact)| {
                 let values: Vec<_> = color_to_impact.values().collect();
-                (point, OrderedFloat(Self::rate_by_impact(values)))
+                (point, OrderedFloat(Self::rate_by_impact(&values)))
             })
             .collect();
         points_rate.sort_by_key(|&(point, rate)| (Reverse(rate), point));
@@ -344,7 +344,7 @@ where
 
         points_rate
             .iter()
-            .map(|&(point, _rate)| {
+            .flat_map(|&(point, _rate)| {
                 let mut point_colors: Vec<_> =
                     point_wise[point].iter().map(|(k, v)| (**k, *v)).collect();
                 // the most impacting color goes first
@@ -355,13 +355,12 @@ where
                     .collect();
                 point_order
             })
-            .flatten()
             .collect::<Vec<_>>()
     }
 
     const CHOOSE_STRATEGY: ChoosePixel = ChoosePixel::Sqrt;
 
-    fn rate_by_impact(impact: Vec<&(usize, f64)>) -> f64 {
+    fn rate_by_impact(impact: &[&(usize, f64)]) -> f64 {
         let sizes_only: Vec<_> = impact
             .iter()
             .map(|(new_points, _priority)| *new_points)
@@ -436,7 +435,7 @@ where
         // when the probing occurs it should immediately set to 'false'
         // to prevent succeeded useless probing on the same board
         let mut board_changed = true;
-        let mut search_counter = 0u32;
+        let mut search_counter = 0_u32;
 
         let mut directions = directions.to_vec();
 

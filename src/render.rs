@@ -37,7 +37,7 @@ where
         let full_width = self.side_width() + self.board().width();
 
         let mut header = self.header_lines();
-        for row in header.iter_mut() {
+        for row in &mut header {
             pad_with(row, "#".to_string(), full_width, false);
         }
 
@@ -110,7 +110,7 @@ where
 
         let width = Self::descriptions_width(descriptions);
 
-        for row in rows.iter_mut() {
+        for row in &mut rows {
             pad_with(row, " ".to_string(), width, false);
         }
         rows

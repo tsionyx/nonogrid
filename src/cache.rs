@@ -4,9 +4,9 @@ use std::hash::Hash;
 use hashbrown::HashMap;
 
 /// The copy of 'cached' crate's structure
-/// https://github.com/jaemk/cached/blob/master/src/stores.rs#L20
-/// but using https://github.com/Amanieu/hashbrown
-/// instead of default HashMap for speeding up
+/// <https://github.com/jaemk/cached/blob/master/src/stores.rs#L20>
+/// but using <https://github.com/Amanieu/hashbrown>
+/// instead of default `HashMap` for speeding up
 #[derive(Default)]
 pub struct GrowableCache<K, V>
 where
@@ -59,15 +59,12 @@ impl<K: Hash + Eq, V> GrowableCache<K, V> {
 
 impl<K: Hash + Eq, V> Cached<K, V> for GrowableCache<K, V> {
     fn cache_get(&mut self, key: &K) -> Option<&V> {
-        match self.store.get(key) {
-            Some(v) => {
-                self.hits += 1;
-                Some(v)
-            }
-            None => {
-                self.misses += 1;
-                None
-            }
+        if let Some(v) = self.store.get(key) {
+            self.hits += 1;
+            Some(v)
+        } else {
+            self.misses += 1;
+            None
         }
     }
     fn cache_set(&mut self, key: K, val: V) {

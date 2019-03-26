@@ -46,22 +46,22 @@ pub fn transpose<T: Clone>(input: &[Vec<T>]) -> Result<Vec<Vec<T>>, String> {
         .collect())
 }
 
-pub fn replace<T>(vec: &mut Vec<T>, what: T, with_what: T)
+pub fn replace<T>(vec: &mut Vec<T>, what: &T, with_what: T)
 where
     T: PartialEq + Clone,
 {
-    if what == with_what {
+    if what == &with_what {
         return;
     }
 
-    if !vec.contains(&what) {
+    if !vec.contains(what) {
         return;
     }
 
     let replaced_indexes: Vec<_> = vec
         .iter()
         .enumerate()
-        .filter_map(|(index, val)| if val == &what { Some(index) } else { None })
+        .filter_map(|(index, val)| if val == what { Some(index) } else { None })
         .collect();
 
     vec.extend(vec![with_what; replaced_indexes.len()]);
@@ -70,18 +70,18 @@ where
     }
 }
 
-pub fn remove<T>(vec: &mut Vec<T>, what: T)
+pub fn remove<T>(vec: &mut Vec<T>, what: &T)
 where
     T: PartialEq,
 {
-    if !vec.contains(&what) {
+    if !vec.contains(what) {
         return;
     }
 
     let mut removed_indexes: Vec<_> = vec
         .iter()
         .enumerate()
-        .filter_map(|(index, val)| if val == &what { Some(index) } else { None })
+        .filter_map(|(index, val)| if val == what { Some(index) } else { None })
         .collect();
 
     removed_indexes.sort_by_key(|&n| Reverse(n));
@@ -112,11 +112,11 @@ pub fn is_power_of_2(x: u32) -> bool {
     x & (x - 1) == 0
 }
 
-pub fn dedup<T>(vec: Vec<T>) -> Vec<T>
+pub fn dedup<T>(vec: &[T]) -> Vec<T>
 where
     T: Eq + Hash + Clone,
 {
-    let set: HashSet<_> = vec.clone().into_iter().collect();
+    let set: HashSet<_> = vec.iter().cloned().collect();
     set.into_iter().collect()
 }
 
@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn replace_ints() {
         let mut v = vec![1, 2, 3, 2];
-        replace(&mut v, 2, 5);
+        replace(&mut v, &2, 5);
 
         assert_eq!(v, vec![1, 5, 3, 5]);
     }
@@ -225,7 +225,7 @@ mod tests {
     #[test]
     fn no_replacement() {
         let mut v = vec![1, 2, 3, 2];
-        replace(&mut v, 5, 4);
+        replace(&mut v, &5, 4);
 
         assert_eq!(v, vec![1, 2, 3, 2]);
     }
@@ -233,7 +233,7 @@ mod tests {
     #[test]
     fn remove_with_replace() {
         let mut v = vec![1, 2, 3, 2];
-        remove(&mut v, 2);
+        remove(&mut v, &2);
 
         assert_eq!(v, vec![1, 3]);
     }

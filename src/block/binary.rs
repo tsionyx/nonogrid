@@ -82,10 +82,9 @@ impl fmt::Display for BinaryColor {
         use BinaryColor::*;
 
         let symbol = match self {
-            Undefined => '?',
             White => '.',
             Black => '\u{2b1b}',
-            BlackOrWhite => '?',
+            Undefined | BlackOrWhite => '?',
         };
         write!(f, "{}", symbol)
     }

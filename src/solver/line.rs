@@ -77,7 +77,7 @@ where
             if let Some(both) = both {
                 let init = B::Color::default();
 
-                utils::replace(&mut solved, both, init);
+                utils::replace(&mut solved, &both, init);
             }
             Ok(Rc::new(solved.to_vec()))
         } else {
@@ -132,13 +132,12 @@ where
         let position = position as usize;
 
         let can_be_solved = self._get_sol(position, block);
-        match can_be_solved {
-            Some(result) => result,
-            None => {
-                let can_be_solved = self.fill_matrix(position, block);
-                self.set_sol(position, block, can_be_solved);
-                can_be_solved
-            }
+        if let Some(result) = can_be_solved {
+            result
+        } else {
+            let can_be_solved = self.fill_matrix(position, block);
+            self.set_sol(position, block, can_be_solved);
+            can_be_solved
         }
     }
 
@@ -350,7 +349,7 @@ impl DynamicColor for MultiColor {
     }
 
     fn solved_copy(&self) -> Self {
-        MultiColor(0)
+        Self(0)
     }
 }
 

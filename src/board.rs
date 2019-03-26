@@ -42,7 +42,7 @@ where
     B::Color: Copy,
 {
     #[allow(dead_code)]
-    pub fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Board<B> {
+    pub fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Self {
         Self::with_descriptions_and_palette(rows, columns, None)
     }
 
@@ -50,7 +50,7 @@ where
         rows: Vec<Description<B>>,
         columns: Vec<Description<B>>,
         palette: Option<ColorPalette>,
-    ) -> Board<B> {
+    ) -> Self {
         let height = rows.len();
         let width = columns.len();
 
@@ -63,7 +63,7 @@ where
 
         let desc_rows = rows.into_iter().map(Rc::new).collect();
         let desc_cols = columns.into_iter().map(Rc::new).collect();
-        Board {
+        Self {
             cells,
             desc_rows,
             desc_cols,
@@ -79,7 +79,7 @@ where
             .collect();
 
         colors.push(ColorPalette::WHITE_ID);
-        dedup(colors)
+        dedup(&colors)
     }
 
     pub fn desc_by_id(&self, id: ColorId) -> Option<ColorDesc> {
@@ -167,7 +167,7 @@ where
         self.cells
             .iter()
             .enumerate()
-            .map(|(y, row)| {
+            .flat_map(|(y, row)| {
                 let row = row.borrow();
                 row.iter()
                     .enumerate()
@@ -180,7 +180,6 @@ where
                     })
                     .collect::<Vec<_>>()
             })
-            .flatten()
             .collect()
     }
 
