@@ -4,6 +4,11 @@ version = "0.2.0"
 authors = ["Ivan Ladelshchikov <tsionyx@gmail.com>"]
 edition = "2018"
 
+[profile.release]
+lto = true
+# uncomment to use with profilers
+#debug = true
+
 [dependencies]
 toml = "0.4"
 serde_derive = "1.0.87"
