@@ -180,22 +180,16 @@ where
         self.line_solution_rate(&self.cells)
     }
 
-    pub fn unsolved_cells(&self) -> Vec<Point> {
-        self.iter_rows()
-            .enumerate()
-            .flat_map(|(y, row)| {
-                row.iter()
-                    .enumerate()
-                    .filter_map(move |(x, cell)| {
-                        if cell.is_solved() {
-                            None
-                        } else {
-                            Some(Point::new(x, y))
-                        }
-                    })
-                    .collect::<Vec<_>>()
+    pub fn unsolved_cells(&self) -> impl Iterator<Item = Point> + '_ {
+        self.iter_rows().enumerate().flat_map(|(y, row)| {
+            row.iter().enumerate().filter_map(move |(x, cell)| {
+                if cell.is_solved() {
+                    None
+                } else {
+                    Some(Point::new(x, y))
+                }
             })
-            .collect()
+        })
     }
 
     pub fn cell(&self, point: &Point) -> B::Color {
@@ -228,17 +222,15 @@ where
     /// For the given cell yield
     /// the neighbour cells
     /// that are not completely solved yet.
-    pub fn unsolved_neighbours(&self, point: &Point) -> Vec<Point> {
-        self.neighbours(&point)
-            .iter()
-            .filter_map(|n| {
-                if self.cell(n).is_solved() {
-                    None
-                } else {
-                    Some(*n)
-                }
-            })
-            .collect()
+    pub fn unsolved_neighbours(&self, point: &Point) -> impl Iterator<Item = Point> + '_ {
+        #[allow(clippy::unnecessary_filter_map)]
+        self.neighbours(&point).into_iter().filter_map(move |n| {
+            if self.cell(&n).is_solved() {
+                None
+            } else {
+                Some(n)
+            }
+        })
     }
 }
 
