@@ -64,16 +64,22 @@ where
     }
 
     fn unsolved_cells(&self) -> PriorityQueue<Point, OrderedFloat<f64>> {
-        let mut queue = PriorityQueue::new();
         let board = self.board();
         let unsolved = board.unsolved_cells();
-        unsolved.iter().for_each(|p| {
-            let no_unsolved = board.unsolved_neighbours(p).len() as f64;
-            let row_rate = board.row_solution_rate(p.y());
-            let column_rate = board.column_solution_rate(p.x());
-            let priority = row_rate + column_rate - no_unsolved + 4.0;
-            queue.push(*p, OrderedFloat(priority));
-        });
+
+        let mut queue = PriorityQueue::with_capacity(unsolved.len());
+        unsolved
+            .iter()
+            .map(|p| {
+                let no_unsolved = board.unsolved_neighbours(p).len() as f64;
+                let row_rate = board.row_solution_rate(p.y());
+                let column_rate = board.column_solution_rate(p.x());
+                let priority = row_rate + column_rate - no_unsolved + 4.0;
+                (*p, OrderedFloat(priority))
+            })
+            .for_each(|(item, priority)| {
+                queue.push(item, priority);
+            });
 
         queue
     }

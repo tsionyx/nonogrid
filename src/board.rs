@@ -110,11 +110,15 @@ where
         self.cells.iter().all(|cell| cell.is_solved())
     }
 
-    pub fn get_row(&self, index: usize) -> Vec<B::Color> {
+    fn get_row_slice(&self, index: usize) -> &[B::Color] {
         //let width = self.width();
         //let start_index = width * index;
         //self.cells.iter().skip(start_index).take(width)
-        self.iter_rows().nth(index).unwrap().to_vec()
+        self.iter_rows().nth(index).unwrap()
+    }
+
+    pub fn get_row(&self, index: usize) -> Vec<B::Color> {
+        self.get_row_slice(index).to_vec()
     }
 
     pub fn get_column(&self, index: usize) -> Vec<B::Color> {
@@ -163,7 +167,7 @@ where
 
     /// How many cells in the row with given index are known to be of particular color
     pub fn row_solution_rate(&self, index: usize) -> f64 {
-        self.line_solution_rate(&self.get_row(index))
+        self.line_solution_rate(self.get_row_slice(index))
     }
 
     /// How many cells in the column with given index are known to be of particular color
@@ -205,7 +209,7 @@ where
     /// that number can reduce to three or two.
     fn neighbours(&self, point: &Point) -> Vec<Point> {
         let Point { x, y } = *point;
-        let mut res = vec![];
+        let mut res = Vec::with_capacity(4);
         if x > 0 {
             res.push(Point::new(x - 1, y));
         }
