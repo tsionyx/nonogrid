@@ -4,7 +4,6 @@ use super::super::cache::GrowableCache;
 use super::line::LineSolver;
 
 use std::cell::RefCell;
-use std::collections::HashSet;
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -106,85 +105,91 @@ where
             &rows, &columns, "standard"
         );
 
-        let mut line_jobs = PriorityQueue::new();
-        let mut all_jobs = HashSet::new();
+        let mut line_jobs = PriorityQueue::with_capacity(rows.len() + columns.len());
 
-        let mut add_job = |job: Job, priority: f64| {
-            let priority = OrderedFloat(priority);
-            line_jobs.push(job, priority);
-            all_jobs.insert(job);
-        };
+        // TODO: replace with `extend` after releasing fix
+        //       https://github.com/garro95/priority-queue/pull/13
+        rows.into_iter()
+            .map(|row_index| {
+                // the more this line solved
+                // priority = 1 - board.row_solution_rate(row_index)
 
-        for row_index in rows {
-            // the more this line solved
-            // priority = 1 - board.row_solution_rate(row_index)
+                // the closer to edge
+                // priority = 1 - abs(2.0 * row_index / board.height - 1)
 
-            // the closer to edge
-            // priority = 1 - abs(2.0 * row_index / board.height - 1)
+                // the more 'dense' this line
+                // priority = 1 - board.densities[False][row_index]
 
-            // the more 'dense' this line
-            // priority = 1 - board.densities[False][row_index]
+                let new_job = (false, row_index);
 
-            let new_job = (false, row_index);
+                // if has_blots:
+                //    // the more attempts the less priority
+                //    priority = board.attempts_to_try(*new_job)
 
-            let priority = 0.0;
-            // if has_blots:
-            //    // the more attempts the less priority
-            //    priority = board.attempts_to_try(*new_job)
+                (new_job, OrderedFloat(0.0))
+            })
+            .for_each(|(item, priority)| {
+                line_jobs.push(item, priority);
+            });
 
-            add_job(new_job, priority);
-        }
+        columns
+            .into_iter()
+            .map(|column_index| {
+                // the more this line solved
+                // priority = 1 - board.column_solution_rate(column_index)
 
-        for column_index in columns {
-            // the more this line solved
-            // priority = 1 - board.column_solution_rate(column_index)
+                // the closer to edge
+                // priority = 1 - abs(2.0 * column_index / board.width - 1)
 
-            // the closer to edge
-            // priority = 1 - abs(2.0 * column_index / board.width - 1)
+                // the more 'dense' this line
+                // priority = 1 - board.densities[True][column_index]
 
-            // the more 'dense' this line
-            // priority = 1 - board.densities[True][column_index]
+                let new_job = (true, column_index);
 
-            let new_job = (true, column_index);
+                // if has_blots:
+                //   // the more attempts the less priority
+                //   priority = board.attempts_to_try(*new_job)
 
-            let priority = 0.0;
-            // if has_blots:
-            //   // the more attempts the less priority
-            //   priority = board.attempts_to_try(*new_job)
-
-            add_job(new_job, priority);
-        }
+                (new_job, OrderedFloat(0.0))
+            })
+            .for_each(|(item, priority)| {
+                line_jobs.push(item, priority);
+            });
 
         let mut solved_cells = vec![];
 
         while let Some(((is_column, index), priority)) = Self::get_top_job(&mut line_jobs) {
             let new_jobs = self.solve_row::<S>(index, is_column)?;
 
-            let new_states: Vec<_> = if is_column {
-                let x = index;
-                new_jobs
-                    .iter()
-                    .map(|((_, y), _color)| Point::new(x, *y))
-                    .collect()
-            } else {
-                let y = index;
-                new_jobs
-                    .iter()
-                    .map(|((_, x), _color)| Point::new(*x, y))
-                    .collect()
-            };
+            let new_states = new_jobs.iter().map(|(another_index, _color)| {
+                let (x, y) = if is_column {
+                    (&index, another_index)
+                } else {
+                    (another_index, &index)
+                };
+                Point::new(*x, *y)
+            });
 
             solved_cells.extend(new_states);
-            for (new_job, _color) in new_jobs {
-                let new_priority = priority + 1.0;
-                // if board.has_blots:
-                //    // the more attempts the less priority
-                //    new_priority = board.attempts_to_try(*new_job)
 
-                // higher priority = more priority
-                //add_job(new_job, new_priority);
-                line_jobs.push(new_job, OrderedFloat(new_priority));
-            }
+            // TODO: replace with `extend` after releasing fix
+            //       https://github.com/garro95/priority-queue/pull/13
+            new_jobs
+                .into_iter()
+                .map(|(new_index, _color)| {
+                    // if board.has_blots:
+                    //    // the more attempts the less priority
+                    //    new_priority = board.attempts_to_try(*new_job)
+
+                    let new_job = (!is_column, new_index);
+                    // higher priority = more priority
+                    //add_job(new_job, new_priority);
+                    (new_job, OrderedFloat(priority + 1.0))
+                })
+                .for_each(|(item, priority)| {
+                    line_jobs.push(item, priority);
+                });
+
             lines_solved += 1;
         }
 
@@ -227,12 +232,12 @@ where
     /// Solve a line with the solver S.
     /// If the line gets partially solved, put the crossed lines into queue.
     ///
-    /// Return the list of new jobs that should be solved next (one job for each solved cell).
+    /// Return the list of indexes which was updated during this solution.
     pub fn solve_row<S>(
         &self,
         index: usize,
         is_column: bool,
-    ) -> Result<Vec<(Job, B::Color)>, String>
+    ) -> Result<Vec<(usize, B::Color)>, String>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -276,7 +281,7 @@ where
 
         // let new_solution_rate = Board::<B>::line_solution_rate(&updated);
 
-        let mut new_jobs = vec![];
+        let mut updated_indexes = vec![];
         // if new_solution_rate > pre_solution_rate
 
         let updated = updated.as_slice();
@@ -284,7 +289,7 @@ where
             debug!("Original: {:?}", line);
             debug!("Updated: {:?}", updated);
 
-            new_jobs = line
+            updated_indexes = line
                 .iter()
                 .zip(updated)
                 .enumerate()
@@ -294,7 +299,7 @@ where
                             "Diff on index={}: original={:?}, updated={:?}",
                             i, pre, &post
                         );
-                        Some(((!is_column, i), *post))
+                        Some((i, *post))
                     } else {
                         None
                     }
@@ -319,11 +324,11 @@ where
                 total_time.as_secs(),
                 total_time.subsec_micros()
             );
-            if !new_jobs.is_empty() {
-                debug!("New info on {} {}: {:?}", name, index, new_jobs);
+            if !updated_indexes.is_empty() {
+                debug!("New info on {} {}: {:?}", name, index, updated_indexes);
             }
         }
-        Ok(new_jobs)
+        Ok(updated_indexes)
     }
 
     fn solve<S>(
