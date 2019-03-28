@@ -107,54 +107,43 @@ where
 
         let mut line_jobs = PriorityQueue::with_capacity(rows.len() + columns.len());
 
-        // TODO: replace with `extend` after releasing fix
-        //       https://github.com/garro95/priority-queue/pull/13
-        rows.into_iter()
-            .map(|row_index| {
-                // the more this line solved
-                // priority = 1 - board.row_solution_rate(row_index)
+        line_jobs.extend(rows.into_iter().map(|row_index| {
+            // the more this line solved
+            // priority = 1 - board.row_solution_rate(row_index)
 
-                // the closer to edge
-                // priority = 1 - abs(2.0 * row_index / board.height - 1)
+            // the closer to edge
+            // priority = 1 - abs(2.0 * row_index / board.height - 1)
 
-                // the more 'dense' this line
-                // priority = 1 - board.densities[False][row_index]
+            // the more 'dense' this line
+            // priority = 1 - board.densities[False][row_index]
 
-                let new_job = (false, row_index);
+            let new_job = (false, row_index);
 
-                // if has_blots:
-                //    // the more attempts the less priority
-                //    priority = board.attempts_to_try(*new_job)
+            // if has_blots:
+            //    // the more attempts the less priority
+            //    priority = board.attempts_to_try(*new_job)
 
-                (new_job, OrderedFloat(0.0))
-            })
-            .for_each(|(item, priority)| {
-                line_jobs.push(item, priority);
-            });
+            (new_job, OrderedFloat(0.0))
+        }));
 
-        columns
-            .into_iter()
-            .map(|column_index| {
-                // the more this line solved
-                // priority = 1 - board.column_solution_rate(column_index)
+        line_jobs.extend(columns.into_iter().map(|column_index| {
+            // the more this line solved
+            // priority = 1 - board.column_solution_rate(column_index)
 
-                // the closer to edge
-                // priority = 1 - abs(2.0 * column_index / board.width - 1)
+            // the closer to edge
+            // priority = 1 - abs(2.0 * column_index / board.width - 1)
 
-                // the more 'dense' this line
-                // priority = 1 - board.densities[True][column_index]
+            // the more 'dense' this line
+            // priority = 1 - board.densities[True][column_index]
 
-                let new_job = (true, column_index);
+            let new_job = (true, column_index);
 
-                // if has_blots:
-                //   // the more attempts the less priority
-                //   priority = board.attempts_to_try(*new_job)
+            // if has_blots:
+            //   // the more attempts the less priority
+            //   priority = board.attempts_to_try(*new_job)
 
-                (new_job, OrderedFloat(0.0))
-            })
-            .for_each(|(item, priority)| {
-                line_jobs.push(item, priority);
-            });
+            (new_job, OrderedFloat(0.0))
+        }));
 
         let mut solved_cells = vec![];
 
@@ -172,23 +161,16 @@ where
 
             solved_cells.extend(new_states);
 
-            // TODO: replace with `extend` after releasing fix
-            //       https://github.com/garro95/priority-queue/pull/13
-            new_jobs
-                .into_iter()
-                .map(|(new_index, _color)| {
-                    // if board.has_blots:
-                    //    // the more attempts the less priority
-                    //    new_priority = board.attempts_to_try(*new_job)
+            line_jobs.extend(new_jobs.into_iter().map(|(new_index, _color)| {
+                // if board.has_blots:
+                //    // the more attempts the less priority
+                //    new_priority = board.attempts_to_try(*new_job)
 
-                    let new_job = (!is_column, new_index);
-                    // higher priority = more priority
-                    //add_job(new_job, new_priority);
-                    (new_job, OrderedFloat(priority + 1.0))
-                })
-                .for_each(|(item, priority)| {
-                    line_jobs.push(item, priority);
-                });
+                let new_job = (!is_column, new_index);
+                // higher priority = more priority
+                //add_job(new_job, new_priority);
+                (new_job, OrderedFloat(priority + 1.0))
+            }));
 
             lines_solved += 1;
         }
