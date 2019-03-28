@@ -49,8 +49,8 @@ fn pony() {
 
     {
         let board = board.borrow();
-        assert!(!board.is_solved_full());
         assert_eq!(board.solution_rate(), 0.0);
+        assert!(!board.is_solved_full());
     }
 
     let solver = FullProbe1::new(Rc::clone(&board));
@@ -58,8 +58,8 @@ fn pony() {
 
     {
         let board = board.borrow();
-        assert!(board.is_solved_full());
         assert_eq!(board.solution_rate(), 1.0);
+        assert!(board.is_solved_full());
     }
 }
 

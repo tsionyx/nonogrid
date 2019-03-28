@@ -32,8 +32,8 @@ where
 }
 
 pub struct DynamicSolver<B: Block, S = <B as Block>::Color> {
-    pub desc: Rc<Description<B>>,
-    pub line: Rc<Vec<S>>,
+    desc: Rc<Description<B>>,
+    line: Rc<Vec<S>>,
     additional_space: bool,
     block_sums: Vec<usize>,
     solution_matrix: Vec<Vec<Option<bool>>>,
