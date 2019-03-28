@@ -6,8 +6,6 @@ use std::hash::Hash;
 use std::marker::Sized;
 use std::ops::{Add, Sub};
 
-use hashbrown::HashSet;
-
 pub trait Color
 where
     Self: Debug
@@ -26,7 +24,7 @@ where
     fn is_solved(&self) -> bool;
     fn solution_rate(&self, all_colors: &[ColorId]) -> f64;
     fn is_updated_with(&self, new: &Self) -> Result<bool, String>;
-    fn variants(&self) -> HashSet<Self>
+    fn variants(&self) -> Vec<Self>
     where
         Self: Sized;
 

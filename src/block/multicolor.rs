@@ -53,7 +53,7 @@ impl Color for MultiColor {
         Err("Color sets cannot be compared".to_string())
     }
 
-    fn variants(&self) -> HashSet<Self>
+    fn variants(&self) -> Vec<Self>
     where
         Self: Sized,
     {

@@ -5,8 +5,6 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::ops::{Add, Sub};
 
-use hashbrown::HashSet;
-
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd)]
 pub enum BinaryColor {
     Undefined,
@@ -54,14 +52,12 @@ impl Color for BinaryColor {
         Ok(true)
     }
 
-    fn variants(&self) -> HashSet<Self> {
+    fn variants(&self) -> Vec<Self> {
         if self.is_solved() {
             vec![*self]
         } else {
             vec![BinaryColor::White, BinaryColor::Black]
         }
-        .into_iter()
-        .collect()
     }
 
     fn as_color_id(&self) -> ColorId {

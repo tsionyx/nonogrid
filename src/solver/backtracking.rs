@@ -455,7 +455,8 @@ where
             }
 
             let (point, color) = direction;
-            let cell_colors: HashSet<B::Color> = self.board().cell(&point).variants();
+            let cell_colors: HashSet<B::Color> =
+                self.board().cell(&point).variants().into_iter().collect();
 
             if !cell_colors.contains(&color) {
                 warn!(
