@@ -159,7 +159,7 @@ where
         let mut solved_cells = vec![];
 
         while let Some(((is_column, index), priority)) = Self::get_top_job(&mut line_jobs) {
-            let new_jobs = self.solve_row::<S>(index, is_column)?;
+            let new_jobs = self.update_line::<S>(index, is_column)?;
 
             let new_states = new_jobs.iter().map(|(another_index, _color)| {
                 let (x, y) = if is_column {
@@ -229,11 +229,11 @@ where
         Some(((is_column, index), priority.0))
     }
 
-    /// Solve a line with the solver S.
+    /// Solve a line with the solver S and update the board.
     /// If the line gets partially solved, put the crossed lines into queue.
     ///
     /// Return the list of indexes which was updated during this solution.
-    pub fn solve_row<S>(
+    pub fn update_line<S>(
         &self,
         index: usize,
         is_column: bool,
@@ -243,77 +243,39 @@ where
     {
         let start = Instant::now();
 
-        let (line, updated) = {
-            let (line_desc, line, name) = {
-                let board = self.board.borrow();
-                if is_column {
-                    (
-                        Rc::clone(&board.descriptions(false)[index]),
-                        board.get_column(index),
-                        "column",
-                    )
-                } else {
-                    (
-                        Rc::clone(&board.descriptions(true)[index]),
-                        board.get_row(index),
-                        "row",
-                    )
-                }
-            };
-
-            //let pre_solution_rate = Board::<B>::line_solution_rate(&line);
-            //if pre_solution_rate == 1 {
-            //    // do not check solved lines in trusted mode
-            //    if ! contradiction_mode {
-            //        return vec![];
-            //     }
-            //}
-
-            debug!(
-                "Solving {} {}: {:?}. Partial: {:?}",
-                index, name, line_desc, line
-            );
-
-            let line = Rc::new(line);
-            let solution = self.solve::<S>(line_desc, Rc::clone(&line))?;
-            (line, solution)
+        let (line_desc, line, name) = {
+            let board = self.board.borrow();
+            if is_column {
+                (
+                    Rc::clone(&board.descriptions(false)[index]),
+                    board.get_column(index),
+                    "column",
+                )
+            } else {
+                (
+                    Rc::clone(&board.descriptions(true)[index]),
+                    board.get_row(index),
+                    "row",
+                )
+            }
         };
 
-        // let new_solution_rate = Board::<B>::line_solution_rate(&updated);
+        //let pre_solution_rate = Board::<B>::line_solution_rate(&line);
+        //if pre_solution_rate == 1 {
+        //    // do not check solved lines in trusted mode
+        //    if ! contradiction_mode {
+        //        return vec![];
+        //     }
+        //}
 
-        let mut updated_indexes = vec![];
-        // if new_solution_rate > pre_solution_rate
+        debug!(
+            "Solving {} {}: {:?}. Partial: {:?}",
+            index, name, line_desc, line
+        );
 
-        let updated = updated.as_slice();
-        if line.as_slice() != updated {
-            debug!("Original: {:?}", line);
-            debug!("Updated: {:?}", updated);
-
-            updated_indexes = line
-                .iter()
-                .zip(updated)
-                .enumerate()
-                .filter_map(|(i, (pre, post))| {
-                    if pre.is_updated_with(post).unwrap() {
-                        debug!(
-                            "Diff on index={}: original={:?}, updated={:?}",
-                            i, pre, &post
-                        );
-                        Some((i, *post))
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-
-            let mut board = self.board.borrow_mut();
-
-            if is_column {
-                board.set_column(index, updated);
-            } else {
-                board.set_row(index, updated);
-            }
-        }
+        let line = Rc::new(line);
+        let solution = self.solve::<S>(line_desc, Rc::clone(&line))?;
+        let indexes = self.update_solved(index, is_column, &line, &solution);
 
         if log_enabled!(Level::Debug) {
             let name = if is_column { "column" } else { "row" };
@@ -324,11 +286,53 @@ where
                 total_time.as_secs(),
                 total_time.subsec_micros()
             );
-            if !updated_indexes.is_empty() {
-                debug!("New info on {} {}: {:?}", name, index, updated_indexes);
+            if !indexes.is_empty() {
+                debug!("New info on {} {}: {:?}", name, index, indexes);
             }
         }
-        Ok(updated_indexes)
+
+        Ok(indexes)
+    }
+
+    fn update_solved(
+        &self,
+        index: usize,
+        is_column: bool,
+        old: &[B::Color],
+        new: &[B::Color],
+    ) -> Vec<(usize, B::Color)> {
+        // let new_solution_rate = Board::<B>::line_solution_rate(&updated);
+        // if new_solution_rate > pre_solution_rate
+
+        if old == new {
+            return vec![];
+        }
+        let mut board = self.board.borrow_mut();
+
+        if is_column {
+            board.set_column(index, new);
+        } else {
+            board.set_row(index, new);
+        }
+
+        debug!("Original: {:?}", old);
+        debug!("Updated: {:?}", new);
+
+        old.iter()
+            .zip(new)
+            .enumerate()
+            .filter_map(|(i, (pre, post))| {
+                if pre.is_updated_with(post).unwrap() {
+                    debug!(
+                        "Diff on index={}: original={:?}, updated={:?}",
+                        i, pre, &post
+                    );
+                    Some((i, *post))
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     fn solve<S>(
