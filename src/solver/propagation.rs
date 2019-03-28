@@ -225,19 +225,17 @@ where
     {
         let start = Instant::now();
 
-        let (line_desc, line, name) = {
+        let (line_desc, line) = {
             let board = self.board.borrow();
             if is_column {
                 (
                     Rc::clone(&board.descriptions(false)[index]),
                     board.get_column(index),
-                    "column",
                 )
             } else {
                 (
                     Rc::clone(&board.descriptions(true)[index]),
                     board.get_row(index),
-                    "row",
                 )
             }
         };
@@ -250,10 +248,13 @@ where
         //     }
         //}
 
-        debug!(
-            "Solving {} {}: {:?}. Partial: {:?}",
-            index, name, line_desc, line
-        );
+        if log_enabled!(Level::Debug) {
+            let name = if is_column { "column" } else { "row" };
+            debug!(
+                "Solving {} {}: {:?}. Partial: {:?}",
+                index, name, line_desc, line
+            );
+        }
 
         let line = Rc::new(line);
         let solution = self.solve::<S>(line_desc, Rc::clone(&line))?;
