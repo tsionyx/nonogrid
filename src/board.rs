@@ -49,6 +49,10 @@ where
     all_colors: Vec<ColorId>,
     cache_rows: Option<LineSolverCache<B>>,
     cache_cols: Option<LineSolverCache<B>>,
+    // use with caching duplicated clues
+    // https://webpbn.com/survey/caching.html
+    rows_cache_indexes: Vec<usize>,
+    cols_cache_indexes: Vec<usize>,
 }
 
 impl<B> Board<B>
@@ -73,6 +77,32 @@ where
         let init = B::Color::from_color_ids(&all_colors);
         let cells = vec![init; width * height];
 
+        let uniq_rows = dedup(&rows.iter().map(|desc| desc.vec.clone()).collect::<Vec<_>>());
+        let uniq_cols = dedup(
+            &columns
+                .iter()
+                .map(|desc| desc.vec.clone())
+                .collect::<Vec<_>>(),
+        );
+        let rows_cache_indexes = rows
+            .iter()
+            .map(|desc| {
+                uniq_rows
+                    .iter()
+                    .position(|uniq_row| uniq_row == &desc.vec)
+                    .unwrap()
+            })
+            .collect();
+        let cols_cache_indexes = columns
+            .iter()
+            .map(|desc| {
+                uniq_cols
+                    .iter()
+                    .position(|unqi_col| unqi_col == &desc.vec)
+                    .unwrap()
+            })
+            .collect();
+
         let desc_rows = rows.into_iter().map(Rc::new).collect();
         let desc_cols = columns.into_iter().map(Rc::new).collect();
         Self {
@@ -83,6 +113,8 @@ where
             all_colors,
             cache_rows: None,
             cache_cols: None,
+            rows_cache_indexes,
+            cols_cache_indexes,
         }
     }
 
@@ -296,6 +328,14 @@ where
             warn!("Cache rows: Size={}, hits={}, hit rate={}.", s, h, r);
         }
     }
+
+    pub fn row_cache_index(&self, row_index: usize) -> usize {
+        self.rows_cache_indexes[row_index]
+    }
+
+    pub fn column_cache_index(&self, column_index: usize) -> usize {
+        self.cols_cache_indexes[column_index]
+    }
 }
 
 impl<B> Board<B>
@@ -373,6 +413,8 @@ where
             // ignore caches while cloning
             cache_rows: None,
             cache_cols: None,
+            rows_cache_indexes: self.rows_cache_indexes.clone(),
+            cols_cache_indexes: self.cols_cache_indexes.clone(),
         }
     }
 }

@@ -310,7 +310,12 @@ where
     where
         S: LineSolver<BlockType = B>,
     {
-        let key = (index, Rc::clone(&line));
+        let cache_index = if is_column {
+            self.board.borrow().column_cache_index(index)
+        } else {
+            self.board.borrow().row_cache_index(index)
+        };
+        let key = (cache_index, Rc::clone(&line));
 
         let cached = self.board.borrow_mut().cached_solution(is_column, &key);
 
