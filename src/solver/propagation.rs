@@ -13,7 +13,7 @@ use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
 
 pub type CacheKey<B> = (Rc<Description<B>>, Rc<Vec<<B as Block>::Color>>);
-pub type CacheValue<B> = Result<Vec<<B as Block>::Color>, String>;
+pub type CacheValue<B> = Result<Rc<Vec<<B as Block>::Color>>, String>;
 pub type ExternalCache<B> = Rc<RefCell<GrowableCache<CacheKey<B>, CacheValue<B>>>>;
 
 pub fn new_cache<B>(capacity: usize) -> ExternalCache<B>
@@ -339,9 +339,10 @@ where
         let mut line_solver = S::new(line_desc, line);
         let value = line_solver.solve();
 
+        let rc_value = value.map(Rc::new);
         if let Some(cache) = &self.cache {
-            cache.borrow_mut().cache_set(key, value.clone());
+            cache.borrow_mut().cache_set(key, rc_value.clone());
         }
-        value
+        rc_value
     }
 }
