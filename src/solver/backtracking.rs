@@ -6,12 +6,10 @@ use super::probing::{Impact, ProbeSolver};
 use std::cell::{Ref, RefCell};
 use std::cmp::Reverse;
 use std::fmt;
-use std::hash::Hash;
 use std::marker::PhantomData;
 use std::rc::Rc;
 use std::time::Instant;
 
-use cached::Cached;
 use hashbrown::{HashMap, HashSet};
 use ordered_float::OrderedFloat;
 
@@ -215,7 +213,7 @@ where
         timeout: Option<u32>,
         max_depth: Option<usize>,
     ) -> Self {
-        let probe_solver = P::new(Rc::clone(&board));
+        let probe_solver = P::with_board(Rc::clone(&board));
         Self {
             board,
             probe_solver,
@@ -265,10 +263,6 @@ where
         );
 
         Ok(())
-    }
-
-    pub fn print_cache_info(&self) {
-        print_cache_info(self.probe_solver.cache());
     }
 
     fn board(&self) -> Ref<Board<B>> {
@@ -737,27 +731,5 @@ where
         }
 
         false
-    }
-}
-
-fn print_cache_info<K, V>(cache: Ref<Cached<K, V>>)
-where
-    K: Hash + Eq,
-{
-    if cache.cache_size() > 0 {
-        let hits = cache.cache_hits().unwrap_or(0);
-        let misses = cache.cache_misses().unwrap_or(0);
-        let hit_rate = if hits == 0 {
-            0.0
-        } else {
-            hits as f32 / (hits + misses) as f32
-        };
-
-        warn!(
-            "Cache size: {}, hits: {}, hit rate: {}",
-            cache.cache_size(),
-            hits,
-            hit_rate,
-        );
     }
 }

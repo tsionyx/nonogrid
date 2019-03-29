@@ -91,3 +91,22 @@ impl<K: Hash + Eq, V> Cached<K, V> for GrowableCache<K, V> {
         Some(self.misses)
     }
 }
+
+pub fn cache_info<K, V>(cache: &Cached<K, V>) -> (usize, u32, f32)
+where
+    K: Hash + Eq,
+{
+    if cache.cache_size() > 0 {
+        let hits = cache.cache_hits().unwrap_or(0);
+        let misses = cache.cache_misses().unwrap_or(0);
+        let hit_rate = if hits == 0 {
+            0.0
+        } else {
+            hits as f32 / (hits + misses) as f32
+        };
+
+        (cache.cache_size(), hits, hit_rate)
+    } else {
+        (0, 0, 0.0)
+    }
+}

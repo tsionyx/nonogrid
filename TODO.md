@@ -30,7 +30,6 @@
 - line in LineSolver: need Rc?
 - remove contradiction mode?
 - do I need RefCell for cells? (use https://crates.io/crates/nalgebra or https://crates.io/crates/rulinalg)
-- move cache into board, provide only indexes instead of real descriptions.
 
 
 ## Refactoring

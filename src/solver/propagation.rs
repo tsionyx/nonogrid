@@ -1,29 +1,14 @@
 use super::super::block::{Block, Color, Description};
 use super::super::board::{Board, Point};
-use super::super::cache::GrowableCache;
 use super::line::LineSolver;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Instant;
 
-use cached::Cached;
 use log::Level;
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
-
-pub type CacheKey<B> = (Rc<Description<B>>, Rc<Vec<<B as Block>::Color>>);
-pub type CacheValue<B> = Result<Rc<Vec<<B as Block>::Color>>, String>;
-pub type ExternalCache<B> = Rc<RefCell<GrowableCache<CacheKey<B>, CacheValue<B>>>>;
-
-pub fn new_cache<B>(capacity: usize) -> ExternalCache<B>
-where
-    B: Block,
-{
-    Rc::new(RefCell::new(GrowableCache::with_capacity_and_increase(
-        capacity, 2,
-    )))
-}
 
 pub struct Solver<B>
 where
@@ -33,7 +18,6 @@ where
     rows: Option<Vec<usize>>,
     columns: Option<Vec<usize>>,
     contradiction_mode: bool,
-    cache: Option<ExternalCache<B>>,
 }
 
 type Job = (bool, usize);
@@ -43,7 +27,7 @@ where
     B: Block,
 {
     pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
-        Self::with_options(board, None, None, false, None)
+        Self::with_options(board, None, None, false)
     }
 
     pub fn with_options(
@@ -51,14 +35,12 @@ where
         rows: Option<Vec<usize>>,
         columns: Option<Vec<usize>>,
         contradiction_mode: bool,
-        cache: Option<ExternalCache<B>>,
     ) -> Self {
         Self {
             board,
             rows,
             columns,
             contradiction_mode,
-            cache,
         }
     }
 
@@ -257,7 +239,7 @@ where
         }
 
         let line = Rc::new(line);
-        let solution = self.solve::<S>(line_desc, Rc::clone(&line))?;
+        let solution = self.solve::<S>(index, is_column, line_desc, Rc::clone(&line))?;
         let indexes = self.update_solved(index, is_column, &line, &solution);
 
         if log_enabled!(Level::Debug) {
@@ -320,29 +302,29 @@ where
 
     fn solve<S>(
         &self,
+        index: usize,
+        is_column: bool,
         line_desc: Rc<Description<B>>,
-        line: Rc<Vec<<B as Block>::Color>>,
-    ) -> CacheValue<B>
+        line: Rc<Vec<B::Color>>,
+    ) -> Result<Rc<Vec<B::Color>>, String>
     where
         S: LineSolver<BlockType = B>,
     {
-        let key = (Rc::clone(&line_desc), Rc::clone(&line));
+        let key = (index, Rc::clone(&line));
 
-        if let Some(cache) = &self.cache {
-            let mut cache = cache.borrow_mut();
-            let res = cache.cache_get(&key);
-            if let Some(value) = res {
-                return value.to_owned();
-            }
+        let cached = self.board.borrow_mut().cached_solution(is_column, &key);
+
+        if let Some(cached) = cached {
+            return cached;
         }
 
         let mut line_solver = S::new(line_desc, line);
         let value = line_solver.solve();
 
         let rc_value = value.map(Rc::new);
-        if let Some(cache) = &self.cache {
-            cache.borrow_mut().cache_set(key, rc_value.clone());
-        }
+        self.board
+            .borrow_mut()
+            .set_cached_solution(is_column, key, rc_value.clone());
         rc_value
     }
 }
