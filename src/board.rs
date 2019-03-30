@@ -188,13 +188,12 @@ where
         self.get_row_slice(index).to_vec()
     }
 
+    fn get_column_iter(&self, index: usize) -> impl Iterator<Item = &B::Color> {
+        self.cells.iter().skip(index).step_by(self.width())
+    }
+
     pub fn get_column(&self, index: usize) -> Vec<B::Color> {
-        self.cells
-            .iter()
-            .skip(index)
-            .step_by(self.width())
-            .cloned()
-            .collect()
+        self.get_column_iter(index).cloned().collect()
     }
 
     fn linear_index(&self, row_index: usize, column_index: usize) -> usize {
@@ -223,28 +222,33 @@ where
     }
 
     /// How many cells in a line are known to be of particular color
-    pub fn line_solution_rate(&self, line: &[B::Color]) -> f64 {
-        let size = line.len();
+    pub fn line_solution_rate<'a>(
+        &self,
+        line: impl Iterator<Item = &'a B::Color>,
+        size: usize,
+    ) -> f64
+    where
+        B::Color: 'a,
+    {
         let colors = &self.all_colors;
-
-        let solved: f64 = line.iter().map(|cell| cell.solution_rate(colors)).sum();
+        let solved: f64 = line.map(|cell| cell.solution_rate(colors)).sum();
 
         solved / size as f64
     }
 
     /// How many cells in the row with given index are known to be of particular color
     pub fn row_solution_rate(&self, index: usize) -> f64 {
-        self.line_solution_rate(self.get_row_slice(index))
+        self.line_solution_rate(self.get_row_slice(index).iter(), self.width())
     }
 
     /// How many cells in the column with given index are known to be of particular color
     pub fn column_solution_rate(&self, index: usize) -> f64 {
-        self.line_solution_rate(&self.get_column(index))
+        self.line_solution_rate(self.get_column_iter(index), self.height())
     }
 
     /// How many cells in the whole grid are known to be of particular color
     pub fn solution_rate(&self) -> f64 {
-        self.line_solution_rate(&self.cells)
+        self.line_solution_rate(self.cells.iter(), self.height() * self.width())
     }
 
     pub fn unsolved_cells(&self) -> impl Iterator<Item = Point> + '_ {
