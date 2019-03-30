@@ -75,6 +75,7 @@ where
 
         let all_colors = Self::all_colors(&rows);
         let init = B::Color::from_color_ids(&all_colors);
+        warn!("Initializing board: height={}, width={}", height, width);
         let cells = vec![init; width * height];
 
         let uniq_rows = dedup(&rows.iter().map(|desc| desc.vec.clone()).collect::<Vec<_>>());
@@ -84,6 +85,22 @@ where
                 .map(|desc| desc.vec.clone())
                 .collect::<Vec<_>>(),
         );
+
+        if uniq_rows.len() < rows.len() {
+            warn!(
+                "Reducing number of rows clues: {} --> {}",
+                rows.len(),
+                uniq_rows.len()
+            );
+        }
+        if uniq_cols.len() < columns.len() {
+            warn!(
+                "Reducing number of columns clues: {} --> {}",
+                columns.len(),
+                uniq_cols.len()
+            );
+        }
+
         let rows_cache_indexes = rows
             .iter()
             .map(|desc| {
