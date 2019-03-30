@@ -4,10 +4,10 @@ use super::line::LineSolver;
 use super::propagation;
 
 use std::cell::{Ref, RefCell};
-use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Instant;
 
+use hashbrown::HashMap;
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue;
 
