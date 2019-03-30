@@ -1,4 +1,4 @@
-use super::super::block::{Block, Color, Description};
+use super::super::block::{Block, Description};
 use super::super::board::{Board, Point};
 use super::line::LineSolver;
 
@@ -287,7 +287,7 @@ where
             .zip(new)
             .enumerate()
             .filter_map(|(i, (pre, post))| {
-                if pre.is_updated_with(post).unwrap() {
+                if pre != post {
                     debug!(
                         "Diff on index={}: original={:?}, updated={:?}",
                         i, pre, &post
