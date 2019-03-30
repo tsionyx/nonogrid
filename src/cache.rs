@@ -52,7 +52,9 @@ impl<K: Hash + Eq, V> GrowableCache<K, V> {
 
         if self.increase_in > 1 {
             let new_capacity = self.capacity * (self.increase_in as usize);
-            self.capacity = new_capacity.min(self.max_size);
+            let additional = new_capacity.min(self.max_size) - self.capacity;
+            self.store.reserve(additional);
+            self.capacity += additional;
         }
     }
 }
@@ -68,7 +70,7 @@ impl<K: Hash + Eq, V> Cached<K, V> for GrowableCache<K, V> {
         }
     }
     fn cache_set(&mut self, key: K, val: V) {
-        if self.store.len() >= self.capacity {
+        if self.store.len() >= (9 * self.capacity) / 10 {
             warn!("Maximum size for cache reached ({}).", self.capacity);
             self.store.clear();
             self.increase_size();
