@@ -2,6 +2,7 @@ use super::super::block::{Block, Color};
 use super::super::board::{Board, Point};
 use super::line::LineSolver;
 use super::propagation;
+use super::propagation::FloatPriorityQueue;
 
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
@@ -9,7 +10,6 @@ use std::time::Instant;
 
 use hashbrown::HashMap;
 use ordered_float::OrderedFloat;
-use priority_queue::PriorityQueue;
 
 pub type Impact<B> = HashMap<(Point, <B as Block>::Color), (usize, f64)>;
 
@@ -18,7 +18,7 @@ pub trait ProbeSolver {
 
     fn with_board(board: Rc<RefCell<Board<Self::BlockType>>>) -> Self;
 
-    fn unsolved_cells(&self) -> PriorityQueue<Point, OrderedFloat<f64>>;
+    fn unsolved_cells(&self) -> FloatPriorityQueue<Point>;
     fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, OrderedFloat<f64>)>, String>
     where
         S: LineSolver<BlockType = Self::BlockType>;
@@ -32,7 +32,7 @@ pub trait ProbeSolver {
 
     fn run<S>(
         &self,
-        probes: &mut PriorityQueue<Point, OrderedFloat<f64>>,
+        probes: &mut FloatPriorityQueue<Point>,
     ) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = Self::BlockType>;
@@ -59,11 +59,11 @@ where
         Self { board }
     }
 
-    fn unsolved_cells(&self) -> PriorityQueue<Point, OrderedFloat<f64>> {
+    fn unsolved_cells(&self) -> FloatPriorityQueue<Point> {
         let board = self.board();
         let unsolved: Vec<_> = board.unsolved_cells().collect();
 
-        let mut queue = PriorityQueue::with_capacity(unsolved.len());
+        let mut queue = FloatPriorityQueue::with_capacity_and_default_hasher(unsolved.len());
         unsolved
             .into_iter()
             .map(|point| {
@@ -106,7 +106,7 @@ where
 
     fn run<S>(
         &self,
-        probes: &mut PriorityQueue<Point, OrderedFloat<f64>>,
+        probes: &mut FloatPriorityQueue<Point>,
     ) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = B>,

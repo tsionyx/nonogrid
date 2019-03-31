@@ -6,9 +6,12 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Instant;
 
+use hashbrown::hash_map::DefaultHashBuilder;
 use log::Level;
 use ordered_float::OrderedFloat;
-use priority_queue::PriorityQueue;
+use priority_queue::PriorityQueue as PQ;
+
+pub type FloatPriorityQueue<K> = PQ<K, OrderedFloat<f64>, DefaultHashBuilder>;
 
 pub struct Solver<B>
 where
@@ -87,7 +90,8 @@ where
             &rows, &columns, "standard"
         );
 
-        let mut line_jobs = PriorityQueue::with_capacity(rows.len() + columns.len());
+        let mut line_jobs =
+            FloatPriorityQueue::with_capacity_and_default_hasher(rows.len() + columns.len());
 
         line_jobs.extend(rows.into_iter().map(|row_index| {
             // the more this line solved
@@ -180,7 +184,7 @@ where
         Ok(solved_cells)
     }
 
-    fn get_top_job(pq: &mut PriorityQueue<Job, OrderedFloat<f64>>) -> Option<(Job, f64)> {
+    fn get_top_job(pq: &mut FloatPriorityQueue<Job>) -> Option<(Job, f64)> {
         let ((is_column, index), priority) = pq.pop()?;
 
         if log_enabled!(Level::Debug) {
