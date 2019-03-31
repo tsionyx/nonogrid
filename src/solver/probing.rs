@@ -2,16 +2,18 @@ use super::super::block::{Block, Color};
 use super::super::board::{Board, Point};
 use super::line::LineSolver;
 use super::propagation;
-use super::propagation::FloatPriorityQueue;
 
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 use std::time::Instant;
 
+use hashbrown::hash_map::DefaultHashBuilder;
 use hashbrown::HashMap;
 use ordered_float::OrderedFloat;
+use priority_queue::PriorityQueue as PQ;
 
 pub type Impact<B> = HashMap<(Point, <B as Block>::Color), (usize, f64)>;
+type FloatPriorityQueue<K> = PQ<K, OrderedFloat<f64>, DefaultHashBuilder>;
 
 pub trait ProbeSolver {
     type BlockType: Block;
