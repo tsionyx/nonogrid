@@ -3,9 +3,11 @@ use super::block::base::{Block, Color, Description};
 use super::cache::{cache_info, GrowableCache};
 use super::utils::dedup;
 
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use cached::Cached;
+use hashbrown::HashMap;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 pub struct Point {
@@ -53,6 +55,7 @@ where
     // https://webpbn.com/survey/caching.html
     rows_cache_indexes: Vec<usize>,
     cols_cache_indexes: Vec<usize>,
+    cell_rate_memo: RefCell<HashMap<B::Color, f64>>,
 }
 
 impl<B> Board<B>
@@ -132,6 +135,7 @@ where
             cache_cols: None,
             rows_cache_indexes,
             cols_cache_indexes,
+            cell_rate_memo: RefCell::new(HashMap::new()),
         }
     }
 
@@ -230,10 +234,23 @@ where
     where
         B::Color: 'a,
     {
-        let colors = &self.all_colors;
-        let solved: f64 = line.map(|cell| cell.solution_rate(colors)).sum();
-
+        let solved: f64 = line.map(|cell| self.cell_solution_rate(cell)).sum();
         solved / size as f64
+    }
+
+    ///How the cell's color set is close
+    ///to the full solution (one color).
+    fn cell_solution_rate(&self, cell: &B::Color) -> f64 {
+        let colors = &self.all_colors;
+        if !B::Color::memoize_rate() {
+            return cell.solution_rate(colors);
+        }
+
+        *self
+            .cell_rate_memo
+            .borrow_mut()
+            .entry(*cell)
+            .or_insert_with(|| cell.solution_rate(colors))
     }
 
     /// How many cells in the row with given index are known to be of particular color
@@ -436,6 +453,7 @@ where
             cache_cols: None,
             rows_cache_indexes: self.rows_cache_indexes.clone(),
             cols_cache_indexes: self.cols_cache_indexes.clone(),
+            cell_rate_memo: RefCell::new(HashMap::new()),
         }
     }
 }

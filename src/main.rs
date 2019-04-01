@@ -20,8 +20,6 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 #[macro_use]
-extern crate cached;
-#[macro_use]
 extern crate serde_derive;
 #[macro_use]
 extern crate log;

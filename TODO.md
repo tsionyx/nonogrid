@@ -1,8 +1,6 @@
 ## Experiments
 - remove solved lines
 - optimize solver cache: use bitset
-- optimize color solver:
-  - cache solution_rate
 
 - reducing board:
   - if there is a fully solved row (column), one can safely remove it (with 'comparing neighbours' check)
@@ -27,9 +25,7 @@
 
 
 ## Optimizations
-- line in LineSolver: need Rc?
 - remove contradiction mode?
-- do I need RefCell for cells? (use https://crates.io/crates/nalgebra or https://crates.io/crates/rulinalg)
 
 
 ## Refactoring

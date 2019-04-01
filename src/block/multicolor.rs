@@ -19,6 +19,9 @@ impl Color for MultiColor {
         is_power_of_2(self.0)
     }
 
+    fn memoize_rate() -> bool {
+        true
+    }
     /// Calculate the rate of the given cell.
     /// The formula is like that:
     ///   `rate = (N - n) / (N - 1)`, where
@@ -31,7 +34,24 @@ impl Color for MultiColor {
     ///    b) when the cell is solved
     ///       rate = (N - 1) / (N - 1) = 1
     fn solution_rate(&self, all_colors: &[ColorId]) -> f64 {
-        color_rate(*self, all_colors.to_vec())
+        let all_colors: HashSet<_> = all_colors.iter().cloned().collect();
+        let cell_colors = self.variants_as_ids();
+        let cell_colors: HashSet<_> = cell_colors.intersection(&all_colors).collect();
+
+        let current_size = cell_colors.len();
+        if current_size == 0 {
+            return 0.0;
+        }
+        if current_size == 1 {
+            return 1.0;
+        }
+
+        let full_size = all_colors.len();
+        let rate = full_size - current_size;
+        let normalized_rate = rate as f64 / (full_size - 1) as f64;
+        assert!(normalized_rate >= 0.0 && normalized_rate <= 1.0);
+
+        normalized_rate
     }
 
     fn is_updated_with(&self, new: &Self) -> Result<bool, String> {
@@ -66,30 +86,6 @@ impl Color for MultiColor {
 
     fn from_color_ids(ids: &[ColorId]) -> Self {
         Self(from_two_powers(ids))
-    }
-}
-
-cached! {
-    COLOR_RATE;
-    fn color_rate(cell: MultiColor, all_colors: Vec<ColorId>) -> f64 = {
-        let all_colors: HashSet<_> = all_colors.iter().cloned().collect();
-        let cell_colors: HashSet<_> = cell.variants().iter().map(|color| color.0).collect();
-        let cell_colors: HashSet<_> = cell_colors.intersection(&all_colors).collect();
-
-        let current_size = cell_colors.len();
-        if current_size == 0 {
-            return 0.0;
-        }
-        if current_size == 1 {
-            return 1.0;
-        }
-
-        let full_size = all_colors.len();
-        let rate = full_size - current_size;
-        let normalized_rate = rate as f64 / (full_size - 1) as f64;
-        assert!(normalized_rate >= 0.0 && normalized_rate <= 1.0);
-
-        normalized_rate
     }
 }
 

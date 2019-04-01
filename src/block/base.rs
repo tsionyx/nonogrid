@@ -22,6 +22,9 @@ where
 {
     fn blank() -> Self;
     fn is_solved(&self) -> bool;
+    fn memoize_rate() -> bool {
+        false
+    }
     fn solution_rate(&self, all_colors: &[ColorId]) -> f64;
     fn is_updated_with(&self, new: &Self) -> Result<bool, String>;
     fn variants(&self) -> Vec<Self>

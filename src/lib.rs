@@ -7,8 +7,6 @@ pub mod solver;
 mod utils;
 
 #[macro_use]
-extern crate cached;
-#[macro_use]
 extern crate serde_derive;
 #[macro_use]
 extern crate log;
