@@ -23,7 +23,7 @@ pub fn new_cache<B>(capacity: usize) -> LineSolverCache<B>
 where
     B: Block,
 {
-    GrowableCache::with_capacity_and_increase(capacity, 2)
+    GrowableCache::with_capacity(capacity)
 }
 
 impl Point {
@@ -325,8 +325,8 @@ where
         let width = self.width();
         let height = self.height();
 
-        self.cache_rows = Some(new_cache::<B>(1_000 * height));
-        self.cache_cols = Some(new_cache::<B>(1_000 * width));
+        self.cache_rows = Some(new_cache::<B>(2_000 * height));
+        self.cache_cols = Some(new_cache::<B>(2_000 * width));
     }
 
     pub fn cached_solution(&mut self, is_column: bool, key: &CacheKey<B>) -> Option<CacheValue<B>> {
