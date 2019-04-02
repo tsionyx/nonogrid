@@ -120,9 +120,85 @@ where
     set.into_iter().collect()
 }
 
+pub mod iter {
+    #[cfg(feature = "try_trait")]
+    use std::ops::Try;
+
+    pub trait FindOk: Iterator {
+        #[cfg(feature = "try_trait")]
+        /// Generalization of `find_map` for any `Try` types
+        /// If the iterator is exhausted, return `on_empty_error`.
+        fn first_ok_with_error<B, E, F, R>(&mut self, on_empty_error: E, mut f: F) -> R
+        where
+            Self: Sized,
+            F: FnMut(Self::Item) -> R,
+            R: Try<Ok = B, Error = E>,
+        {
+            let mut return_err = on_empty_error;
+
+            loop {
+                if let Some(x) = self.next() {
+                    let res = f(x).into_result();
+                    match res {
+                        Ok(res) => break Try::from_ok(res),
+                        Err(err) => return_err = err,
+                    }
+                } else {
+                    break Try::from_error(return_err);
+                }
+            }
+        }
+
+        #[cfg(not(feature = "try_trait"))]
+        /// Generalization of `find_map` for `Result` type.
+        /// If the iterator is exhausted, return `on_empty_error`.
+        fn first_ok_with_error<B, E, F>(&mut self, on_empty_error: E, mut f: F) -> Result<B, E>
+        where
+            Self: Sized,
+            F: FnMut(Self::Item) -> Result<B, E>,
+        {
+            let mut return_err = on_empty_error;
+
+            loop {
+                if let Some(x) = self.next() {
+                    match f(x) {
+                        Ok(res) => break Ok(res),
+                        Err(err) => return_err = err,
+                    }
+                } else {
+                    break Err(return_err);
+                }
+            }
+        }
+
+        /// Generalization of `find_map` for `Result` type.
+        /// If the iterator is exhausted, return default error for provided `E` type.
+        fn first_ok<B, E, F>(&mut self, f: F) -> Result<B, E>
+        where
+            Self: Sized,
+            E: Default,
+            F: FnMut(Self::Item) -> Result<B, E>,
+        {
+            self.first_ok_with_error(E::default(), f)
+        }
+    }
+
+    impl<I: Iterator> FindOk for I {}
+}
+
+pub fn product<T, U>(s1: &[T], s2: &[U]) -> Vec<(T, U)>
+where
+    T: Clone,
+    U: Clone,
+{
+    s1.iter()
+        .flat_map(|x| s2.iter().map(move |y| (x.clone(), y.clone())))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{pad, pad_with, remove, replace, transpose};
+    use super::{pad, pad_with, product, remove, replace, transpose};
 
     #[test]
     fn pad_vector_left() {
@@ -236,5 +312,16 @@ mod tests {
         remove(&mut v, &2);
 
         assert_eq!(v, vec![1, 3]);
+    }
+
+    #[test]
+    fn product_2_by_3() {
+        let a = ['a', 'b'];
+        let b: Vec<_> = (0..3).collect();
+
+        assert_eq!(
+            product(&a, &b),
+            vec![('a', 0), ('a', 1), ('a', 2), ('b', 0), ('b', 1), ('b', 2)]
+        );
     }
 }

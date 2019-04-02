@@ -74,6 +74,68 @@ where
     }
 }
 
+/// Generate clues for the given line of color codes
+fn line_clues<B>(line: &[color::ColorId], blank_code: color::ColorId) -> Description<B>
+where
+    B: Block,
+{
+    let size = line.len();
+
+    let mut description = vec![];
+
+    let mut index = 0;
+    while index < size {
+        let block_begin = index;
+        let color_number = line[index];
+
+        while (index < size) && (line[index] == color_number) {
+            index += 1;
+        }
+
+        let block_size = index - block_begin;
+        if (block_size > 0) && (color_number != blank_code) {
+            let block = B::from_size_and_color(block_size, Some(color_number));
+            description.push(block);
+        }
+    }
+    Description::new(description)
+}
+
+/// Generate nonogram description (columns and rows) from a solution matrix.
+pub fn clues_from_solution<B>(
+    solution_matrix: &[Vec<color::ColorId>],
+    blank_code: color::ColorId,
+) -> (Vec<Description<B>>, Vec<Description<B>>)
+where
+    B: Block,
+{
+    let height = solution_matrix.len();
+    if height == 0 {
+        return (vec![], vec![]);
+    }
+
+    let width = solution_matrix[0].len();
+    if width == 0 {
+        return (vec![], vec![]);
+    }
+
+    let columns = (0..width)
+        .map(|col_index| {
+            let column: Vec<_> = (0..height)
+                .map(|row_index| solution_matrix[row_index][col_index])
+                .collect();
+            line_clues(&column, blank_code)
+        })
+        .collect();
+    let rows = (0..height)
+        .map(|row_index| {
+            let row = &solution_matrix[row_index];
+            line_clues(row, blank_code)
+        })
+        .collect();
+    (columns, rows)
+}
+
 pub mod color {
     use std::collections::{HashMap, HashSet};
 
