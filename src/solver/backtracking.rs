@@ -461,13 +461,13 @@ where
             }
 
             if cell_colors.len() == 1 {
-                warn!(
+                info!(
                     "Only one color for {:?} left: {:?}. Solve it unconditionally",
                     point, color
                 );
                 assert!(cell_colors.contains(&color));
                 if !board_changed {
-                    warn!("The board does not change since the last unconditional solving, skip.");
+                    info!("The board does not change since the last unconditional solving, skip.");
                     continue;
                 }
 
@@ -502,7 +502,7 @@ where
             let rate = self.board().solution_rate();
             let guess_save = self.board().make_snapshot();
 
-            warn!(
+            info!(
                 "Trying direction ({}/{}): {:?} (depth={}, rate={:.4}, previous={:?})",
                 search_counter, total_number_of_directions, &direction, depth, rate, path
             );
@@ -521,7 +521,7 @@ where
 
             if !success {
                 // TODO: add backjumping here
-                warn!(
+                info!(
                     "Unset the color {:?} for {:?}. Solve it unconditionally",
                     color, point
                 );
@@ -538,7 +538,7 @@ where
                 }
 
                 if !board_changed {
-                    warn!("The board does not change since the last unconditional solving, skip.");
+                    info!("The board does not change since the last unconditional solving, skip.");
                     continue;
                 }
 
@@ -670,7 +670,7 @@ where
         let (point, color) = guess;
 
         if !self.board().cell(&point).variants().contains(&color) {
-            warn!("The probe is useless: color {:?} already unset", color);
+            info!("The probe is useless: color {:?} already unset", color);
             return Ok(vec![]);
         }
 
