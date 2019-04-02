@@ -1,6 +1,9 @@
-use super::block::base::color::{ColorPalette, ColorValue};
+use super::block::base::clues_from_solution;
+use super::block::base::color::{ColorId, ColorPalette, ColorValue};
 use super::block::{Block, Description};
 use super::board::Board;
+use super::utils::iter::FindOk;
+use super::utils::product;
 
 use std::fs;
 
@@ -70,7 +73,7 @@ pub trait Paletted {
     fn get_palette(&self) -> ColorPalette;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PuzzleScheme {
     BlackAndWhite,
     MultiColor,
@@ -429,6 +432,195 @@ impl Paletted for WebPbn {
                 }
             }
         }
+        palette
+    }
+}
+
+type EncodedInt = u16;
+
+pub struct NonogramsOrg {
+    encoded: Vec<Vec<EncodedInt>>,
+}
+
+impl NonogramsOrg {
+    const URLS: [&'static str; 2] = ["http://www.nonograms.ru/", "http://www.nonograms.org/"];
+    const PATHS: [(PuzzleScheme, &'static str); 2] = [
+        (PuzzleScheme::BlackAndWhite, "nonograms"),
+        (PuzzleScheme::MultiColor, "nonograms2"),
+    ];
+    const CYPHER_PREFIX: &'static str = r"var d=";
+    const CYPHER_SUFFIX: char = ';';
+
+    fn extract_encoded_json(html: &str) -> Option<String> {
+        html.lines().find_map(|line| {
+            if line.starts_with(Self::CYPHER_PREFIX) {
+                Some(
+                    line.replace(Self::CYPHER_PREFIX, "")
+                        .trim_end_matches(|c| c == Self::CYPHER_SUFFIX)
+                        .to_string(),
+                )
+            } else {
+                None
+            }
+        })
+    }
+
+    fn parse_json(array: &str) -> Vec<Vec<EncodedInt>> {
+        array
+            .trim_start_matches(|x| x == '[')
+            .trim_end_matches(|x| x == ']')
+            .split("],[")
+            .map(|line| {
+                line.split(',')
+                    .map(|x| x.parse::<EncodedInt>().unwrap())
+                    .collect()
+            })
+            .collect()
+    }
+
+    /// Reverse engineered version of the part of the script
+    /// http://www.nonograms.org/js/nonogram.min.059.js
+    /// that produces a nonogram solution for the given cyphered solution
+    /// (it can be found in puzzle HTML in the form 'var d=[...]').
+    #[allow(clippy::shadow_unrelated)]
+    pub fn decipher(&self) -> (Vec<String>, Vec<Vec<ColorId>>) {
+        let cyphered = self.encoded();
+
+        let x = &cyphered[1];
+        let width = (x[0] % x[3] + x[1] % x[3] - x[2] % x[3]) as usize;
+
+        let x = &cyphered[2];
+        let height = (x[0] % x[3] + x[1] % x[3] - x[2] % x[3]) as usize;
+
+        let x = &cyphered[3];
+        let colors_number = (x[0] % x[3] + x[1] % x[3] - x[2] % x[3]) as usize;
+
+        let x = &cyphered[4];
+        let colors: Vec<_> = (0..colors_number)
+            .map(|c| {
+                let color_x = &cyphered[c + 5];
+                let a = color_x[0] - x[1];
+                let b = u32::from(color_x[1] - x[0]);
+                let c = u32::from(color_x[2] - x[3]);
+                let _unknown_flag = color_x[3] - a - x[2];
+                let a = &format!("{:x}", a + 256)[1..];
+                let b = &format!("{:x}", ((b + 256) << 8) + c)[1..];
+                a.to_string() + b
+            })
+            .collect();
+
+        let mut solution = vec![vec![0; width]; height];
+        let z = colors_number + 5;
+        let x = &cyphered[z];
+        let solution_size = (x[0] % x[3] * (x[0] % x[3]) + x[1] % x[3] * 2 + x[2] % x[3]) as usize;
+
+        let x = &cyphered[z + 1];
+        for i in 0..solution_size {
+            let y = &cyphered[z + 2 + i];
+            let vv = y[0] - x[0] - 1;
+
+            for j in 0..(y[1] - x[1]) {
+                let v = (j + vv) as usize;
+                let xx = y[3] - x[3] - 1;
+                solution[xx as usize][v] = ColorId::from(y[2] - x[2]);
+            }
+        }
+
+        (colors, solution)
+    }
+
+    pub fn encoded(&self) -> &Vec<Vec<EncodedInt>> {
+        &self.encoded
+    }
+
+    fn get_solution_matrix(&self) -> Vec<Vec<ColorId>> {
+        let (_colors, solution_matrix) = self.decipher();
+        let palette = self.get_palette();
+
+        solution_matrix
+            .iter()
+            .map(|row| {
+                row.iter()
+                    .map(|item| {
+                        palette
+                            .id_by_name(&Self::color_name_by_id(*item))
+                            .unwrap_or(0)
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
+    fn color_name_by_id(id: ColorId) -> String {
+        format!("color-{}", id)
+    }
+}
+
+impl LocalReader for NonogramsOrg {}
+
+impl NetworkReader for NonogramsOrg {
+    fn read_remote(file_name: &str) -> Result<Self, String> {
+        product(&Self::URLS, &Self::PATHS)
+            .iter()
+            .first_ok(|(base_url, (_scheme, path))| {
+                let url = format!("{}{}/i/{}", base_url, path, file_name);
+                let content = Self::http_content(url)?;
+                Self::with_content(content)
+            })
+    }
+}
+
+impl BoardParser for NonogramsOrg {
+    fn with_content(content: String) -> Result<Self, String> {
+        let json = Self::extract_encoded_json(&content)
+            .ok_or_else(|| "Not found cypher in HTML content".to_string())?;
+
+        Ok(Self {
+            encoded: Self::parse_json(&json),
+        })
+    }
+
+    fn parse<B>(&self) -> Board<B>
+    where
+        B: Block,
+    {
+        let solution_matrix = self.get_solution_matrix();
+        let (columns, rows) = clues_from_solution(&solution_matrix, 0);
+
+        Board::with_descriptions_and_palette(rows, columns, Some(self.get_palette()))
+    }
+
+    fn infer_scheme(&self) -> PuzzleScheme {
+        let (colors, _solution) = self.decipher();
+        if colors.len() == 1 {
+            assert_eq!(colors, ["000000"]);
+            return PuzzleScheme::BlackAndWhite;
+        }
+
+        PuzzleScheme::MultiColor
+    }
+}
+
+impl Paletted for NonogramsOrg {
+    fn get_colors(&self) -> Vec<(String, char, String)> {
+        let (colors, _solution) = self.decipher();
+        colors
+            .into_iter()
+            .enumerate()
+            // enumerating starts with 1
+            .map(|(i, rgb)| (Self::color_name_by_id((i + 1) as ColorId), '?', rgb))
+            .collect()
+    }
+
+    fn get_palette(&self) -> ColorPalette {
+        let mut palette = ColorPalette::with_white("W");
+
+        let colors = self.get_colors();
+        colors.iter().for_each(|(name, _dumb_symbol, value)| {
+            let val = ColorValue::parse(value);
+            palette.color_with_name_and_value(name, val);
+        });
+
         palette
     }
 }

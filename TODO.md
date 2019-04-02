@@ -6,7 +6,7 @@
   - if there is a fully solved row (column), one can safely remove it (with 'comparing neighbours' check)
   - if the block position is fully revealed, one can replace that block with white (for the whole board).
   Consider applying 'comparing neighbours' procedure.
-  - if only one color left after previous two prodecures, then replace MultiColor with BinaryColor
+  - if only one color left after previous two procedures, then replace MultiColor with BinaryColor
     (see puzzles 672, 3085, 10585, 16552, 16878).
   - if one can determine if the cell belongs to the particular block
     one can replace this cell with 'space' and decrement the appropriate blocks.
@@ -20,7 +20,6 @@
 ## Features
 - web-assembly and JS rendering(SVG/Canvas/WebGL)
 - other formats:
-  - http://nonograms.org
   - https://github.com/Izaron/Nonograms/raw/master/puzzles
 
 

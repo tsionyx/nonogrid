@@ -36,14 +36,19 @@ fn main() {
         .version("0.1.0")
         .about("Nonogram solver")
         .args_from_usage(
-            "-b, --my [PATH]     'path to custom-formatted nonogram file'
-             -p, --webpbn [PATH] 'path to Jan Wolter's http://webpbn.com XML-formatted file'
-             -w, --webpbn-online [ID] 'id of the http://webpbn.com puzzle'",
+            "-b, --my [PATH]                 'path to custom-formatted nonogram file'
+             -p, --webpbn [PATH]             'path to Jan Wolter's http://webpbn.com XML-formatted file'
+             -w, --webpbn-online [ID]        'id of the http://webpbn.com puzzle'
+             -n, --nonograms-org [PATH]      'path to HTML file from http://www.nonograms.org'
+             -o, --nonograms-org-online [ID] 'id of the http://www.nonograms.org/ puzzle'
+             ",
         )
         .group(ArgGroup::with_name("source").required(true).args(&[
             "my",
             "webpbn",
             "webpbn-online",
+            "nonograms-org",
+            "nonograms-org-online",
         ]))
         .arg_from_usage(
             "-m, --max-solutions=[THRESHOLD] 'Stop searching after finding enough solutions'",
@@ -69,10 +74,21 @@ fn main() {
             PuzzleScheme::BlackAndWhite => run::<BinaryBlock, _>(&board_parser, search_options),
             PuzzleScheme::MultiColor => run::<ColoredBlock, _>(&board_parser, search_options),
         }
-    } else {
+    } else if (source == Source::WebPbn) || (source == Source::WebPbnOnline) {
         let board_parser = match source {
             Source::WebPbn => parser::WebPbn::read_local(&path),
             Source::WebPbnOnline => parser::WebPbn::read_remote(&path),
+            _ => unreachable!("No parser matched"),
+        }
+        .unwrap();
+        match board_parser.infer_scheme() {
+            PuzzleScheme::BlackAndWhite => run::<BinaryBlock, _>(&board_parser, search_options),
+            PuzzleScheme::MultiColor => run::<ColoredBlock, _>(&board_parser, search_options),
+        }
+    } else if (source == Source::NonogramsOrg) || (source == Source::NonogramsOrgOnline) {
+        let board_parser = match source {
+            Source::NonogramsOrg => parser::NonogramsOrg::read_local(&path),
+            Source::NonogramsOrgOnline => parser::NonogramsOrg::read_remote(&path),
             _ => unreachable!("No parser matched"),
         }
         .unwrap();
@@ -127,12 +143,19 @@ fn source_from_args(matches: &ArgMatches) -> (Source, String) {
     let my_path = matches.value_of("my");
     let webpbn_path = matches.value_of("webpbn");
     let webpbn_id = matches.value_of("webpbn-online");
+    let nonograms_org_path = matches.value_of("nonograms-org");
+    let nonograms_org_id = matches.value_of("nonograms-org-online");
 
     if let Some(webpbn_path) = webpbn_path {
         return (Source::WebPbn, webpbn_path.to_string());
     } else if let Some(webpbn_id) = webpbn_id {
         value_t_or_exit!(matches, "webpbn-online", u16);
         return (Source::WebPbnOnline, webpbn_id.to_string());
+    } else if let Some(nonograms_org_path) = nonograms_org_path {
+        return (Source::NonogramsOrg, nonograms_org_path.to_string());
+    } else if let Some(nonograms_org_id) = nonograms_org_id {
+        value_t_or_exit!(matches, "nonograms-org-online", u16);
+        return (Source::NonogramsOrgOnline, nonograms_org_id.to_string());
     } else if let Some(my_path) = my_path {
         return (Source::Own, my_path.to_string());
     }
@@ -161,8 +184,11 @@ where
     None
 }
 
+#[derive(PartialEq)]
 enum Source {
     Own,
     WebPbn,
     WebPbnOnline,
+    NonogramsOrg,
+    NonogramsOrgOnline,
 }

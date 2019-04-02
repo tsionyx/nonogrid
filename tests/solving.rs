@@ -1,5 +1,5 @@
 #[cfg(feature = "web")]
-use nonogrid::parser::{NetworkReader, WebPbn};
+use nonogrid::parser::{NetworkReader, NonogramsOrg, WebPbn};
 use nonogrid::{
     block::binary::{BinaryBlock, BinaryColor},
     block::multicolor::ColoredBlock,
@@ -96,4 +96,65 @@ fn webpbn_18() {
     let board = board.borrow();
     assert!(board.is_solved_full());
     assert_eq!(board.solution_rate(), 1.0);
+}
+
+#[test]
+#[cfg(feature = "web")]
+/// http://www.nonograms.org/nonograms/i/4353
+fn nonograms_org_extract() {
+    let nop = NonogramsOrg::read_remote("4353").unwrap();
+    assert_eq!(nop.infer_scheme(), PuzzleScheme::BlackAndWhite);
+    assert_eq!(nop.encoded().len(), 40);
+
+    let (colors, solution) = nop.decipher();
+    assert_eq!(colors, ["000000"]);
+    assert_eq!(
+        solution,
+        [
+            [1, 1, 1, 0],
+            [0, 0, 1, 1],
+            [1, 0, 1, 0],
+            [0, 1, 1, 0],
+            [1, 1, 1, 0],
+            [1, 0, 1, 0],
+        ]
+    );
+}
+
+#[test]
+#[cfg(feature = "web")]
+/// http://www.nonograms.org/nonograms2/i/4374
+fn nonograms_org_extract_colored() {
+    let nop = NonogramsOrg::read_remote("4374").unwrap();
+    assert_eq!(nop.infer_scheme(), PuzzleScheme::MultiColor);
+    assert_eq!(nop.encoded().len(), 45);
+
+    let (colors, solution) = nop.decipher();
+    assert_eq!(colors, ["fbf204", "000000", "f4951c"]);
+    assert_eq!(
+        solution,
+        [
+            [0, 0, 0, 1, 0],
+            [1, 0, 0, 1, 1],
+            [1, 3, 3, 0, 0],
+            [2, 3, 3, 0, 0],
+            [3, 3, 0, 0, 0],
+        ]
+    );
+}
+
+#[test]
+#[cfg(feature = "web")]
+/// http://www.nonograms.ru/nonograms/i/23342
+fn nonograms_org_not_found_on_org_but_found_on_ru() {
+    let nop = NonogramsOrg::read_remote("23342").unwrap();
+    assert_eq!(nop.infer_scheme(), PuzzleScheme::BlackAndWhite);
+    assert_eq!(nop.encoded().len(), 846);
+}
+
+#[test]
+#[cfg(feature = "web")]
+fn nonograms_org_not_found() {
+    let msg = NonogramsOrg::read_remote("444444").err().unwrap();
+    assert_eq!(msg, "Not found cypher in HTML content");
 }
