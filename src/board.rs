@@ -1,12 +1,11 @@
 use super::block::base::color::{ColorDesc, ColorId, ColorPalette};
 use super::block::base::{Block, Color, Description};
-use super::cache::{cache_info, GrowableCache};
+use super::cache::{cache_info, Cached, GrowableCache};
 use super::utils::dedup;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use cached::Cached;
 use hashbrown::HashMap;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]

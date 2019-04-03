@@ -1,12 +1,19 @@
-use cached::Cached;
 use std::hash::Hash;
 
 use lru::LruCache;
 
-/// The copy of 'cached' crate's structure
-/// <https://github.com/jaemk/cached/blob/master/src/stores.rs#L20>
-/// but using <https://github.com/Amanieu/hashbrown>
-/// instead of default `HashMap` for speeding up
+/// The copy of 'cached' crate's trait
+/// <https://github.com/jaemk/cached/blob/master/src/stores.rs>
+pub trait Cached<K, V> {
+    fn cache_get(&mut self, key: &K) -> Option<&V>;
+    fn cache_set(&mut self, key: K, val: V);
+    fn cache_remove(&mut self, k: &K) -> Option<V>;
+    fn cache_clear(&mut self);
+    fn cache_size(&self) -> usize;
+    fn cache_hits(&self) -> Option<u32>;
+    fn cache_misses(&self) -> Option<u32>;
+}
+
 pub struct GrowableCache<K, V>
 where
     K: Eq + Hash,
