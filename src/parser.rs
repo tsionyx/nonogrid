@@ -13,27 +13,40 @@ extern crate sxd_document;
 extern crate sxd_xpath;
 extern crate toml;
 
-pub trait LocalReader {
+pub trait BoardParser {
+    fn with_content(content: String) -> Result<Self, String>
+    where
+        Self: Sized;
+
+    fn parse<B>(&self) -> Board<B>
+    where
+        B: Block;
+
+    fn infer_scheme(&self) -> PuzzleScheme;
+}
+
+pub trait LocalReader: BoardParser {
     fn read_local(file_name: &str) -> Result<Self, String>
     where
         Self: Sized,
     {
         let content = Self::file_content(file_name)?;
-        Self::from_string(content)
+        Self::with_content(content)
     }
     fn file_content(file_name: &str) -> Result<String, String> {
         fs::read_to_string(file_name).map_err(|err| format!("{:?}", err))
     }
-
-    fn from_string(content: String) -> Result<Self, String>
-    where
-        Self: Sized;
 }
 
-pub trait NetworkReader {
+pub trait NetworkReader: BoardParser {
     fn read_remote(file_name: &str) -> Result<Self, String>
     where
-        Self: Sized;
+        Self: Sized,
+    {
+        let url = file_name.to_string();
+        let content = Self::http_content(url)?;
+        Self::with_content(content)
+    }
 
     #[cfg(feature = "web")]
     fn http_content(url: String) -> Result<String, String> {
@@ -50,14 +63,6 @@ pub trait NetworkReader {
             url
         ))
     }
-}
-
-pub trait BoardParser {
-    fn parse<B>(&self) -> Board<B>
-    where
-        B: Block;
-
-    fn infer_scheme(&self) -> PuzzleScheme;
 }
 
 pub trait Paletted {
@@ -93,8 +98,10 @@ pub struct MyFormat {
     //board_str: String,
 }
 
-impl LocalReader for MyFormat {
-    fn from_string(content: String) -> Result<Self, String>
+impl LocalReader for MyFormat {}
+
+impl BoardParser for MyFormat {
+    fn with_content(content: String) -> Result<Self, String>
     where
         Self: Sized,
     {
@@ -106,9 +113,7 @@ impl LocalReader for MyFormat {
             //board_str: content,
         })
     }
-}
 
-impl BoardParser for MyFormat {
     fn parse<B>(&self) -> Board<B>
     where
         B: Block,
@@ -256,8 +261,19 @@ pub struct WebPbn {
     //board_str: String,
 }
 
-impl LocalReader for WebPbn {
-    fn from_string(content: String) -> Result<Self, String>
+impl LocalReader for WebPbn {}
+
+impl NetworkReader for WebPbn {
+    fn read_remote(file_name: &str) -> Result<Self, String> {
+        let url = format!("{}/XMLpuz.cgi?id={}", Self::BASE_URL, file_name);
+
+        let content = Self::http_content(url)?;
+        Self::with_content(content)
+    }
+}
+
+impl BoardParser for WebPbn {
+    fn with_content(content: String) -> Result<Self, String>
     where
         Self: Sized,
     {
@@ -269,24 +285,7 @@ impl LocalReader for WebPbn {
             //board_str: content,
         })
     }
-}
 
-impl NetworkReader for WebPbn {
-    fn read_remote(file_name: &str) -> Result<Self, String> {
-        let url = format!("{}/XMLpuz.cgi?id={}", Self::BASE_URL, file_name);
-
-        let content = Self::http_content(url)?;
-        let package = sxd_document::parser::parse(&content)
-            .map_err(|sxd_parser_error| format!("{:?}", sxd_parser_error))?;
-
-        Ok(Self {
-            package,
-            //board_str: content,
-        })
-    }
-}
-
-impl BoardParser for WebPbn {
     fn parse<B>(&self) -> Board<B>
     where
         B: Block,
@@ -439,7 +438,7 @@ mod tests {
     use super::super::block::base::color::ColorPalette;
     use super::super::block::binary::BinaryBlock;
     use super::super::block::Description;
-    use super::{BoardParser, LocalReader, MyFormat, Paletted, PuzzleScheme};
+    use super::{BoardParser, MyFormat, Paletted, PuzzleScheme};
 
     fn block(n: usize) -> BinaryBlock {
         BinaryBlock(n)
@@ -558,7 +557,9 @@ mod tests {
         ";
 
         assert_eq!(
-            MyFormat::from_string(s.to_string()).unwrap().infer_scheme(),
+            MyFormat::with_content(s.to_string())
+                .unwrap()
+                .infer_scheme(),
             PuzzleScheme::BlackAndWhite
         )
     }
@@ -574,7 +575,9 @@ mod tests {
         ";
 
         assert_eq!(
-            MyFormat::from_string(s.to_string()).unwrap().infer_scheme(),
+            MyFormat::with_content(s.to_string())
+                .unwrap()
+                .infer_scheme(),
             PuzzleScheme::BlackAndWhite
         )
     }
@@ -591,7 +594,9 @@ mod tests {
         ";
 
         assert_eq!(
-            MyFormat::from_string(s.to_string()).unwrap().infer_scheme(),
+            MyFormat::with_content(s.to_string())
+                .unwrap()
+                .infer_scheme(),
             PuzzleScheme::BlackAndWhite
         )
     }
@@ -608,7 +613,9 @@ mod tests {
         ";
 
         assert_eq!(
-            MyFormat::from_string(s.to_string()).unwrap().infer_scheme(),
+            MyFormat::with_content(s.to_string())
+                .unwrap()
+                .infer_scheme(),
             PuzzleScheme::MultiColor
         )
     }
@@ -624,7 +631,7 @@ mod tests {
         defs = ['g=(0, 204, 0) %']
         ";
 
-        let f = MyFormat::from_string(s.to_string()).unwrap();
+        let f = MyFormat::with_content(s.to_string()).unwrap();
         let mut colors = vec![];
         colors.push(("g".to_string(), '%', "0, 204, 0".to_string()));
 
