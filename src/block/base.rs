@@ -155,7 +155,7 @@ pub mod color {
     #[derive(Clone)]
     pub struct ColorPalette {
         vec: HashMap<String, ColorDesc>,
-        symbols: HashSet<char>,
+        symbols: Vec<char>,
         default_color: Option<String>,
     }
 
@@ -163,6 +163,13 @@ pub mod color {
         pub const WHITE_ID: ColorId = 1;
 
         pub fn with_white_and_black(white_name: &str, black_name: &str) -> Self {
+            let mut this = Self::with_white(white_name);
+            this.color_with_name_value_and_symbol(black_name, ColorValue::HexValue3(0x000), 'X');
+            this.set_default(black_name);
+            this
+        }
+
+        pub fn with_white(white_name: &str) -> Self {
             let mut this = Self::new();
             this.color_with_name_value_symbol_and_id(
                 white_name,
@@ -170,8 +177,6 @@ pub mod color {
                 '.',
                 Self::WHITE_ID,
             );
-            this.color_with_name_value_and_symbol(black_name, ColorValue::HexValue3(0x000), 'X');
-            this.set_default(black_name);
 
             this
         }
@@ -181,7 +186,7 @@ pub mod color {
         }
 
         fn with_colors(colors: HashMap<String, ColorDesc>) -> Self {
-            let symbols: HashSet<_> = (0_u8..0xFF)
+            let symbols: Vec<_> = (0_u8..0xFF)
                 .filter_map(|x| {
                     let ch = x as char;
                     if ch.is_ascii_punctuation() {
@@ -261,21 +266,22 @@ pub mod color {
 
         #[allow(dead_code)]
         pub fn color_with_name_and_value(&mut self, name: &str, value: ColorValue) {
+            let occupied_symbols: HashSet<_> =
+                self.vec.iter().map(|(_name, color)| color.symbol).collect();
+
             let next_symbol = self
-                .vec
+                .symbols
                 .iter()
-                .filter_map(|(_name, color)| {
-                    let symbol = color.symbol;
-                    if self.symbols.contains(&symbol) {
+                .find_map(|available_symbol| {
+                    if occupied_symbols.contains(&available_symbol) {
                         None
                     } else {
-                        Some(symbol)
+                        Some(available_symbol)
                     }
                 })
-                .next()
                 .expect("Cannot create color: No more symbols available.");
 
-            self.color_with_name_value_and_symbol(name, value, next_symbol)
+            self.color_with_name_value_and_symbol(name, value, *next_symbol)
         }
     }
 }
