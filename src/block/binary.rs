@@ -133,8 +133,8 @@ pub struct BinaryBlock(pub usize);
 impl Block for BinaryBlock {
     type Color = BinaryColor;
 
-    fn from_str_and_color(s: &str, _color: Option<ColorId>) -> Self {
-        Self(s.parse::<usize>().unwrap())
+    fn from_size_and_color(size: usize, _color: Option<ColorId>) -> Self {
+        Self(size)
     }
 
     fn partial_sums(desc: &[Self]) -> Vec<usize> {

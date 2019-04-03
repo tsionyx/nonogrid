@@ -73,7 +73,7 @@ fn main() {
         let board_parser = match source {
             Source::WebPbn => parser::WebPbn::read_local(&path),
             Source::WebPbnOnline => parser::WebPbn::read_remote(&path),
-            _ => panic!("No parser matched"),
+            _ => unreachable!("No parser matched"),
         }
         .unwrap();
         match board_parser.infer_scheme() {
@@ -136,7 +136,7 @@ fn source_from_args(matches: &ArgMatches) -> (Source, String) {
     } else if let Some(my_path) = my_path {
         return (Source::Own, my_path.to_string());
     }
-    panic!("No valid source found");
+    unreachable!("No valid source found");
 }
 
 type SearchOptions = (Option<usize>, Option<u32>, Option<usize>);

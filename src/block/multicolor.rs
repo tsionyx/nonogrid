@@ -162,8 +162,7 @@ impl ColoredBlock {
 impl Block for ColoredBlock {
     type Color = MultiColor;
 
-    fn from_str_and_color(s: &str, color: Option<ColorId>) -> Self {
-        let size = s.parse::<usize>().unwrap();
+    fn from_size_and_color(size: usize, color: Option<ColorId>) -> Self {
         let color = color.unwrap();
         Self { size, color }
     }

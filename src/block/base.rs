@@ -41,7 +41,12 @@ where
 {
     type Color: Color;
 
-    fn from_str_and_color(s: &str, color: Option<ColorId>) -> Self;
+    fn from_str_and_color(s: &str, color: Option<ColorId>) -> Self {
+        let size = s.parse::<usize>().unwrap();
+        Self::from_size_and_color(size, color)
+    }
+
+    fn from_size_and_color(size: usize, color: Option<ColorId>) -> Self;
     fn partial_sums(desc: &[Self]) -> Vec<usize>
     where
         Self: Sized;
