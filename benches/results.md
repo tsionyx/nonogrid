@@ -85,3 +85,56 @@
 `+` means the solving time exceeds 1 hour and was interrupted (`--timeout=3600`)
 
 **Bold** puzzles are from http://webpbn.com/survey/ (_italic_ puzzles are mentioned there too).
+
+
+# http://www.nonograms.org puzzles
+
+23258 puzzles run. All the puzzles are line solvable and has single solution.
+
+## Distribution of solve times
+
+```
+$ less batch-norg.log | grep 'Total' | awk '{print $2}' | sort -r | uniq -c
+      2 0.22
+      1 0.20
+      1 0.14
+      3 0.13
+      2 0.12
+      2 0.10
+      1 0.09
+      3 0.08
+      2 0.07
+     10 0.06
+     26 0.05
+    149 0.04
+    190 0.03
+   1159 0.02
+   2366 0.01
+  19341 0.00
+```
+
+## Top times (more than 0.06 sec)
+
+| puzzle_id | solve time, sec | colors (w/o blank) |
+|-----------|----------------:|--------------------|
+| 2617      | 0.12            | 6
+| **4462**  | 0.13            | 3
+| **9596**  | 0.20            | 10
+| 10509     | 0.07            | 1 (black)
+| 10548     | 0.08            | 1 (black)
+| 18305     | 0.07            | 8
+| 18417     | 0.08            | 1 (black)
+| 20689     | 0.12            | 4
+| 21251     | 0.14            | 1 (black)
+| 21259     | 0.10            | 1 (black)
+| 21272     | 0.13            | 1 (black)
+| 21424     | 0.22            | 10
+| 21553     | 0.22            | 5
+| 21886     | 0.10            | 3
+| 22118     | 0.13            | 10
+| 22326     | 0.08            | 1 (black)
+| 23343     | 0.09            | 7
+
+
+**Bold** puzzles also found in [this C++ solver post](
+https://izaron.github.io/post/solving-colored-japanese-crosswords-with-the-speed-of-light/#what-decreases-the-execution-time).

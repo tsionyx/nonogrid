@@ -10,3 +10,10 @@
 # profiles and benchmarks
 *.log
 perf.data*
+callgrind.out.*
+
+profiles/
+puzzles-norg/
+puzzles/
+solutions-norg/
+solutions/
