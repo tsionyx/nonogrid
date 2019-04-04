@@ -64,42 +64,31 @@ fn main() {
     let search_options = search_options_from_args(&matches);
     let (source, path) = source_from_args(&matches);
 
-    // FIXME: lack of dynamic dispatching entails this shit.
-    //        Box<dyn BoardParser> also does not work due to
-    //        error[E0038]: the trait `parser::BoardParser` cannot be made into an object
-    //        note: method `parse` has generic type parameters
-    if let Source::Own = source {
-        let board_parser = parser::MyFormat::read_local(&path).unwrap();
-        match board_parser.infer_scheme() {
-            PuzzleScheme::BlackAndWhite => run::<BinaryBlock, _>(&board_parser, search_options),
-            PuzzleScheme::MultiColor => run::<ColoredBlock, _>(&board_parser, search_options),
+    match source {
+        Source::Own => run(parser::MyFormat::read_local(&path), search_options),
+        Source::WebPbn => run(parser::WebPbn::read_local(&path), search_options),
+        Source::WebPbnOnline => run(parser::WebPbn::read_remote(&path), search_options),
+        Source::NonogramsOrg => run(parser::NonogramsOrg::read_local(&path), search_options),
+        Source::NonogramsOrgOnline => run(parser::NonogramsOrg::read_remote(&path), search_options),
+    }
+}
+
+fn run<P>(board_parser: Result<P, String>, search_options: SearchOptions)
+where
+    P: BoardParser,
+{
+    let board_parser = board_parser.unwrap();
+    match board_parser.infer_scheme() {
+        PuzzleScheme::BlackAndWhite => {
+            run_with_block::<BinaryBlock, _>(&board_parser, search_options)
         }
-    } else if (source == Source::WebPbn) || (source == Source::WebPbnOnline) {
-        let board_parser = match source {
-            Source::WebPbn => parser::WebPbn::read_local(&path),
-            Source::WebPbnOnline => parser::WebPbn::read_remote(&path),
-            _ => unreachable!("No parser matched"),
-        }
-        .unwrap();
-        match board_parser.infer_scheme() {
-            PuzzleScheme::BlackAndWhite => run::<BinaryBlock, _>(&board_parser, search_options),
-            PuzzleScheme::MultiColor => run::<ColoredBlock, _>(&board_parser, search_options),
-        }
-    } else if (source == Source::NonogramsOrg) || (source == Source::NonogramsOrgOnline) {
-        let board_parser = match source {
-            Source::NonogramsOrg => parser::NonogramsOrg::read_local(&path),
-            Source::NonogramsOrgOnline => parser::NonogramsOrg::read_remote(&path),
-            _ => unreachable!("No parser matched"),
-        }
-        .unwrap();
-        match board_parser.infer_scheme() {
-            PuzzleScheme::BlackAndWhite => run::<BinaryBlock, _>(&board_parser, search_options),
-            PuzzleScheme::MultiColor => run::<ColoredBlock, _>(&board_parser, search_options),
+        PuzzleScheme::MultiColor => {
+            run_with_block::<ColoredBlock, _>(&board_parser, search_options)
         }
     }
 }
 
-fn run<B, P>(board_parser: &P, search_options: SearchOptions)
+fn run_with_block<B, P>(board_parser: &P, search_options: SearchOptions)
 where
     B: Block + Display,
     B::Color: DynamicColor + Display,
@@ -184,7 +173,6 @@ where
     None
 }
 
-#[derive(PartialEq)]
 enum Source {
     Own,
     WebPbn,
