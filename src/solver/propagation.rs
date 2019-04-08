@@ -13,9 +13,7 @@ where
     B: Block,
 {
     board: Rc<RefCell<Board<B>>>,
-    rows: Option<Vec<usize>>,
-    columns: Option<Vec<usize>>,
-    contradiction_mode: bool,
+    point: Option<Point>,
 }
 
 type Job = (bool, usize);
@@ -25,20 +23,13 @@ where
     B: Block,
 {
     pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
-        Self::with_options(board, None, None, false)
+        Self { board, point: None }
     }
 
-    pub fn with_options(
-        board: Rc<RefCell<Board<B>>>,
-        rows: Option<Vec<usize>>,
-        columns: Option<Vec<usize>>,
-        contradiction_mode: bool,
-    ) -> Self {
+    pub fn with_point(board: Rc<RefCell<Board<B>>>, point: Point) -> Self {
         Self {
             board,
-            rows,
-            columns,
-            contradiction_mode,
+            point: Some(point),
         }
     }
 
@@ -46,28 +37,20 @@ where
     where
         S: LineSolver<BlockType = B>,
     {
-        let (rows, columns) = {
-            // for safe borrowing
+        let (rows, columns) = if let Some(point) = self.point {
+            (vec![point.y()], vec![point.x()])
+        } else {
             let board = self.board.borrow();
-            (
-                self.rows
-                    .clone()
-                    .unwrap_or_else(|| (0..board.height()).collect()),
-                self.columns
-                    .clone()
-                    .unwrap_or_else(|| (0..board.width()).collect()),
-            )
-        };
+            let rows: Vec<_> = (0..board.height()).collect();
+            let cols: Vec<_> = (0..board.width()).collect();
 
-        // `is_solved_full` is expensive, so minimize calls to it.
-        // Do not call if only a handful of lines has to be solved
-        if rows.len() > 2 || columns.len() > 2 {
-            // do not shortcut in contradiction_mode
-            if !self.contradiction_mode && self.board.borrow().is_solved_full() {
+            // `is_solved_full` is expensive, so minimize calls to it.
+            // Do not call if only a handful of lines has to be solved
+            if board.is_solved_full() {
                 //return 0, ()
             }
-        }
-        // has_blots = board.has_blots
+            (rows, cols)
+        };
 
         let start = Instant::now();
         let mut lines_solved = 0_u32;
@@ -157,7 +140,8 @@ where
         }
 
         // all the following actions applied only to verified solving
-        if !self.contradiction_mode {
+        //if !self.contradiction_mode
+        {
             //let board = board.borrow();
             //board.solution_round_completed()
             //let rate = board.solution_rate();

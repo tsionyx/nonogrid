@@ -204,11 +204,7 @@ where
     where
         S: LineSolver<BlockType = B>,
     {
-        let rows = Some(vec![point.y()]);
-        let columns = Some(vec![point.x()]);
-
-        let point_solver =
-            propagation::Solver::with_options(Rc::clone(&self.board), rows, columns, false);
+        let point_solver = propagation::Solver::with_point(Rc::clone(&self.board), *point);
         point_solver.run::<S>()
     }
 
