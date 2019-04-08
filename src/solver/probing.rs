@@ -63,21 +63,16 @@ where
 
     fn unsolved_cells(&self) -> FloatPriorityQueue<Point> {
         let board = self.board();
-        let unsolved: Vec<_> = board.unsolved_cells().collect();
+        let unsolved = board.unsolved_cells();
 
-        let mut queue = FloatPriorityQueue::with_capacity_and_default_hasher(unsolved.len());
-        unsolved
-            .into_iter()
-            .map(|point| {
-                let no_unsolved = board.unsolved_neighbours(&point).count() as f64;
-                let row_rate = board.row_solution_rate(point.y());
-                let column_rate = board.column_solution_rate(point.x());
-                let priority = row_rate + column_rate - no_unsolved + 4.0;
-                (point, OrderedFloat(priority))
-            })
-            .for_each(|(item, priority)| {
-                queue.push(item, priority);
-            });
+        let mut queue = FloatPriorityQueue::with_default_hasher();
+        queue.extend(unsolved.map(|point| {
+            let no_unsolved = board.unsolved_neighbours(&point).count() as f64;
+            let row_rate = board.row_solution_rate(point.y());
+            let column_rate = board.column_solution_rate(point.x());
+            let priority = row_rate + column_rate - no_unsolved + 4.0;
+            (point, OrderedFloat(priority))
+        }));
 
         queue
     }
