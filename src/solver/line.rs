@@ -155,9 +155,9 @@ where
         self.solved_line[position] = color;
     }
 
-    fn update_solved(&mut self, position: usize, color: &B::Color) {
+    fn update_solved(&mut self, position: usize, color: B::Color) {
         let current = &self.solved_line[position];
-        self.set_solved(position, current.add_color(color.clone()))
+        self.set_solved(position, current.add_color(color))
     }
 
     fn fill_matrix(&mut self, position: usize, block: usize) -> bool {
@@ -177,7 +177,7 @@ where
             if has_blank {
                 let blank = B::Color::blank();
                 // set cell blank and continue
-                self.update_solved(position, &blank);
+                self.update_solved(position, blank);
                 return true;
             }
         }
@@ -213,7 +213,7 @@ where
                 self.set_color_block(
                     block_start,
                     position,
-                    &current_color,
+                    current_color,
                     should_have_trailing_space,
                 );
                 return true;
@@ -247,8 +247,6 @@ where
             return false;
         }
 
-        let start = start as usize;
-
         if trailing_space {
             if !self.color_at(end).can_be_blank() {
                 return false;
@@ -258,28 +256,28 @@ where
         }
 
         // the color can be placed in every cell
-        self.line()[start..end]
+        self.line()[start as usize..end]
             .iter()
-            .all(|cell| cell.can_be(&color))
+            .all(|cell| cell.can_be(color))
     }
 
     fn set_color_block(
         &mut self,
         start: isize,
         mut end: usize,
-        color: &B::Color,
+        color: B::Color,
         trailing_space: bool,
     ) {
         if trailing_space {
             let blank = B::Color::blank();
-            self.update_solved(end, &blank);
+            self.update_solved(end, blank);
         } else {
             end += 1
         }
 
         // set colored cells
         for i in start as usize..end {
-            self.update_solved(i, &color);
+            self.update_solved(i, color);
         }
     }
 }
