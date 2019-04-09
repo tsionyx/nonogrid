@@ -19,57 +19,78 @@ where
 
 type Job = (bool, usize);
 
-struct JobQueue {
-    vec: Vec<Job>,
-    // do not use HashSet with small queues
-    visited: Option<HashSet<Job>>,
+trait JobQueue {
+    fn push(&mut self, job: Job);
+    fn pop(&mut self) -> Option<Job>;
 }
 
-impl JobQueue {
-    fn with_vec(vec: Vec<Job>) -> Self {
-        let visited = if vec.len() <= 5 {
-            None
-        } else {
-            Some(HashSet::new())
-        };
-        Self { vec, visited }
+struct SmallJobQueue {
+    vec: Vec<Job>,
+}
+
+impl SmallJobQueue {
+    fn with_point(point: Point) -> Self {
+        Self {
+            vec: vec![(true, point.x()), (false, point.y())],
+        }
+    }
+}
+
+impl JobQueue for SmallJobQueue {
+    fn push(&mut self, job: Job) {
+        self.vec.push(job)
     }
 
-    fn with_columns_and_rows(columns: Vec<usize>, rows: Vec<usize>) -> Self {
+    fn pop(&mut self) -> Option<Job> {
+        let top_job = self.vec.pop()?;
+        //let before_retain_size = pq.len();
+        // remove all the previous occurrences of the new job
+        self.vec.retain(|&x| x != top_job);
+
+        if log_enabled!(Level::Debug) {
+            let (is_column, index) = top_job;
+            let line_description = if is_column { "column" } else { "row" };
+            debug!("Solving {} {}", index, line_description);
+        }
+        Some(top_job)
+    }
+}
+
+struct LongJobQueue {
+    vec: Vec<Job>,
+    visited: HashSet<Job>,
+}
+
+impl LongJobQueue {
+    fn with_rows_and_columns(rows: Vec<usize>, columns: Vec<usize>) -> Self {
         let mut jobs: Vec<_> = columns
             .into_iter()
             .map(|column_index| (true, column_index))
             .collect();
         jobs.extend(rows.into_iter().map(|row_index| (false, row_index)));
 
-        Self::with_vec(jobs)
-    }
-
-    fn push(&mut self, job: Job) {
-        if let Some(visited) = self.visited.as_mut() {
-            visited.remove(&job);
+        Self {
+            vec: jobs,
+            visited: HashSet::new(),
         }
+    }
+}
+
+impl JobQueue for LongJobQueue {
+    fn push(&mut self, job: Job) {
+        self.visited.remove(&job);
         self.vec.push(job)
     }
 
     fn pop(&mut self) -> Option<Job> {
-        let top_job = if let Some(visited) = self.visited.as_mut() {
-            let top_job = loop {
-                let top_job = self.vec.pop()?;
-                if !visited.contains(&top_job) {
-                    break top_job;
-                }
-            };
-            // mark the job as visited
-            visited.insert(top_job);
-            top_job
-        } else {
+        let top_job = loop {
             let top_job = self.vec.pop()?;
-            //let before_retain_size = pq.len();
-            // remove all the previous occurrences of the new job
-            self.vec.retain(|&x| x != top_job);
-            top_job
+            if !self.visited.contains(&top_job) {
+                break top_job;
+            }
         };
+        // mark the job as visited
+        self.visited.insert(top_job);
 
         if log_enabled!(Level::Debug) {
             let (is_column, index) = top_job;
@@ -99,28 +120,37 @@ where
     where
         S: LineSolver<BlockType = B>,
     {
-        let (rows, columns) = if let Some(point) = self.point {
+        if let Some(point) = self.point {
             debug!("Solving {:?}", &point);
-            (vec![point.y()], vec![point.x()])
+            let queue = SmallJobQueue::with_point(point);
+            self.run_jobs::<S, _>(queue)
         } else {
-            let board = self.board.borrow();
-            let rows: Vec<_> = (0..board.height()).rev().collect();
-            let cols: Vec<_> = (0..board.width()).rev().collect();
+            let queue = {
+                let board = self.board.borrow();
+                let rows: Vec<_> = (0..board.height()).rev().collect();
+                let cols: Vec<_> = (0..board.width()).rev().collect();
 
-            // `is_solved_full` is expensive, so minimize calls to it.
-            // Do not call if only a handful of lines has to be solved
-            if board.is_solved_full() {
-                //return 0, ()
-            }
-            (rows, cols)
-        };
+                // `is_solved_full` is expensive, so minimize calls to it.
+                // Do not call if only a handful of lines has to be solved
+                if board.is_solved_full() {
+                    //return 0, ()
+                }
+                LongJobQueue::with_rows_and_columns(rows, cols)
+            };
+            self.run_jobs::<S, _>(queue)
+        }
+    }
 
+    fn run_jobs<S, Q>(&self, mut queue: Q) -> Result<Vec<Point>, String>
+    where
+        S: LineSolver<BlockType = B>,
+        Q: JobQueue,
+    {
         let start = Instant::now();
         let mut lines_solved = 0_u32;
         let mut solved_cells = vec![];
 
-        let mut line_jobs = JobQueue::with_columns_and_rows(columns, rows);
-        while let Some((is_column, index)) = line_jobs.pop() {
+        while let Some((is_column, index)) = queue.pop() {
             let new_jobs = self.update_line::<S>(index, is_column)?;
 
             let new_states = new_jobs.iter().map(|(another_index, _color)| {
@@ -138,7 +168,7 @@ where
                 .into_iter()
                 .rev()
                 .map(|(new_index, _color)| (!is_column, new_index))
-                .for_each(|job| line_jobs.push(job));
+                .for_each(|job| queue.push(job));
 
             lines_solved += 1;
         }
