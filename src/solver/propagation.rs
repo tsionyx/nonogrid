@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Instant;
 
+use hashbrown::HashSet;
 use log::Level;
 
 pub struct Solver<B>
@@ -17,6 +18,67 @@ where
 }
 
 type Job = (bool, usize);
+
+struct JobQueue {
+    vec: Vec<Job>,
+    // do not use HashSet with small queues
+    visited: Option<HashSet<Job>>,
+}
+
+impl JobQueue {
+    fn with_vec(vec: Vec<Job>) -> Self {
+        let visited = if vec.len() <= 5 {
+            None
+        } else {
+            Some(HashSet::new())
+        };
+        Self { vec, visited }
+    }
+
+    fn with_columns_and_rows(columns: Vec<usize>, rows: Vec<usize>) -> Self {
+        let mut jobs: Vec<_> = columns
+            .into_iter()
+            .map(|column_index| (true, column_index))
+            .collect();
+        jobs.extend(rows.into_iter().map(|row_index| (false, row_index)));
+
+        Self::with_vec(jobs)
+    }
+
+    fn push(&mut self, job: Job) {
+        if let Some(visited) = self.visited.as_mut() {
+            visited.remove(&job);
+        }
+        self.vec.push(job)
+    }
+
+    fn pop(&mut self) -> Option<Job> {
+        let top_job = if let Some(visited) = self.visited.as_mut() {
+            let top_job = loop {
+                let top_job = self.vec.pop()?;
+                if !visited.contains(&top_job) {
+                    break top_job;
+                }
+            };
+            // mark the job as visited
+            visited.insert(top_job);
+            top_job
+        } else {
+            let top_job = self.vec.pop()?;
+            //let before_retain_size = pq.len();
+            // remove all the previous occurrences of the new job
+            self.vec.retain(|&x| x != top_job);
+            top_job
+        };
+
+        if log_enabled!(Level::Debug) {
+            let (is_column, index) = top_job;
+            let line_description = if is_column { "column" } else { "row" };
+            debug!("Solving {} {}", index, line_description);
+        }
+        Some(top_job)
+    }
+}
 
 impl<B> Solver<B>
 where
@@ -38,11 +100,12 @@ where
         S: LineSolver<BlockType = B>,
     {
         let (rows, columns) = if let Some(point) = self.point {
+            debug!("Solving {:?}", &point);
             (vec![point.y()], vec![point.x()])
         } else {
             let board = self.board.borrow();
-            let rows: Vec<_> = (0..board.height()).collect();
-            let cols: Vec<_> = (0..board.width()).collect();
+            let rows: Vec<_> = (0..board.height()).rev().collect();
+            let cols: Vec<_> = (0..board.width()).rev().collect();
 
             // `is_solved_full` is expensive, so minimize calls to it.
             // Do not call if only a handful of lines has to be solved
@@ -54,63 +117,10 @@ where
 
         let start = Instant::now();
         let mut lines_solved = 0_u32;
-
-        // every job is a tuple (is_column, index)
-        //
-        // Why `is_column`, not `is_row`?
-        // To assign more priority to the rows:
-        // when adding row, `is_column = False = 0`
-        // when adding column, `is_column = True = 1`
-        // heap always pops the lowest item, so the rows will go first
-
-        debug!(
-            "Solving {:?} rows and {:?} columns with {} method",
-            &rows, &columns, "standard"
-        );
-
-        let mut line_jobs = Vec::with_capacity(rows.len() + columns.len());
-
-        line_jobs.extend(columns.into_iter().rev().map(|column_index| {
-            // the more this line solved
-            // priority = 1 - board.column_solution_rate(column_index)
-
-            // the closer to edge
-            // priority = 1 - abs(2.0 * column_index / board.width - 1)
-
-            // the more 'dense' this line
-            // priority = 1 - board.densities[True][column_index]
-
-            //let new_job = (true, column_index);
-
-            // if has_blots:
-            //   // the more attempts the less priority
-            //   priority = board.attempts_to_try(*new_job)
-
-            (true, column_index)
-        }));
-
-        line_jobs.extend(rows.into_iter().rev().map(|row_index| {
-            // the more this line solved
-            // priority = 1 - board.row_solution_rate(row_index)
-
-            // the closer to edge
-            // priority = 1 - abs(2.0 * row_index / board.height - 1)
-
-            // the more 'dense' this line
-            // priority = 1 - board.densities[False][row_index]
-
-            //let new_job = (false, row_index);
-
-            // if has_blots:
-            //    // the more attempts the less priority
-            //    priority = board.attempts_to_try(*new_job)
-
-            (false, row_index)
-        }));
-
         let mut solved_cells = vec![];
 
-        while let Some((is_column, index)) = Self::get_top_job(&mut line_jobs) {
+        let mut line_jobs = JobQueue::with_columns_and_rows(columns, rows);
+        while let Some((is_column, index)) = line_jobs.pop() {
             let new_jobs = self.update_line::<S>(index, is_column)?;
 
             let new_states = new_jobs.iter().map(|(another_index, _color)| {
@@ -124,17 +134,11 @@ where
 
             solved_cells.extend(new_states);
 
-            line_jobs.extend(new_jobs.into_iter().rev().map(|(new_index, _color)| {
-                // if board.has_blots:
-                //    // the more attempts the less priority
-                //    new_priority = board.attempts_to_try(*new_job)
-
-                //let new_job = (!is_column, new_index);
-                // higher priority = more priority
-                //add_job(new_job, new_priority);
-
-                (!is_column, new_index)
-            }));
+            new_jobs
+                .into_iter()
+                .rev()
+                .map(|(new_index, _color)| (!is_column, new_index))
+                .for_each(|job| line_jobs.push(job));
 
             lines_solved += 1;
         }
@@ -161,26 +165,6 @@ where
         }
 
         Ok(solved_cells)
-    }
-
-    fn get_top_job(pq: &mut Vec<Job>) -> Option<Job> {
-        let top_job = pq.pop()?;
-        let before_retain_size = pq.len();
-        // remove all the previous occurrences of the new job
-        pq.retain(|&x| x != top_job);
-
-        if log_enabled!(Level::Debug) {
-            debug!(
-                "Removed {} instances of job {:?}",
-                before_retain_size - pq.len(),
-                top_job
-            );
-
-            let (is_column, index) = top_job;
-            let line_description = if is_column { "column" } else { "row" };
-            debug!("Solving {} {}", index, line_description);
-        }
-        Some(top_job)
     }
 
     /// Solve a line with the solver S and update the board.
