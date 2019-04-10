@@ -42,7 +42,7 @@ where
     type Color: Color;
 
     fn from_str_and_color(s: &str, color: Option<ColorId>) -> Self {
-        let size = s.parse::<usize>().unwrap();
+        let size = s.parse::<usize>().expect("Non-integer block size given");
         Self::from_size_and_color(size, color)
     }
 

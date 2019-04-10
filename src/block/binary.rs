@@ -147,7 +147,7 @@ impl Block for BinaryBlock {
                 if acc.is_empty() {
                     vec![block.0]
                 } else {
-                    let last = acc.last().unwrap();
+                    let last = acc.last().expect("Partial sums vector should be non-empty");
                     acc.push(last + block.0 + 1);
                     acc
                 }

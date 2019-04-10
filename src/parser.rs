@@ -222,7 +222,7 @@ impl MyFormat {
         let parts: Vec<_> = color_def.split('=').map(|part| part.trim()).collect();
         let name = parts[0];
         let mut desc = parts[1].to_string();
-        let symbol = desc.pop().unwrap();
+        let symbol = desc.pop().expect("Empty color description in definition");
 
         desc = desc
             .trim()
@@ -396,8 +396,14 @@ impl Paletted for WebPbn {
                 .filter_map(|color_node| {
                     let value = color_node.string_value();
                     if let Node::Element(e) = color_node {
-                        let name = e.attribute("name").unwrap().value();
-                        let symbol = e.attribute("char").unwrap().value();
+                        let name = e
+                            .attribute("name")
+                            .expect("Not found 'name' attribute in the 'color' element")
+                            .value();
+                        let symbol = e
+                            .attribute("char")
+                            .expect("Not found 'char' attribute in the 'color' element")
+                            .value();
                         let symbol: char = symbol.as_bytes()[0] as char;
                         Some((name.to_string(), symbol, value))
                     } else {
@@ -465,16 +471,21 @@ impl NonogramsOrg {
         })
     }
 
+    fn parse_line(line: &str) -> Vec<EncodedInt> {
+        line.split(',')
+            .map(|x| {
+                x.parse::<EncodedInt>()
+                    .expect("The items should be positive integers")
+            })
+            .collect()
+    }
+
     fn parse_json(array: &str) -> Vec<Vec<EncodedInt>> {
         array
             .trim_start_matches(|x| x == '[')
             .trim_end_matches(|x| x == ']')
             .split("],[")
-            .map(|line| {
-                line.split(',')
-                    .map(|x| x.parse::<EncodedInt>().unwrap())
-                    .collect()
-            })
+            .map(Self::parse_line)
             .collect()
     }
 

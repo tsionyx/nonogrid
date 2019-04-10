@@ -163,7 +163,7 @@ impl Block for ColoredBlock {
     type Color = MultiColor;
 
     fn from_size_and_color(size: usize, color: Option<ColorId>) -> Self {
-        let color = color.unwrap();
+        let color = color.expect("Color not provided for ColoredBlock");
         Self { size, color }
     }
 
@@ -181,7 +181,7 @@ impl Block for ColoredBlock {
                 if acc.is_empty() {
                     vec![block.size()]
                 } else {
-                    let last = acc.last().unwrap();
+                    let last = acc.last().expect("Partial sums vector should be non-empty");
                     let mut sum = last + block.size();
                     if desc[i - 1].color() == block.color() {
                         // plus at least one space

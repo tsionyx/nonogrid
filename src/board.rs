@@ -109,7 +109,7 @@ where
                 uniq_rows
                     .iter()
                     .position(|uniq_row| uniq_row == &desc.vec)
-                    .unwrap()
+                    .expect("Every row should be present in unique rows")
             })
             .collect();
         let cols_cache_indexes = columns
@@ -118,7 +118,7 @@ where
                 uniq_cols
                     .iter()
                     .position(|uniq_col| uniq_col == &desc.vec)
-                    .unwrap()
+                    .expect("Every column should be present in unique columns")
             })
             .collect();
 
@@ -188,7 +188,7 @@ where
         //let width = self.width();
         //let start_index = width * index;
         //self.cells.iter().skip(start_index).take(width)
-        self.iter_rows().nth(index).unwrap()
+        self.iter_rows().nth(index).expect("Invalid row index")
     }
 
     pub fn get_row(&self, index: usize) -> Vec<B::Color> {

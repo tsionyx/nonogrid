@@ -111,7 +111,10 @@ where
                 current.borrow_mut().new_children(node.clone(), child_value);
             }
 
-            let child = current.borrow().get(node).unwrap();
+            let child = current
+                .borrow()
+                .get(node)
+                .expect("The node should be present second time");
             current = child;
         }
     }
@@ -248,7 +251,10 @@ where
         );
         self.search(&directions, &[])?;
 
-        let total_time = self.start_time.unwrap().elapsed();
+        let total_time = self
+            .start_time
+            .expect("Start time should be set in current function")
+            .elapsed();
         warn!(
             "Search completed (depth reached: {}, solutions found: {})",
             self.depth_reached,
@@ -610,7 +616,7 @@ where
     /// Later that jobs will be used as candidates for a deeper search.
     fn try_direction(&mut self, path: &[(Point, B::Color)]) -> Result<bool, String> {
         let depth = path.len();
-        let direction = *path.last().unwrap();
+        let direction = *path.last().expect("Path should be non-empty");
 
         // add every cell to the jobs queue
         let mut probe_jobs = self.probe_solver.unsolved_cells();
