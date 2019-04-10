@@ -15,7 +15,7 @@ echo "Start at $(date)"
 for i in $@; do
     path=puzzles/${i}.xml
     if [[ ! -f ${path} ]]; then
-        echo "File not found locally. Donwload into $path"
+        echo "File not found locally. Download into $path"
         wget --timeout=10 -qO- "http://webpbn.com/XMLpuz.cgi?id=$i" > ${path}
         if [[ $? -ne 0 ]]; then
             echo "Failed to download puzzle #$i: timeout" >&2

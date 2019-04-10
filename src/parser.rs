@@ -730,7 +730,7 @@ mod tests {
         assert_eq!(
             MyFormat::parse_clues(
                 &String::from("1 2 \n # the multi-line \n # comment \n 3, 4"),
-                &palette()
+                &palette(),
             ),
             vec![
                 Description::new(vec![block(1), block(2)]),

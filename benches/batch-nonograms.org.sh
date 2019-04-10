@@ -35,7 +35,7 @@ function find_puzzle_url() {
 for i in $@; do
     path=puzzles-norg/${i}.html
     if [[ ! -f ${path} ]]; then
-        echo "File not found locally. Donwload into $path"
+        echo "File not found locally. Download into $path"
         url=$(find_puzzle_url ${i})
         if [[ ! ${url} ]]; then
             echo "Not found URL for puzzle #$i" >&2

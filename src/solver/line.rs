@@ -500,7 +500,7 @@ mod tests_solve_color {
 
     #[test]
     fn empty_3_cells() {
-        check_solve(&[], &unsolved_line(3), &vec![w(); 3])
+        check_solve(&[], &unsolved_line(3), &[w(); 3])
     }
 
     #[test]
@@ -508,7 +508,7 @@ mod tests_solve_color {
         check_solve(
             &[ColoredBlock::from_size_and_color(1, 4)],
             &unsolved_line(1),
-            &vec![4],
+            &[4],
         );
     }
 
@@ -529,7 +529,7 @@ mod tests_solve_color {
         check_solve(
             &[ColoredBlock::from_size_and_color(1, 4)],
             &unsolved_line(2),
-            &vec![4 + w(); 2],
+            &[4 + w(); 2],
         );
     }
 
@@ -538,7 +538,7 @@ mod tests_solve_color {
         check_solve(
             &vec![ColoredBlock::from_size_and_color(1, 4); 2],
             &unsolved_line(3),
-            &vec![4, w(), 4],
+            &[4, w(), 4],
         );
     }
 

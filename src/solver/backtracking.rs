@@ -559,7 +559,7 @@ where
                     self.add_solution()?;
                     warn!(
                         "The negation of color {:?} for the {:?} lead to full solution. No need to traverse the path {:?} anymore.",
-                          color, point, path);
+                        color, point, path);
                     return Ok(true);
                 }
             }

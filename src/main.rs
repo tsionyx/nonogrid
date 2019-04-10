@@ -1,10 +1,10 @@
-mod block;
-mod board;
-mod cache;
-mod parser;
-mod render;
-mod solver;
-mod utils;
+pub mod block;
+pub mod board;
+pub(crate) mod cache;
+pub mod parser;
+pub mod render;
+pub mod solver;
+pub(crate) mod utils;
 
 use block::binary::BinaryBlock;
 use block::multicolor::ColoredBlock;

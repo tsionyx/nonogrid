@@ -117,7 +117,7 @@ where
             .map(|desc| {
                 uniq_cols
                     .iter()
-                    .position(|unqi_col| unqi_col == &desc.vec)
+                    .position(|uniq_col| uniq_col == &desc.vec)
                     .unwrap()
             })
             .collect();
