@@ -80,8 +80,8 @@ impl Color for MultiColor {
         self.variants_as_ids().into_iter().map(Self).collect()
     }
 
-    fn as_color_id(&self) -> ColorId {
-        self.0
+    fn as_color_id(&self) -> Option<ColorId> {
+        Some(self.0)
     }
 
     fn from_color_ids(ids: &[ColorId]) -> Self {

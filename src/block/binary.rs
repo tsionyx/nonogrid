@@ -60,8 +60,8 @@ impl Color for BinaryColor {
         }
     }
 
-    fn as_color_id(&self) -> ColorId {
-        ColorPalette::WHITE_ID
+    fn as_color_id(&self) -> Option<ColorId> {
+        None
     }
 
     fn from_color_ids(ids: &[ColorId]) -> Self {

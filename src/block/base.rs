@@ -31,7 +31,7 @@ where
     where
         Self: Sized;
 
-    fn as_color_id(&self) -> ColorId;
+    fn as_color_id(&self) -> Option<ColorId>;
     fn from_color_ids(ids: &[ColorId]) -> Self;
 }
 

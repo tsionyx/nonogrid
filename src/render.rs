@@ -1,5 +1,5 @@
-use super::block::base::color::{ColorDesc, ColorId};
-use super::block::{Block, Description};
+use super::block::base::color::ColorDesc;
+use super::block::{Block, Color, Description};
 use super::board::Board;
 use super::utils::{pad, pad_with, transpose};
 
@@ -7,7 +7,8 @@ use std::cell::{Ref, RefCell};
 use std::fmt::Display;
 use std::rc::Rc;
 
-use colored::{Color, ColoredString, Colorize};
+use colored;
+use colored::{ColoredString, Colorize};
 
 pub trait Renderer<B>
 where
@@ -129,7 +130,7 @@ where
 
     fn from_desc(color_desc: &ColorDesc) -> ColoredString {
         let symbol = color_desc.symbol();
-        let color_res: Result<Color, _> = color_desc.name().parse();
+        let color_res: Result<colored::Color, _> = color_desc.name().parse();
         if let Ok(color) = color_res {
             //symbol.color(color)
             " ".on_color(color)
@@ -142,17 +143,16 @@ where
     where
         B::Color: Display,
     {
-        let symbol = cell.to_string();
-        let color_id = symbol.parse::<ColorId>();
+        let id = cell.as_color_id();
 
-        if let Ok(color_id) = color_id {
+        if let Some(color_id) = id {
             let color_desc = self.board().desc_by_id(color_id);
             if let Some(color_desc) = &color_desc {
                 return Self::from_desc(color_desc);
             }
         }
 
-        symbol.normal()
+        cell.to_string().normal()
     }
 
     fn grid_lines(&self) -> Vec<Vec<ColoredString>>

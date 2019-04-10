@@ -141,7 +141,11 @@ where
     fn all_colors(descriptions: &[Description<B>]) -> Vec<ColorId> {
         let mut colors: Vec<_> = descriptions
             .iter()
-            .flat_map(|row| row.vec.iter().map(|block| block.color().as_color_id()))
+            .flat_map(|row| {
+                row.vec
+                    .iter()
+                    .filter_map(|block| block.color().as_color_id())
+            })
             .collect();
 
         colors.push(ColorPalette::WHITE_ID);
