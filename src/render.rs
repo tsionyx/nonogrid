@@ -9,6 +9,7 @@ use std::rc::Rc;
 
 use colored;
 use colored::{ColoredString, Colorize};
+use hashbrown::HashMap;
 
 pub trait Renderer<B>
 where
@@ -159,9 +160,19 @@ where
     where
         B::Color: Display,
     {
+        let mut color_cache = HashMap::new();
         self.board()
             .iter_rows()
-            .map(|row| row.iter().map(|cell| self.cell_symbol(cell)).collect())
+            .map(|row| {
+                row.iter()
+                    .map(|cell| {
+                        color_cache
+                            .entry(cell)
+                            .or_insert_with(|| self.cell_symbol(cell))
+                            .clone()
+                    })
+                    .collect()
+            })
             .collect()
     }
 }
