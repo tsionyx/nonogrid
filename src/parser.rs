@@ -9,6 +9,7 @@ use std::fs;
 
 use self::sxd_xpath::nodeset::{Node, Nodeset};
 use self::sxd_xpath::{evaluate_xpath, Value};
+use hashbrown::HashMap;
 
 #[cfg(feature = "web")]
 extern crate reqwest;
@@ -548,14 +549,17 @@ impl NonogramsOrg {
         let (_colors, solution_matrix) = self.decipher();
         let palette = self.get_palette();
 
+        let mut mapping_cache = HashMap::new();
         solution_matrix
             .iter()
             .map(|row| {
                 row.iter()
-                    .map(|item| {
-                        palette
-                            .id_by_name(&Self::color_name_by_id(*item))
-                            .unwrap_or(0)
+                    .map(|&item| {
+                        *mapping_cache.entry(item).or_insert_with(|| {
+                            palette
+                                .id_by_name(&Self::color_name_by_id(item))
+                                .unwrap_or(0)
+                        })
                     })
                     .collect()
             })
