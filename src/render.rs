@@ -45,24 +45,21 @@ where
 
         let header: Vec<_> = header
             .into_iter()
-            .map(|row| row.into_iter().map(|s| s.normal()).collect::<Vec<_>>())
+            .map(|row| row.into_iter().map(|s| s.normal()).collect())
             .collect();
 
         let side = self.side_lines();
-        let mut side: Vec<_> = side
+        let side: Vec<_> = side
             .into_iter()
-            .map(|row| row.into_iter().map(|s| s.normal()).collect::<Vec<_>>())
+            .map(|row| row.into_iter().map(|s| s.normal()).collect())
             .collect();
 
         let grid = self.grid_lines();
-        let grid: Vec<_> = side
-            .iter_mut()
+        let grid = side
+            .iter()
             .zip(grid)
-            .map(|(s, g)| {
-                s.extend(g);
-                // convert into immutable, https://stackoverflow.com/a/41367094
-                s.to_owned()
-            })
+            // https://users.rust-lang.org/t/how-to-concatenate-two-vectors/8324/4
+            .map(|(s, g): (&Vec<ColoredString>, _)| [&s[..], &g].concat())
             .collect();
 
         let lines = vec![header, grid];
@@ -73,7 +70,7 @@ where
                 line.iter()
                     .map(|symbol| pad(symbol, 2, true))
                     .collect::<Vec<_>>()
-                    .join("")
+                    .concat()
             })
             .collect::<Vec<_>>()
             .join("\n")
