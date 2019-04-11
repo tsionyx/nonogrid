@@ -55,7 +55,15 @@ where
     rows_cache_indexes: Vec<usize>,
     cols_cache_indexes: Vec<usize>,
     cell_rate_memo: RefCell<HashMap<B::Color, f64>>,
+    // callbacks
+    on_set_line: Box<FnMut(bool, usize)>,
+    on_restore: Box<FnMut()>,
+    on_change_color: Box<FnMut(Point)>,
 }
+
+fn empty_set_line_callback(_is_column: bool, _index: usize) {}
+fn empty_restore_callback() {}
+fn empty_change_color_callback(_point: Point) {}
 
 impl<B> Board<B>
 where
@@ -135,6 +143,9 @@ where
             rows_cache_indexes,
             cols_cache_indexes,
             cell_rate_memo: RefCell::new(HashMap::new()),
+            on_set_line: Box::new(empty_set_line_callback),
+            on_restore: Box::new(empty_restore_callback),
+            on_change_color: Box::new(empty_change_color_callback),
         }
     }
 
@@ -215,6 +226,8 @@ where
             .for_each(|(linear_index, &new_cell)| {
                 self.cells[linear_index] = new_cell;
             });
+
+        (self.on_set_line)(false, index);
     }
 
     pub fn set_column(&mut self, index: usize, new: &[B::Color]) {
@@ -226,6 +239,8 @@ where
             .for_each(|(linear_index, &new_cell)| {
                 self.cells[linear_index] = new_cell;
             });
+
+        (self.on_set_line)(true, index);
     }
 
     /// How many cells in a line are known to be of particular color
@@ -416,6 +431,19 @@ where
 
     pub fn restore(&mut self, cells: Vec<B::Color>) {
         self.cells = cells;
+        (self.on_restore)();
+    }
+
+    pub fn set_callback_on_set_line<CB: 'static + FnMut(bool, usize)>(&mut self, f: CB) {
+        self.on_set_line = Box::new(f);
+    }
+
+    pub fn set_callback_on_restore<CB: 'static + FnMut()>(&mut self, f: CB) {
+        self.on_restore = Box::new(f);
+    }
+
+    pub fn set_callback_on_change_color<CB: 'static + FnMut(Point)>(&mut self, f: CB) {
+        self.on_change_color = Box::new(f);
     }
 }
 
@@ -429,6 +457,8 @@ where
         let Point { x, y } = *point;
         let index = self.linear_index(y, x);
         self.cells[index] = old_value + *color;
+
+        (self.on_change_color)(*point);
     }
 
     pub fn unset_color(&mut self, point: &Point, color: &B::Color) -> Result<(), String> {
@@ -436,6 +466,8 @@ where
         let Point { x, y } = *point;
         let index = self.linear_index(y, x);
         self.cells[index] = (old_value - *color)?;
+        (self.on_change_color)(*point);
+
         Ok(())
     }
 }
@@ -457,6 +489,9 @@ where
             rows_cache_indexes: self.rows_cache_indexes.clone(),
             cols_cache_indexes: self.cols_cache_indexes.clone(),
             cell_rate_memo: RefCell::new(HashMap::new()),
+            on_set_line: Box::new(empty_set_line_callback),
+            on_restore: Box::new(empty_restore_callback),
+            on_change_color: Box::new(empty_change_color_callback),
         }
     }
 }
