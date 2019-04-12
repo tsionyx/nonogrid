@@ -56,14 +56,10 @@ where
     cols_cache_indexes: Vec<usize>,
     cell_rate_memo: RefCell<HashMap<B::Color, f64>>,
     // callbacks
-    on_set_line: Box<Fn(bool, usize)>,
-    on_restore: Box<Fn()>,
-    on_change_color: Box<Fn(Point)>,
+    on_set_line: Option<Box<Fn(bool, usize)>>,
+    on_restore: Option<Box<Fn()>>,
+    on_change_color: Option<Box<Fn(Point)>>,
 }
-
-fn empty_set_line_callback(_is_column: bool, _index: usize) {}
-fn empty_restore_callback() {}
-fn empty_change_color_callback(_point: Point) {}
 
 impl<B> Board<B>
 where
@@ -143,9 +139,9 @@ where
             rows_cache_indexes,
             cols_cache_indexes,
             cell_rate_memo: RefCell::new(HashMap::new()),
-            on_set_line: Box::new(empty_set_line_callback),
-            on_restore: Box::new(empty_restore_callback),
-            on_change_color: Box::new(empty_change_color_callback),
+            on_set_line: None,
+            on_restore: None,
+            on_change_color: None,
         }
     }
 
@@ -457,35 +453,43 @@ where
     B: Block,
 {
     pub fn set_callback_on_set_line<CB: 'static + Fn(bool, usize)>(&mut self, f: CB) {
-        self.on_set_line = Box::new(f);
+        self.on_set_line = Some(Box::new(f));
     }
 
     pub fn set_callback_on_restore<CB: 'static + Fn()>(&mut self, f: CB) {
-        self.on_restore = Box::new(f);
+        self.on_restore = Some(Box::new(f));
     }
 
     pub fn set_callback_on_change_color<CB: 'static + Fn(Point)>(&mut self, f: CB) {
-        self.on_change_color = Box::new(f);
+        self.on_change_color = Some(Box::new(f));
     }
 
     pub fn set_row_with_callback(board_ref: Rc<RefCell<Self>>, index: usize, new: &[B::Color]) {
         board_ref.borrow_mut().set_row(index, new);
-        (board_ref.borrow().on_set_line)(false, index);
+        if let Some(f) = &board_ref.borrow().on_set_line {
+            f(false, index);
+        }
     }
 
     pub fn set_column_with_callback(board_ref: Rc<RefCell<Self>>, index: usize, new: &[B::Color]) {
         board_ref.borrow_mut().set_column(index, new);
-        (board_ref.borrow().on_set_line)(true, index);
+        if let Some(f) = &board_ref.borrow().on_set_line {
+            f(true, index);
+        }
     }
 
     pub fn restore_with_callback(board_ref: Rc<RefCell<Self>>, cells: Vec<B::Color>) {
         board_ref.borrow_mut().restore(cells);
-        (board_ref.borrow().on_restore)();
+        if let Some(f) = &board_ref.borrow().on_restore {
+            f();
+        }
     }
 
     pub fn set_color_with_callback(board_ref: Rc<RefCell<Self>>, point: &Point, color: &B::Color) {
         board_ref.borrow_mut().set_color(point, color);
-        (board_ref.borrow().on_change_color)(*point);
+        if let Some(f) = &board_ref.borrow().on_change_color {
+            f(*point);
+        }
     }
 
     pub fn unset_color_with_callback(
@@ -494,7 +498,9 @@ where
         color: &B::Color,
     ) -> Result<(), String> {
         board_ref.borrow_mut().unset_color(point, color)?;
-        (board_ref.borrow().on_change_color)(*point);
+        if let Some(f) = &board_ref.borrow().on_change_color {
+            f(*point);
+        }
         Ok(())
     }
 }
@@ -516,9 +522,9 @@ where
             rows_cache_indexes: self.rows_cache_indexes.clone(),
             cols_cache_indexes: self.cols_cache_indexes.clone(),
             cell_rate_memo: RefCell::new(HashMap::new()),
-            on_set_line: Box::new(empty_set_line_callback),
-            on_restore: Box::new(empty_restore_callback),
-            on_change_color: Box::new(empty_change_color_callback),
+            on_set_line: None,
+            on_restore: None,
+            on_change_color: None,
         }
     }
 }
