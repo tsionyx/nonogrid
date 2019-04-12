@@ -220,7 +220,7 @@ impl MyFormat {
     /// assert_eq!(colors, ("b".to_string(), '*', "blue".to_string()));
     /// ```
     pub fn parse_color_def(color_def: &str) -> (String, char, String) {
-        let parts: Vec<_> = color_def.split('=').map(|part| part.trim()).collect();
+        let parts: Vec<_> = color_def.split('=').map(str::trim).collect();
         let name = parts[0];
         let mut desc = parts[1].to_string();
         let symbol = desc.pop().expect("Empty color description in definition");

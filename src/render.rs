@@ -45,13 +45,21 @@ where
 
         let header: Vec<_> = header
             .into_iter()
-            .map(|row| row.into_iter().map(|s| s.normal()).collect())
+            .map(|row| {
+                row.into_iter()
+                    .map(|s| ColoredString::from(s.as_str()))
+                    .collect()
+            })
             .collect();
 
         let side = self.side_lines();
         let side: Vec<_> = side
             .into_iter()
-            .map(|row| row.into_iter().map(|s| s.normal()).collect())
+            .map(|row| {
+                row.into_iter()
+                    .map(|s| ColoredString::from(s.as_str()))
+                    .collect()
+            })
             .collect();
 
         let grid = self.grid_lines();
@@ -101,7 +109,7 @@ where
     }
 
     fn desc_to_string(desc: &Rc<Description<B>>) -> Vec<String> {
-        (*desc).vec.iter().map(|block| block.to_string()).collect()
+        (*desc).vec.iter().map(ToString::to_string).collect()
     }
 
     fn descriptions_to_matrix(descriptions: &[Rc<Description<B>>]) -> Vec<Vec<String>> {
@@ -133,7 +141,7 @@ where
             //symbol.color(color)
             " ".on_color(color)
         } else {
-            symbol.normal()
+            ColoredString::from(symbol.as_str())
         }
     }
 
@@ -150,7 +158,7 @@ where
             }
         }
 
-        cell.to_string().normal()
+        ColoredString::from(cell.to_string().as_str())
     }
 
     fn grid_lines(&self) -> Vec<Vec<ColoredString>>

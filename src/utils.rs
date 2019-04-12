@@ -33,7 +33,7 @@ pub fn transpose<T: Clone>(input: &[Vec<T>]) -> Result<Vec<Vec<T>>, String> {
         return Ok(vec![]);
     }
 
-    let sizes: Vec<_> = input.iter().map(|row| row.len()).collect();
+    let sizes: Vec<_> = input.iter().map(Vec::len).collect();
     let min_size = sizes.iter().min().unwrap_or(&0);
     let max_size = sizes.iter().max().unwrap_or(&0);
 

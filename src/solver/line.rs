@@ -52,7 +52,7 @@ where
 
         let block_sums = Self::calc_block_sum(&*desc);
         let solution_matrix = Self::build_solution_matrix(&*desc, &line);
-        let solved_line = line.iter().map(|cell| cell.solved_copy()).collect();
+        let solved_line = line.iter().map(DynamicColor::solved_copy).collect();
 
         Self {
             desc,
