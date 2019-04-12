@@ -276,12 +276,11 @@ where
         if old == new {
             return vec![];
         }
-        let mut board = self.board.borrow_mut();
 
         if is_column {
-            board.set_column(index, new);
+            Board::set_column_with_callback(Rc::clone(&self.board), index, new);
         } else {
-            board.set_row(index, new);
+            Board::set_row_with_callback(Rc::clone(&self.board), index, new);
         }
 
         debug!("Original: {:?}", old);

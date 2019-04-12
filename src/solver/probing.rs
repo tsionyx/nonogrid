@@ -162,9 +162,11 @@ where
                 //iteration_probes.clear();
 
                 for color in colors {
-                    self.board
-                        .borrow_mut()
-                        .unset_color(&contradiction, &color)?;
+                    Board::unset_color_with_callback(
+                        Rc::clone(&self.board),
+                        &contradiction,
+                        &color,
+                    )?;
                 }
                 for (point, priority) in self.propagate_point::<S>(&contradiction)? {
                     probes.push(point, priority);
@@ -224,10 +226,10 @@ where
 
         for assumption in vars {
             let save = self.board().make_snapshot();
-            self.board.borrow_mut().set_color(&point, &assumption);
+            Board::set_color_with_callback(Rc::clone(&self.board), &point, &assumption);
 
             let solved = self.run_propagation::<S>(&point);
-            self.board.borrow_mut().restore(save);
+            Board::restore_with_callback(Rc::clone(&self.board), save);
 
             if let Ok(new_cells) = solved {
                 if !new_cells.is_empty() {

@@ -9,6 +9,7 @@ pub(crate) mod utils;
 use block::binary::BinaryBlock;
 use block::multicolor::ColoredBlock;
 use block::Block;
+use board::Board;
 use parser::{BoardParser, LocalReader, NetworkReader, PuzzleScheme};
 use render::{Renderer, ShellRenderer};
 use solver::line::{DynamicColor, DynamicSolver};
@@ -88,14 +89,34 @@ where
     }
 }
 
+#[allow(dead_code)]
+fn example_set_line_callback<B, R>(renderer: &R, is_column: bool, index: usize)
+where
+    B: Block,
+    R: Renderer<B>,
+{
+    println!(
+        "Set {}-th {}",
+        index,
+        if is_column { "column" } else { "row" }
+    );
+    println!("{}", renderer.render())
+}
+
 fn run_with_block<B, P>(board_parser: &P, search_options: SearchOptions)
 where
-    B: Block + Display,
+    B: 'static + Block + Display,
     B::Color: DynamicColor + Display,
     P: BoardParser,
 {
     let board = board_parser.parse::<B>();
     let board = Rc::new(RefCell::new(board));
+    //let callback_renderer = ShellRenderer::with_board(Rc::clone(&board));
+    //board
+    //    .borrow_mut()
+    //    .set_callback_on_set_line(move |is_column, index| {
+    //        example_set_line_callback(&callback_renderer, is_column, index)
+    //    });
 
     let r = ShellRenderer::with_board(Rc::clone(&board));
 
@@ -113,7 +134,7 @@ where
         if !solutions.is_empty() && (!board.borrow().is_solved_full() || solutions.len() > 1) {
             println!("Backtracking found {} solutions:", solutions.len());
             for solution in solutions.iter() {
-                board.borrow_mut().restore(solution.clone());
+                Board::restore_with_callback(Rc::clone(&board), solution.clone());
                 println!("{}", r.render());
             }
         }

@@ -415,7 +415,7 @@ where
 
         // do not restore the solved cells on a root path - they are really solved!
         if !path.is_empty() {
-            self.board.borrow_mut().restore(save);
+            Board::restore_with_callback(Rc::clone(&self.board), save);
             self.set_explored(path);
         }
 
@@ -516,7 +516,7 @@ where
 
             let state_result = self.try_direction(&full_path);
             //let is_solved = board.is_solved_full();
-            self.board.borrow_mut().restore(guess_save);
+            Board::restore_with_callback(Rc::clone(&self.board), guess_save);
             self.set_explored(&full_path);
 
             if state_result.is_err() {
@@ -532,9 +532,10 @@ where
                     color, point
                 );
 
-                let err = self.board.borrow_mut().unset_color(&point, &color);
+                let err =
+                    Board::unset_color_with_callback(Rc::clone(&self.board), &point, &color).err();
                 board_changed = true;
-                if err.is_err() {
+                if err.is_some() {
                     // the whole `path` branch of a search tree is a dead end
                     warn!(
                         "The last possible color {:?} for the {:?} cannot be unset. The whole branch (depth={}) is invalid.",
@@ -683,7 +684,7 @@ where
         //let save = self.board().make_snapshot();
 
         let mut probes = vec![];
-        self.board.borrow_mut().set_color(&point, &color);
+        Board::set_color_with_callback(Rc::clone(&self.board), &point, &color);
         for (new_point, priority) in self.probe_solver.propagate_point::<S>(&point)? {
             probes.push((new_point, priority));
         }

@@ -56,9 +56,9 @@ where
     cols_cache_indexes: Vec<usize>,
     cell_rate_memo: RefCell<HashMap<B::Color, f64>>,
     // callbacks
-    on_set_line: Box<FnMut(bool, usize)>,
-    on_restore: Box<FnMut()>,
-    on_change_color: Box<FnMut(Point)>,
+    on_set_line: Box<Fn(bool, usize)>,
+    on_restore: Box<Fn()>,
+    on_change_color: Box<Fn(Point)>,
 }
 
 fn empty_set_line_callback(_is_column: bool, _index: usize) {}
@@ -219,18 +219,16 @@ where
         row_index * width + column_index
     }
 
-    pub fn set_row(&mut self, index: usize, new: &[B::Color]) {
+    fn set_row(&mut self, index: usize, new: &[B::Color]) {
         let row_start = self.linear_index(index, 0);
         (row_start..)
             .zip(new)
             .for_each(|(linear_index, &new_cell)| {
                 self.cells[linear_index] = new_cell;
             });
-
-        (self.on_set_line)(false, index);
     }
 
-    pub fn set_column(&mut self, index: usize, new: &[B::Color]) {
+    fn set_column(&mut self, index: usize, new: &[B::Color]) {
         let width = self.width();
         let column_indexes = (index..).step_by(width);
 
@@ -239,8 +237,6 @@ where
             .for_each(|(linear_index, &new_cell)| {
                 self.cells[linear_index] = new_cell;
             });
-
-        (self.on_set_line)(true, index);
     }
 
     /// How many cells in a line are known to be of particular color
@@ -429,21 +425,8 @@ where
         self.cells.clone()
     }
 
-    pub fn restore(&mut self, cells: Vec<B::Color>) {
+    fn restore(&mut self, cells: Vec<B::Color>) {
         self.cells = cells;
-        (self.on_restore)();
-    }
-
-    pub fn set_callback_on_set_line<CB: 'static + FnMut(bool, usize)>(&mut self, f: CB) {
-        self.on_set_line = Box::new(f);
-    }
-
-    pub fn set_callback_on_restore<CB: 'static + FnMut()>(&mut self, f: CB) {
-        self.on_restore = Box::new(f);
-    }
-
-    pub fn set_callback_on_change_color<CB: 'static + FnMut(Point)>(&mut self, f: CB) {
-        self.on_change_color = Box::new(f);
     }
 }
 
@@ -452,22 +435,66 @@ where
     B: Block,
     B::Color: Copy,
 {
-    pub fn set_color(&mut self, point: &Point, color: &B::Color) {
+    fn set_color(&mut self, point: &Point, color: &B::Color) {
         let old_value = self.cell(point);
         let Point { x, y } = *point;
         let index = self.linear_index(y, x);
         self.cells[index] = old_value + *color;
-
-        (self.on_change_color)(*point);
     }
 
-    pub fn unset_color(&mut self, point: &Point, color: &B::Color) -> Result<(), String> {
+    fn unset_color(&mut self, point: &Point, color: &B::Color) -> Result<(), String> {
         let old_value = self.cell(point);
         let Point { x, y } = *point;
         let index = self.linear_index(y, x);
         self.cells[index] = (old_value - *color)?;
-        (self.on_change_color)(*point);
 
+        Ok(())
+    }
+}
+
+impl<B> Board<B>
+where
+    B: Block,
+{
+    pub fn set_callback_on_set_line<CB: 'static + Fn(bool, usize)>(&mut self, f: CB) {
+        self.on_set_line = Box::new(f);
+    }
+
+    pub fn set_callback_on_restore<CB: 'static + Fn()>(&mut self, f: CB) {
+        self.on_restore = Box::new(f);
+    }
+
+    pub fn set_callback_on_change_color<CB: 'static + Fn(Point)>(&mut self, f: CB) {
+        self.on_change_color = Box::new(f);
+    }
+
+    pub fn set_row_with_callback(board_ref: Rc<RefCell<Self>>, index: usize, new: &[B::Color]) {
+        board_ref.borrow_mut().set_row(index, new);
+        (board_ref.borrow().on_set_line)(false, index);
+    }
+
+    pub fn set_column_with_callback(board_ref: Rc<RefCell<Self>>, index: usize, new: &[B::Color]) {
+        board_ref.borrow_mut().set_column(index, new);
+        (board_ref.borrow().on_set_line)(true, index);
+    }
+
+    pub fn restore_with_callback(board_ref: Rc<RefCell<Self>>, cells: Vec<B::Color>) {
+        board_ref.borrow_mut().restore(cells);
+        (board_ref.borrow().on_restore)();
+    }
+
+    pub fn set_color_with_callback(board_ref: Rc<RefCell<Self>>, point: &Point, color: &B::Color) {
+        board_ref.borrow_mut().set_color(point, color);
+        (board_ref.borrow().on_change_color)(*point);
+    }
+
+    pub fn unset_color_with_callback(
+        board_ref: Rc<RefCell<Self>>,
+        point: &Point,
+        color: &B::Color,
+    ) -> Result<(), String> {
+        board_ref.borrow_mut().unset_color(point, color)?;
+        (board_ref.borrow().on_change_color)(*point);
         Ok(())
     }
 }
