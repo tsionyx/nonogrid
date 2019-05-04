@@ -1,13 +1,12 @@
 use super::super::block::{Block, Color};
 use super::super::board::{Board, Point};
+use super::super::utils::rc::{MutRc, ReadRef};
 use super::line::LineSolver;
 use super::probing::{Impact, ProbeSolver};
 
-use std::cell::{Ref, RefCell};
 use std::cmp::Reverse;
 use std::fmt;
 use std::marker::PhantomData;
-use std::rc::Rc;
 use std::time::Instant;
 
 use hashbrown::{HashMap, HashSet};
@@ -21,7 +20,7 @@ where
     P: ProbeSolver<BlockType = B>,
     S: LineSolver<BlockType = B>,
 {
-    board: Rc<RefCell<Board<B>>>,
+    board: MutRc<Board<B>>,
     probe_solver: P,
 
     // search options
@@ -50,7 +49,7 @@ enum ChoosePixel {
     MinLogd,
 }
 
-type SearchTreeRef<K, V> = Rc<RefCell<SearchTree<K, V>>>;
+type SearchTreeRef<K, V> = MutRc<SearchTree<K, V>>;
 
 pub struct SearchTree<K, V> {
     value: Option<V>,
@@ -80,39 +79,39 @@ where
 
     fn new_children(&mut self, key: K, value: Option<V>) {
         self.children
-            .push((key, Rc::new(RefCell::new(Self::with_option(value)))));
+            .push((key, MutRc::new(Self::with_option(value))));
     }
 
-    fn get(&self, key: &K) -> Option<Rc<RefCell<Self>>> {
+    fn get(&self, key: &K) -> Option<MutRc<Self>> {
         self.children.iter().find_map(|(child_key, child)| {
             if child_key == key {
-                Some(Rc::clone(child))
+                Some(MutRc::clone(child))
             } else {
                 None
             }
         })
     }
 
-    fn add(this: Rc<RefCell<Self>>, path: &[K], value: Option<V>) {
-        if path.is_empty() && this.borrow_mut().value.is_none() {
-            this.borrow_mut().value = value;
+    fn add(this: MutRc<Self>, path: &[K], value: Option<V>) {
+        if path.is_empty() && this.read().value.is_none() {
+            this.write().value = value;
             return;
         }
 
         let mut current = this;
         for (i, node) in path.iter().enumerate() {
-            let child = current.borrow().get(node);
+            let child = current.read().get(node);
             if child.is_none() {
                 let child_value = if i == path.len() - 1 {
                     value.clone()
                 } else {
                     None
                 };
-                current.borrow_mut().new_children(node.clone(), child_value);
+                current.write().new_children(node.clone(), child_value);
             }
 
             let child = current
-                .borrow()
+                .read()
                 .get(node)
                 .expect("The node should be present second time");
             current = child;
@@ -165,7 +164,7 @@ where
         let last_index = self.children.len() - 1;
 
         for (i, (child_key, child)) in self.children.iter().enumerate() {
-            let child_format = child.borrow().format(spaces + 2, indent_size);
+            let child_format = child.read().format(spaces + 2, indent_size);
             let trail_comma = if i == last_index { "" } else { "," };
             res.push(format!(
                 "{}{:?}: {}{}",
@@ -206,17 +205,17 @@ where
     S: LineSolver<BlockType = B>,
 {
     #[allow(dead_code)]
-    pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
+    pub fn new(board: MutRc<Board<B>>) -> Self {
         Self::with_options(board, None, None, None)
     }
 
     pub fn with_options(
-        board: Rc<RefCell<Board<B>>>,
+        board: MutRc<Board<B>>,
         max_solutions: Option<usize>,
         timeout: Option<u32>,
         max_depth: Option<usize>,
     ) -> Self {
-        let probe_solver = P::with_board(Rc::clone(&board));
+        let probe_solver = P::with_board(MutRc::clone(&board));
         Self {
             board,
             probe_solver,
@@ -227,7 +226,7 @@ where
             depth_reached: 0,
             start_time: None,
             explored_paths: HashSet::new(),
-            search_tree: Rc::new(RefCell::new(SearchTree::new())),
+            search_tree: MutRc::new(SearchTree::new()),
             _phantom: PhantomData,
         }
     }
@@ -272,8 +271,8 @@ where
         Ok(())
     }
 
-    fn board(&self) -> Ref<Board<B>> {
-        self.board.borrow()
+    fn board(&self) -> ReadRef<Board<B>> {
+        self.board.read()
     }
 
     fn is_solved(&self) -> bool {
@@ -416,7 +415,7 @@ where
 
         // do not restore the solved cells on a root path - they are really solved!
         if !path.is_empty() {
-            Board::restore_with_callback(Rc::clone(&self.board), save);
+            Board::restore_with_callback(MutRc::clone(&self.board), save);
             self.set_explored(path);
         }
 
@@ -517,7 +516,7 @@ where
 
             let state_result = self.try_direction(&full_path);
             //let is_solved = board.is_solved_full();
-            Board::restore_with_callback(Rc::clone(&self.board), guess_save);
+            Board::restore_with_callback(MutRc::clone(&self.board), guess_save);
             self.set_explored(&full_path);
 
             if state_result.is_err() {
@@ -534,7 +533,8 @@ where
                 );
 
                 let err =
-                    Board::unset_color_with_callback(Rc::clone(&self.board), &point, &color).err();
+                    Board::unset_color_with_callback(MutRc::clone(&self.board), &point, &color)
+                        .err();
                 board_changed = true;
                 if err.is_some() {
                     // the whole `path` branch of a search tree is a dead end
@@ -605,11 +605,11 @@ where
     }
 
     fn add_search_score(&mut self, path: &[(Point, B::Color)], score: f64) {
-        SearchTree::add(Rc::clone(&self.search_tree), path, Some(score));
+        SearchTree::add(MutRc::clone(&self.search_tree), path, Some(score));
     }
 
     fn add_search_deadend(&mut self, path: &[(Point, B::Color)]) {
-        SearchTree::add(Rc::clone(&self.search_tree), path, None);
+        SearchTree::add(MutRc::clone(&self.search_tree), path, None);
     }
 
     /// Trying to search for solutions in the given direction.
@@ -685,7 +685,7 @@ where
         //let save = self.board().make_snapshot();
 
         let mut probes = vec![];
-        Board::set_color_with_callback(Rc::clone(&self.board), &point, &color);
+        Board::set_color_with_callback(MutRc::clone(&self.board), &point, &color);
         for (new_point, priority) in self.probe_solver.propagate_point::<S>(&point)? {
             probes.push((new_point, priority));
         }

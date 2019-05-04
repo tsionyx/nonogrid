@@ -1,10 +1,9 @@
 use super::super::block::{Block, Color};
 use super::super::board::{Board, Point};
+use super::super::utils::rc::{MutRc, ReadRef};
 use super::line::LineSolver;
 use super::propagation;
 
-use std::cell::{Ref, RefCell};
-use std::rc::Rc;
 //use std::time::Instant;
 
 use hashbrown::hash_map::DefaultHashBuilder;
@@ -18,7 +17,7 @@ type FloatPriorityQueue<K> = PQ<K, OrderedFloat<f64>, DefaultHashBuilder>;
 pub trait ProbeSolver {
     type BlockType: Block;
 
-    fn with_board(board: Rc<RefCell<Board<Self::BlockType>>>) -> Self;
+    fn with_board(board: MutRc<Board<Self::BlockType>>) -> Self;
 
     fn unsolved_cells(&self) -> FloatPriorityQueue<Point>;
     fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, OrderedFloat<f64>)>, String>
@@ -44,7 +43,7 @@ pub struct FullProbe1<B>
 where
     B: Block,
 {
-    board: Rc<RefCell<Board<B>>>,
+    board: MutRc<Board<B>>,
 }
 
 const PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED: f64 = 10.0;
@@ -56,8 +55,8 @@ where
 {
     type BlockType = B;
 
-    fn with_board(board: Rc<RefCell<Board<B>>>) -> Self {
-        board.borrow_mut().init_cache();
+    fn with_board(board: MutRc<Board<B>>) -> Self {
+        board.write().init_cache();
         Self { board }
     }
 
@@ -163,7 +162,7 @@ where
 
                 for color in colors {
                     Board::unset_color_with_callback(
-                        Rc::clone(&self.board),
+                        MutRc::clone(&self.board),
                         &contradiction,
                         &color,
                     )?;
@@ -193,15 +192,15 @@ impl<B> FullProbe1<B>
 where
     B: Block,
 {
-    fn board(&self) -> Ref<Board<B>> {
-        self.board.borrow()
+    fn board(&self) -> ReadRef<Board<B>> {
+        self.board.read()
     }
 
     fn run_propagation<S>(&self, point: &Point) -> Result<Vec<Point>, String>
     where
         S: LineSolver<BlockType = B>,
     {
-        let point_solver = propagation::Solver::with_point(Rc::clone(&self.board), *point);
+        let point_solver = propagation::Solver::with_point(MutRc::clone(&self.board), *point);
         point_solver.run::<S>()
     }
 
@@ -226,10 +225,10 @@ where
 
         for assumption in vars {
             let save = self.board().make_snapshot();
-            Board::set_color_with_callback(Rc::clone(&self.board), &point, &assumption);
+            Board::set_color_with_callback(MutRc::clone(&self.board), &point, &assumption);
 
             let solved = self.run_propagation::<S>(&point);
-            Board::restore_with_callback(Rc::clone(&self.board), save);
+            Board::restore_with_callback(MutRc::clone(&self.board), save);
 
             if let Ok(new_cells) = solved {
                 if !new_cells.is_empty() {

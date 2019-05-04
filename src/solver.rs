@@ -7,12 +7,10 @@ use super::block::Block;
 use super::board::Board;
 use super::solver::backtracking::Solver;
 use super::solver::probing::ProbeSolver;
-
-use std::cell::RefCell;
-use std::rc::Rc;
+use super::utils::rc::MutRc;
 
 pub fn run<B, S, P>(
-    board: Rc<RefCell<Board<B>>>,
+    board: MutRc<Board<B>>,
     max_solutions: Option<usize>,
     timeout: Option<u32>,
     max_depth: Option<usize>,
@@ -23,13 +21,17 @@ where
     P: ProbeSolver<BlockType = B>,
 {
     warn!("Solving with simple line propagation");
-    let solver = propagation::Solver::new(Rc::clone(&board));
+    let solver = propagation::Solver::new(MutRc::clone(&board));
     solver.run::<S>()?;
 
-    if !board.borrow().is_solved_full() {
+    if !board.read().is_solved_full() {
         warn!("Trying to solve with backtracking");
-        let mut solver =
-            Solver::<_, P, S>::with_options(Rc::clone(&board), max_solutions, timeout, max_depth);
+        let mut solver = Solver::<_, P, S>::with_options(
+            MutRc::clone(&board),
+            max_solutions,
+            timeout,
+            max_depth,
+        );
         solver.run()?;
         return Ok(Some(solver));
     }

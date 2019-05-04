@@ -27,3 +27,5 @@ lru = "*"
 
 [features]
 web = ["reqwest"]
+# slower, but allows to use with concurrency
+threaded = []

@@ -1,29 +1,56 @@
+#[cfg(feature = "threaded")]
+use nonogrid::{
+    block::base::Block,
+    block::binary::BinaryColor,
+    render::{Renderer, ShellRenderer},
+};
+
 #[cfg(feature = "web")]
 use nonogrid::parser::{NetworkReader, NonogramsOrg, WebPbn};
 use nonogrid::{
-    block::binary::{BinaryBlock, BinaryColor},
+    block::binary::BinaryBlock,
     block::multicolor::ColoredBlock,
     parser::{BoardParser, LocalReader, MyFormat, PuzzleScheme},
     solver::{line, probing::*, propagation},
+    utils::rc::MutRc,
 };
 
 #[macro_use]
 extern crate log;
 
-use std::cell::RefCell;
-use std::rc::Rc;
+#[cfg(feature = "threaded")]
+fn example_set_line_callback<B, R>(renderer: &R, is_column: bool, index: usize)
+where
+    B: Block,
+    R: Renderer<B>,
+{
+    println!(
+        "Set {}-th {}",
+        index,
+        if is_column { "column" } else { "row" }
+    );
+    println!("{}", renderer.render())
+}
 
 #[test]
+#[cfg(feature = "threaded")]
 fn hello() {
     let f = MyFormat::read_local("examples/hello.toml").unwrap();
     let board = f.parse::<BinaryBlock>();
-    let board = Rc::new(RefCell::new(board));
+    let board = MutRc::new(board);
+
+    let callback_renderer = ShellRenderer::with_board(MutRc::clone(&board));
+    board
+        .write()
+        .set_callback_on_set_line(move |is_column, index| {
+            example_set_line_callback(&callback_renderer, is_column, index)
+        });
 
     warn!("Solving with simple line propagation");
-    let solver = propagation::Solver::new(Rc::clone(&board));
+    let solver = propagation::Solver::new(MutRc::clone(&board));
     solver.run::<line::DynamicSolver<_>>().unwrap();
 
-    let board = board.borrow();
+    let board = board.read();
 
     assert!(board.is_solved_full());
     assert_eq!(board.solution_rate(), 1.0);
@@ -41,23 +68,23 @@ fn hello() {
 fn pony() {
     let f = MyFormat::read_local("examples/MLP.toml").unwrap();
     let board = f.parse::<BinaryBlock>();
-    let board = Rc::new(RefCell::new(board));
+    let board = MutRc::new(board);
 
     warn!("Solving with simple line propagation");
-    let solver = propagation::Solver::new(Rc::clone(&board));
+    let solver = propagation::Solver::new(MutRc::clone(&board));
     solver.run::<line::DynamicSolver<_>>().unwrap();
 
     {
-        let board = board.borrow();
+        let board = board.read();
         assert_eq!(board.solution_rate(), 0.0);
         assert!(!board.is_solved_full());
     }
 
-    let solver = FullProbe1::with_board(Rc::clone(&board));
+    let solver = FullProbe1::with_board(MutRc::clone(&board));
     solver.run_unsolved::<line::DynamicSolver<_>>().unwrap();
 
     {
-        let board = board.borrow();
+        let board = board.read();
         assert_eq!(board.solution_rate(), 1.0);
         assert!(board.is_solved_full());
     }
@@ -69,13 +96,13 @@ fn uk_flag() {
     assert_eq!(p.infer_scheme(), PuzzleScheme::MultiColor);
 
     let board = p.parse::<ColoredBlock>();
-    let board = Rc::new(RefCell::new(board));
+    let board = MutRc::new(board);
 
     warn!("Solving with simple line propagation");
-    let solver = propagation::Solver::new(Rc::clone(&board));
+    let solver = propagation::Solver::new(MutRc::clone(&board));
     solver.run::<line::DynamicSolver<_>>().unwrap();
 
-    let board = board.borrow();
+    let board = board.read();
     assert!(board.is_solved_full());
     assert_eq!(board.solution_rate(), 1.0);
 }
@@ -87,13 +114,13 @@ fn webpbn_18() {
     assert_eq!(p.infer_scheme(), PuzzleScheme::MultiColor);
 
     let board = p.parse::<ColoredBlock>();
-    let board = Rc::new(RefCell::new(board));
+    let board = MutRc::new(board);
 
     warn!("Solving with simple line propagation");
-    let solver = propagation::Solver::new(Rc::clone(&board));
+    let solver = propagation::Solver::new(MutRc::clone(&board));
     solver.run::<line::DynamicSolver<_>>().unwrap();
 
-    let board = board.borrow();
+    let board = board.read();
     assert!(board.is_solved_full());
     assert_eq!(board.solution_rate(), 1.0);
 }

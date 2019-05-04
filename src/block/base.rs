@@ -15,6 +15,8 @@ where
         + Default
         + Copy
         + Clone
+        + Send
+        + Sync
         + PartialOrd
         + Ord
         + Add<Output = Self>
@@ -37,7 +39,7 @@ where
 
 pub trait Block
 where
-    Self: Debug + PartialEq + Eq + Hash + Default + Clone,
+    Self: Debug + PartialEq + Eq + Hash + Default + Clone + Send + Sync,
 {
     type Color: Color;
 

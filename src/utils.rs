@@ -196,6 +196,81 @@ where
         .collect()
 }
 
+pub mod rc {
+    #[cfg(not(feature = "threaded"))]
+    use std::{
+        cell::{Ref, RefCell, RefMut},
+        rc::Rc,
+    };
+
+    #[cfg(feature = "threaded")]
+    use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+
+    pub struct MutRc<T>(ReadRc<InteriorMutableRef<T>>);
+
+    impl<T> MutRc<T> {
+        pub fn new(data: T) -> Self {
+            Self(ReadRc::new(InteriorMutableRef::new(data)))
+        }
+
+        pub fn read(&self) -> ReadRef<T> {
+            read_ref(&self.0)
+        }
+
+        pub fn write(&self) -> MutRef<T> {
+            mutate_ref(&self.0)
+        }
+    }
+
+    impl<T> Clone for MutRc<T> {
+        fn clone(&self) -> Self {
+            Self(ReadRc::clone(&self.0))
+        }
+    }
+
+    #[cfg(feature = "threaded")]
+    pub type ReadRc<T> = Arc<T>;
+    #[cfg(feature = "threaded")]
+    pub type InteriorMutableRef<T> = RwLock<T>;
+    #[cfg(feature = "threaded")]
+    pub type ReadRef<'a, T> = RwLockReadGuard<'a, T>;
+    #[cfg(feature = "threaded")]
+    pub type MutRef<'a, T> = RwLockWriteGuard<'a, T>;
+
+    #[cfg(feature = "threaded")]
+    fn read_ref<T>(cell_value: &InteriorMutableRef<T>) -> ReadRef<T> {
+        cell_value
+            .read()
+            .expect("Cannot read the value under mutable reference: already locked for writing.")
+    }
+
+    #[cfg(feature = "threaded")]
+    pub fn mutate_ref<T>(cell_value: &InteriorMutableRef<T>) -> MutRef<T> {
+        cell_value
+            .write()
+            .expect("Cannot write the value under mutable reference: already locked.")
+    }
+
+    #[cfg(not(feature = "threaded"))]
+    pub type ReadRc<T> = Rc<T>;
+    #[cfg(not(feature = "threaded"))]
+    pub type InteriorMutableRef<T> = RefCell<T>;
+    #[cfg(not(feature = "threaded"))]
+    pub type ReadRef<'a, T> = Ref<'a, T>;
+    #[cfg(not(feature = "threaded"))]
+    pub type MutRef<'a, T> = RefMut<'a, T>;
+
+    #[cfg(not(feature = "threaded"))]
+    fn read_ref<T>(cell_value: &InteriorMutableRef<T>) -> ReadRef<T> {
+        cell_value.borrow()
+    }
+
+    #[cfg(not(feature = "threaded"))]
+    pub fn mutate_ref<T>(cell_value: &InteriorMutableRef<T>) -> MutRef<T> {
+        cell_value.borrow_mut()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{pad, pad_with, product, remove, replace, transpose};

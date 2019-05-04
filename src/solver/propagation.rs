@@ -1,9 +1,8 @@
 use super::super::block::{Block, Description};
 use super::super::board::{Board, Point};
+use super::super::utils::rc::{MutRc, ReadRc};
 use super::line::LineSolver;
 
-use std::cell::RefCell;
-use std::rc::Rc;
 //use std::time::Instant;
 
 use hashbrown::HashSet;
@@ -13,7 +12,7 @@ pub struct Solver<B>
 where
     B: Block,
 {
-    board: Rc<RefCell<Board<B>>>,
+    board: MutRc<Board<B>>,
     point: Option<Point>,
 }
 
@@ -105,11 +104,11 @@ impl<B> Solver<B>
 where
     B: Block,
 {
-    pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
+    pub fn new(board: MutRc<Board<B>>) -> Self {
         Self { board, point: None }
     }
 
-    pub fn with_point(board: Rc<RefCell<Board<B>>>, point: Point) -> Self {
+    pub fn with_point(board: MutRc<Board<B>>, point: Point) -> Self {
         Self {
             board,
             point: Some(point),
@@ -126,7 +125,7 @@ where
             self.run_jobs::<S, _>(queue)
         } else {
             let queue = {
-                let board = self.board.borrow();
+                let board = self.board.read();
                 let rows: Vec<_> = (0..board.height()).rev().collect();
                 let cols: Vec<_> = (0..board.width()).rev().collect();
 
@@ -211,15 +210,15 @@ where
     {
         //let start = Instant::now();
         let (line_desc, line) = {
-            let board = self.board.borrow();
+            let board = self.board.read();
             if is_column {
                 (
-                    Rc::clone(&board.descriptions(false)[index]),
+                    ReadRc::clone(&board.descriptions(false)[index]),
                     board.get_column(index),
                 )
             } else {
                 (
-                    Rc::clone(&board.descriptions(true)[index]),
+                    ReadRc::clone(&board.descriptions(true)[index]),
                     board.get_row(index),
                 )
             }
@@ -241,8 +240,8 @@ where
             );
         }
 
-        let line = Rc::new(line);
-        let solution = self.solve::<S>(index, is_column, line_desc, Rc::clone(&line))?;
+        let line = ReadRc::new(line);
+        let solution = self.solve::<S>(index, is_column, line_desc, ReadRc::clone(&line))?;
         let indexes = self.update_solved(index, is_column, &line, &solution);
 
         if log_enabled!(Level::Debug) {
@@ -277,9 +276,9 @@ where
         }
 
         if is_column {
-            Board::set_column_with_callback(Rc::clone(&self.board), index, new);
+            Board::set_column_with_callback(MutRc::clone(&self.board), index, new);
         } else {
-            Board::set_row_with_callback(Rc::clone(&self.board), index, new);
+            Board::set_row_with_callback(MutRc::clone(&self.board), index, new);
         }
 
         debug!("Original: {:?}", old);
@@ -306,20 +305,20 @@ where
         &self,
         index: usize,
         is_column: bool,
-        line_desc: Rc<Description<B>>,
-        line: Rc<Vec<B::Color>>,
-    ) -> Result<Rc<Vec<B::Color>>, String>
+        line_desc: ReadRc<Description<B>>,
+        line: ReadRc<Vec<B::Color>>,
+    ) -> Result<ReadRc<Vec<B::Color>>, String>
     where
         S: LineSolver<BlockType = B>,
     {
         let cache_index = if is_column {
-            self.board.borrow().column_cache_index(index)
+            self.board.read().column_cache_index(index)
         } else {
-            self.board.borrow().row_cache_index(index)
+            self.board.read().row_cache_index(index)
         };
-        let key = (cache_index, Rc::clone(&line));
+        let key = (cache_index, ReadRc::clone(&line));
 
-        let cached = self.board.borrow_mut().cached_solution(is_column, &key);
+        let cached = self.board.write().cached_solution(is_column, &key);
 
         if let Some(cached) = cached {
             return cached;
@@ -328,9 +327,9 @@ where
         let mut line_solver = S::new(line_desc, line);
         let value = line_solver.solve();
 
-        let rc_value = value.map(Rc::new);
+        let rc_value = value.map(ReadRc::new);
         self.board
-            .borrow_mut()
+            .write()
             .set_cached_solution(is_column, key, rc_value.clone());
         rc_value
     }

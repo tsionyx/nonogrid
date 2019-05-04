@@ -2,9 +2,7 @@ use super::block::base::color::{ColorDesc, ColorId, ColorPalette};
 use super::block::base::{Block, Color, Description};
 use super::cache::{cache_info, Cached, GrowableCache};
 use super::utils::dedup;
-
-use std::cell::RefCell;
-use std::rc::Rc;
+use super::utils::rc::{mutate_ref, InteriorMutableRef, MutRc, ReadRc};
 
 use hashbrown::HashMap;
 
@@ -14,8 +12,8 @@ pub struct Point {
     y: usize,
 }
 
-pub type CacheKey<B> = (usize, Rc<Vec<<B as Block>::Color>>);
-pub type CacheValue<B> = Result<Rc<Vec<<B as Block>::Color>>, String>;
+pub type CacheKey<B> = (usize, ReadRc<Vec<<B as Block>::Color>>);
+pub type CacheValue<B> = Result<ReadRc<Vec<<B as Block>::Color>>, String>;
 pub type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
 
 pub fn new_cache<B>(capacity: usize) -> LineSolverCache<B>
@@ -44,8 +42,8 @@ where
     B: Block,
 {
     cells: Vec<B::Color>,
-    desc_rows: Vec<Rc<Description<B>>>,
-    desc_cols: Vec<Rc<Description<B>>>,
+    desc_rows: Vec<ReadRc<Description<B>>>,
+    desc_cols: Vec<ReadRc<Description<B>>>,
     palette: Option<ColorPalette>,
     all_colors: Vec<ColorId>,
     cache_rows: Option<LineSolverCache<B>>,
@@ -54,11 +52,11 @@ where
     // https://webpbn.com/survey/caching.html
     rows_cache_indexes: Vec<usize>,
     cols_cache_indexes: Vec<usize>,
-    cell_rate_memo: RefCell<HashMap<B::Color, f64>>,
+    cell_rate_memo: InteriorMutableRef<HashMap<B::Color, f64>>,
     // callbacks
-    on_set_line: Option<Box<Fn(bool, usize)>>,
-    on_restore: Option<Box<Fn()>>,
-    on_change_color: Option<Box<Fn(Point)>>,
+    on_set_line: Option<Box<Fn(bool, usize) + Send + Sync>>,
+    on_restore: Option<Box<Fn() + Send + Sync>>,
+    on_change_color: Option<Box<Fn(Point) + Send + Sync>>,
 }
 
 impl<B> Board<B>
@@ -126,8 +124,8 @@ where
             })
             .collect();
 
-        let desc_rows = rows.into_iter().map(Rc::new).collect();
-        let desc_cols = columns.into_iter().map(Rc::new).collect();
+        let desc_rows = rows.into_iter().map(ReadRc::new).collect();
+        let desc_cols = columns.into_iter().map(ReadRc::new).collect();
         Self {
             cells,
             desc_rows,
@@ -138,7 +136,7 @@ where
             cache_cols: None,
             rows_cache_indexes,
             cols_cache_indexes,
-            cell_rate_memo: RefCell::new(HashMap::new()),
+            cell_rate_memo: InteriorMutableRef::new(HashMap::new()),
             on_set_line: None,
             on_restore: None,
             on_change_color: None,
@@ -171,7 +169,7 @@ where
         self.cells.chunks(self.width())
     }
 
-    pub fn descriptions(&self, rows: bool) -> &Vec<Rc<Description<B>>> {
+    pub fn descriptions(&self, rows: bool) -> &[ReadRc<Description<B>>] {
         if rows {
             &self.desc_rows
         } else {
@@ -256,9 +254,7 @@ where
             return cell.solution_rate(colors);
         }
 
-        *self
-            .cell_rate_memo
-            .borrow_mut()
+        *mutate_ref(&self.cell_rate_memo)
             .entry(*cell)
             .or_insert_with(|| cell.solution_rate(colors))
     }
@@ -452,53 +448,53 @@ impl<B> Board<B>
 where
     B: Block,
 {
-    pub fn set_callback_on_set_line<CB: 'static + Fn(bool, usize)>(&mut self, f: CB) {
+    pub fn set_callback_on_set_line<CB: 'static + Fn(bool, usize) + Send + Sync>(&mut self, f: CB) {
         self.on_set_line = Some(Box::new(f));
     }
 
-    pub fn set_callback_on_restore<CB: 'static + Fn()>(&mut self, f: CB) {
+    pub fn set_callback_on_restore<CB: 'static + Fn() + Send + Sync>(&mut self, f: CB) {
         self.on_restore = Some(Box::new(f));
     }
 
-    pub fn set_callback_on_change_color<CB: 'static + Fn(Point)>(&mut self, f: CB) {
+    pub fn set_callback_on_change_color<CB: 'static + Fn(Point) + Send + Sync>(&mut self, f: CB) {
         self.on_change_color = Some(Box::new(f));
     }
 
-    pub fn set_row_with_callback(board_ref: Rc<RefCell<Self>>, index: usize, new: &[B::Color]) {
-        board_ref.borrow_mut().set_row(index, new);
-        if let Some(f) = &board_ref.borrow().on_set_line {
+    pub fn set_row_with_callback(board_ref: MutRc<Self>, index: usize, new: &[B::Color]) {
+        board_ref.write().set_row(index, new);
+        if let Some(f) = &board_ref.read().on_set_line {
             f(false, index);
         }
     }
 
-    pub fn set_column_with_callback(board_ref: Rc<RefCell<Self>>, index: usize, new: &[B::Color]) {
-        board_ref.borrow_mut().set_column(index, new);
-        if let Some(f) = &board_ref.borrow().on_set_line {
+    pub fn set_column_with_callback(board_ref: MutRc<Self>, index: usize, new: &[B::Color]) {
+        board_ref.write().set_column(index, new);
+        if let Some(f) = &board_ref.read().on_set_line {
             f(true, index);
         }
     }
 
-    pub fn restore_with_callback(board_ref: Rc<RefCell<Self>>, cells: Vec<B::Color>) {
-        board_ref.borrow_mut().restore(cells);
-        if let Some(f) = &board_ref.borrow().on_restore {
+    pub fn restore_with_callback(board_ref: MutRc<Self>, cells: Vec<B::Color>) {
+        board_ref.write().restore(cells);
+        if let Some(f) = &board_ref.read().on_restore {
             f();
         }
     }
 
-    pub fn set_color_with_callback(board_ref: Rc<RefCell<Self>>, point: &Point, color: &B::Color) {
-        board_ref.borrow_mut().set_color(point, color);
-        if let Some(f) = &board_ref.borrow().on_change_color {
+    pub fn set_color_with_callback(board_ref: MutRc<Self>, point: &Point, color: &B::Color) {
+        board_ref.write().set_color(point, color);
+        if let Some(f) = &board_ref.read().on_change_color {
             f(*point);
         }
     }
 
     pub fn unset_color_with_callback(
-        board_ref: Rc<RefCell<Self>>,
+        board_ref: MutRc<Self>,
         point: &Point,
         color: &B::Color,
     ) -> Result<(), String> {
-        board_ref.borrow_mut().unset_color(point, color)?;
-        if let Some(f) = &board_ref.borrow().on_change_color {
+        board_ref.write().unset_color(point, color)?;
+        if let Some(f) = &board_ref.read().on_change_color {
             f(*point);
         }
         Ok(())
@@ -521,7 +517,7 @@ where
             cache_cols: None,
             rows_cache_indexes: self.rows_cache_indexes.clone(),
             cols_cache_indexes: self.cols_cache_indexes.clone(),
-            cell_rate_memo: RefCell::new(HashMap::new()),
+            cell_rate_memo: InteriorMutableRef::new(HashMap::new()),
             on_set_line: None,
             on_restore: None,
             on_change_color: None,
