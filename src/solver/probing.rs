@@ -5,7 +5,7 @@ use super::propagation;
 
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
-use std::time::Instant;
+//use std::time::Instant;
 
 use hashbrown::hash_map::DefaultHashBuilder;
 use hashbrown::HashMap;
@@ -108,7 +108,7 @@ where
     where
         S: LineSolver<BlockType = B>,
     {
-        let start = Instant::now();
+        //let start = Instant::now();
         let mut contradictions_number = 0;
         //let mut iteration_probes = HashSet::new();
 
@@ -176,13 +176,13 @@ where
             }
         };
 
-        let total_time = start.elapsed();
         if contradictions_number > 0 {
-            warn!(
-                "Full solution: {}.{:06} sec",
-                total_time.as_secs(),
-                total_time.subsec_micros()
-            );
+            //let total_time = start.elapsed();
+            //warn!(
+            //    "Full solution: {}.{:06} sec",
+            //    total_time.as_secs(),
+            //    total_time.subsec_micros()
+            //);
             warn!("Contradictions found: {}", contradictions_number);
         }
         Ok(impact)

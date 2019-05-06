@@ -242,7 +242,7 @@ where
             return Ok(());
         }
 
-        self.start_time = Some(Instant::now());
+        //self.start_time = Some(Instant::now());
 
         let directions = self.choose_directions(&impact);
         warn!(
@@ -251,22 +251,23 @@ where
         );
         self.search(&directions, &[])?;
 
-        let total_time = self
-            .start_time
-            .expect("Start time should be set in current function")
-            .elapsed();
         warn!(
             "Search completed (depth reached: {}, solutions found: {})",
             self.depth_reached,
             self.solutions.len()
         );
 
-        warn!(
-            "Full solution: {}.{:06} sec. The rate is {:.4}",
-            total_time.as_secs(),
-            total_time.subsec_micros(),
-            self.board().solution_rate(),
-        );
+        if let Some(start_time) = self.start_time {
+            //.expect("Start time should be set in current function")
+            let total_time = start_time.elapsed();
+
+            warn!(
+                "Full solution: {}.{:06} sec. The rate is {:.4}",
+                total_time.as_secs(),
+                total_time.subsec_micros(),
+                self.board().solution_rate(),
+            );
+        }
 
         Ok(())
     }

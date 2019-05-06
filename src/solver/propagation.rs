@@ -4,7 +4,7 @@ use super::line::LineSolver;
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::Instant;
+//use std::time::Instant;
 
 use hashbrown::HashSet;
 use log::Level;
@@ -146,7 +146,7 @@ where
         S: LineSolver<BlockType = B>,
         Q: JobQueue,
     {
-        let start = Instant::now();
+        //let start = Instant::now();
         let mut lines_solved = 0_u32;
         let mut solved_cells = vec![];
 
@@ -184,12 +184,12 @@ where
             //}
 
             if log_enabled!(Level::Info) {
-                let total_time = start.elapsed();
-                info!(
-                    "Full solution: {}.{:06} sec",
-                    total_time.as_secs(),
-                    total_time.subsec_micros()
-                );
+                //let total_time = start.elapsed();
+                //info!(
+                //    "Full solution: {}.{:06} sec",
+                //    total_time.as_secs(),
+                //    total_time.subsec_micros()
+                //);
                 info!("Lines solved: {}", lines_solved);
             }
         }
@@ -209,8 +209,7 @@ where
     where
         S: LineSolver<BlockType = B>,
     {
-        let start = Instant::now();
-
+        //let start = Instant::now();
         let (line_desc, line) = {
             let board = self.board.borrow();
             if is_column {
@@ -248,13 +247,13 @@ where
 
         if log_enabled!(Level::Debug) {
             let name = if is_column { "column" } else { "row" };
-            let total_time = start.elapsed();
-            debug!(
-                "{}s solution: {}.{:06} sec",
-                name,
-                total_time.as_secs(),
-                total_time.subsec_micros()
-            );
+            //let total_time = start.elapsed();
+            //debug!(
+            //    "{}s solution: {}.{:06} sec",
+            //    name,
+            //    total_time.as_secs(),
+            //    total_time.subsec_micros()
+            //);
             if !indexes.is_empty() {
                 debug!("New info on {} {}: {:?}", name, index, indexes);
             }
