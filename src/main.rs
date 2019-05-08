@@ -6,14 +6,14 @@ pub mod render;
 pub mod solver;
 pub(crate) mod utils;
 
-use block::binary::BinaryBlock;
-use block::multicolor::ColoredBlock;
-use block::Block;
+use block::{binary::BinaryBlock, multicolor::ColoredBlock, Block};
 use board::Board;
 use parser::{BoardParser, LocalReader, NetworkReader, PuzzleScheme};
 use render::{Renderer, ShellRenderer};
-use solver::line::{DynamicColor, DynamicSolver};
-use solver::probing::FullProbe1;
+use solver::{
+    line::{DynamicColor, DynamicSolver},
+    probing::FullProbe1,
+};
 use utils::rc::MutRc;
 
 use std::fmt::Display;

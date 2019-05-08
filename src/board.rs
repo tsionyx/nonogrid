@@ -1,8 +1,12 @@
-use super::block::base::color::{ColorDesc, ColorId, ColorPalette};
-use super::block::base::{Block, Color, Description};
-use super::cache::{cache_info, Cached, GrowableCache};
-use super::utils::dedup;
-use super::utils::rc::{mutate_ref, InteriorMutableRef, MutRc, ReadRc};
+use crate::block::base::{
+    color::{ColorDesc, ColorId, ColorPalette},
+    Block, Color, Description,
+};
+use crate::cache::{cache_info, Cached, GrowableCache};
+use crate::utils::{
+    dedup,
+    rc::{mutate_ref, InteriorMutableRef, MutRc, ReadRc},
+};
 
 use hashbrown::HashMap;
 
@@ -527,10 +531,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::super::block::binary::BinaryBlock;
-    use super::super::block::binary::BinaryColor::Undefined;
-    use super::super::block::{Block, Description};
     use super::Board;
+    use crate::block::{
+        binary::{BinaryBlock, BinaryColor::Undefined},
+        Block, Description,
+    };
 
     #[test]
     fn u_letter() {

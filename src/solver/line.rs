@@ -1,9 +1,8 @@
-use super::super::block::base::color::ColorPalette;
-use super::super::block::binary::BinaryColor;
-use super::super::block::multicolor::MultiColor;
-use super::super::block::{Block, Color, Description};
-use super::super::utils;
-use super::super::utils::rc::ReadRc;
+use crate::block::{
+    base::color::ColorPalette, binary::BinaryColor, multicolor::MultiColor, Block, Color,
+    Description,
+};
+use crate::utils::{self, rc::ReadRc};
 
 pub trait LineSolver {
     type BlockType: Block;
@@ -351,11 +350,15 @@ impl DynamicColor for MultiColor {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::block::binary::BinaryColor::{Black, Undefined, White};
-    use super::super::super::block::binary::{BinaryBlock, BinaryColor};
-    use super::super::super::block::Description;
-    use super::super::super::utils::rc::ReadRc;
     use super::{DynamicSolver, LineSolver};
+    use crate::block::{
+        binary::{
+            BinaryBlock,
+            BinaryColor::{self, Black, Undefined, White},
+        },
+        Description,
+    };
+    use crate::utils::rc::ReadRc;
 
     fn simple_description() -> ReadRc<Description<BinaryBlock>> {
         ReadRc::new(Description::new(vec![BinaryBlock(3)]))
@@ -464,11 +467,15 @@ mod tests {
 
 #[cfg(test)]
 mod tests_solve_color {
-    use super::super::super::block::base::color::{ColorId, ColorPalette};
-    use super::super::super::block::base::Description;
-    use super::super::super::block::multicolor::{ColoredBlock, MultiColor};
-    use super::super::super::utils::rc::ReadRc;
     use super::{DynamicSolver, LineSolver};
+    use crate::block::{
+        base::{
+            color::{ColorId, ColorPalette},
+            Description,
+        },
+        multicolor::{ColoredBlock, MultiColor},
+    };
+    use crate::utils::rc::ReadRc;
 
     fn w() -> ColorId {
         ColorPalette::WHITE_ID

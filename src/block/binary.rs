@@ -1,5 +1,7 @@
-use super::base::color::{ColorId, ColorPalette};
-use super::base::{Block, Color};
+use crate::block::base::{
+    color::{ColorId, ColorPalette},
+    Block, Color,
+};
 
 use std::cmp::Ordering;
 use std::fmt;

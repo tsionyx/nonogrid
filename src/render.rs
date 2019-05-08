@@ -1,13 +1,14 @@
-use super::block::base::color::ColorDesc;
-use super::block::{Block, Color, Description};
-use super::board::Board;
-use super::utils::rc::{MutRc, ReadRc, ReadRef};
-use super::utils::{pad, pad_with, transpose};
+use crate::block::{base::color::ColorDesc, Block, Color, Description};
+use crate::board::Board;
+use crate::utils::{
+    pad, pad_with,
+    rc::{MutRc, ReadRc, ReadRef},
+    transpose,
+};
 
 use std::fmt::Display;
 
-use colored;
-use colored::{ColoredString, Colorize};
+use colored::{self, ColoredString, Colorize};
 use hashbrown::HashMap;
 
 pub trait Renderer<B>

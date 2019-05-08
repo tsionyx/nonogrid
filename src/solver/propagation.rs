@@ -1,7 +1,7 @@
-use super::super::block::{Block, Description};
-use super::super::board::{Board, Point};
-use super::super::utils::rc::{MutRc, ReadRc};
-use super::line::LineSolver;
+use crate::block::{Block, Description};
+use crate::board::{Board, Point};
+use crate::solver::line::LineSolver;
+use crate::utils::rc::{MutRc, ReadRc};
 
 //use std::time::Instant;
 

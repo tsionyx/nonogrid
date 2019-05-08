@@ -1,15 +1,21 @@
-use super::block::base::clues_from_solution;
-use super::block::base::color::{ColorId, ColorPalette, ColorValue};
-use super::block::{Block, Description};
-use super::board::Board;
-use super::utils::iter::FindOk;
-use super::utils::product;
+use crate::block::{
+    base::{
+        clues_from_solution,
+        color::{ColorId, ColorPalette, ColorValue},
+    },
+    Block, Description,
+};
+use crate::board::Board;
+use crate::utils::{iter::FindOk, product};
 
 use std::fs;
 
-use self::sxd_xpath::nodeset::{Node, Nodeset};
-use self::sxd_xpath::{evaluate_xpath, Value};
 use hashbrown::HashMap;
+use sxd_xpath::{
+    evaluate_xpath,
+    nodeset::{Node, Nodeset},
+    Value,
+};
 
 #[cfg(feature = "web")]
 extern crate reqwest;
@@ -199,10 +205,7 @@ impl MyFormat {
         )
     }
 
-    pub(in super::parser) fn parse_clues<B>(
-        descriptions: &str,
-        palette: &ColorPalette,
-    ) -> Vec<Description<B>>
+    pub(self) fn parse_clues<B>(descriptions: &str, palette: &ColorPalette) -> Vec<Description<B>>
     where
         B: Block,
     {
@@ -370,7 +373,7 @@ impl WebPbn {
             .collect()
     }
 
-    pub(in super::parser) fn parse_clues<B>(&self, type_: &str) -> Vec<Description<B>>
+    pub(self) fn parse_clues<B>(&self, type_: &str) -> Vec<Description<B>>
     where
         B: Block,
     {
@@ -642,10 +645,8 @@ impl Paletted for NonogramsOrg {
 
 #[cfg(test)]
 mod tests {
-    use super::super::block::base::color::ColorPalette;
-    use super::super::block::binary::BinaryBlock;
-    use super::super::block::Description;
     use super::{BoardParser, MyFormat, Paletted, PuzzleScheme};
+    use crate::block::{base::color::ColorPalette, binary::BinaryBlock, Description};
 
     fn block(n: usize) -> BinaryBlock {
         BinaryBlock(n)

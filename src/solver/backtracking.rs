@@ -1,8 +1,10 @@
-use super::super::block::{Block, Color};
-use super::super::board::{Board, Point};
-use super::super::utils::rc::{MutRc, ReadRef};
-use super::line::LineSolver;
-use super::probing::{Impact, ProbeSolver};
+use crate::block::{Block, Color};
+use crate::board::{Board, Point};
+use crate::solver::{
+    line::LineSolver,
+    probing::{Impact, ProbeSolver},
+};
+use crate::utils::rc::{MutRc, ReadRef};
 
 use std::cmp::Reverse;
 use std::fmt;

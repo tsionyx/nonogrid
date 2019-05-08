@@ -3,11 +3,10 @@ pub mod line;
 pub mod probing;
 pub mod propagation;
 
-use super::block::Block;
-use super::board::Board;
-use super::solver::backtracking::Solver;
-use super::solver::probing::ProbeSolver;
-use super::utils::rc::MutRc;
+use crate::block::Block;
+use crate::board::Board;
+use crate::solver::{backtracking::Solver, probing::ProbeSolver};
+use crate::utils::rc::MutRc;
 
 pub fn run<B, S, P>(
     board: MutRc<Board<B>>,

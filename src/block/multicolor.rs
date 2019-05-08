@@ -1,6 +1,8 @@
-use super::super::utils::{from_two_powers, is_power_of_2, two_powers};
-use super::base::color::{ColorId, ColorPalette};
-use super::base::{Block, Color};
+use crate::block::base::{
+    color::{ColorId, ColorPalette},
+    Block, Color,
+};
+use crate::utils::{from_two_powers, is_power_of_2, two_powers};
 
 use std::fmt;
 use std::ops::{Add, Sub};

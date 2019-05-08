@@ -1,5 +1,5 @@
-use super::super::block::base::color::ColorId;
-use super::super::utils;
+use crate::block::base::color::ColorId;
+use crate::utils;
 
 use std::fmt::Debug;
 use std::hash::Hash;
