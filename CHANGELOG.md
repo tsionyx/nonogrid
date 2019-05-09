@@ -37,3 +37,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - replace `Option::unwrap` with `Option::expect("error message")`
 - many refactoring of references
 - refactoring with clippy
+
+
+## [0.4.0] - 2019-05-09
+### Added
+- ability to use Board in threaded environment (--features=threaded)
+
+### Fixed
+- WASM runtime support: remove Instant::now() calls
+
+### Updated
+- fix imports to use `crate::` instead of `super::`
+- switch to upstream priority-queue (after merging https://github.com/garro95/priority-queue/pull/14)

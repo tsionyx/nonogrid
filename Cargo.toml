@@ -15,7 +15,7 @@ serde_derive = "1.0.87"
 serde = "1.0.87"
 log = "*"
 env_logger = "*"
-priority-queue = { git = "https://github.com/tsionyx/priority-queue" }
+priority-queue = "0.6"
 ordered-float = "1.0"
 clap = "2.32.0"
 sxd-document = "0.3.0"
