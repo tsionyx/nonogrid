@@ -193,6 +193,59 @@ pub mod color {
 
             ColorValue::CommonName(value.to_string())
         }
+
+        /// ```
+        /// use nonogrid::block::base::color::ColorValue;
+        ///
+        /// assert_eq!(ColorValue::parse("0F0").to_rgb(), (0, 255, 0));
+        /// assert_eq!(ColorValue::parse("0000FF").to_rgb(), (0, 0, 255));
+        /// assert_eq!(ColorValue::parse("red").to_rgb(), (255, 0, 0));
+        /// assert_eq!(ColorValue::parse("YELLOW").to_rgb(), (255, 255, 0));
+        /// assert_eq!(ColorValue::parse("teal").to_rgb(), (0, 128, 128));
+        /// assert_eq!(ColorValue::parse("unknown").to_rgb(), (0, 0, 0));
+        /// assert_eq!(ColorValue::parse("200, 16,0  ").to_rgb(), (200, 16, 0));
+        /// // short form
+        /// assert_eq!(ColorValue::parse("55bb88").to_rgb(), ColorValue::parse("5b8").to_rgb());
+        /// ```
+        pub fn to_rgb(&self) -> (u8, u8, u8) {
+            match self {
+                ColorValue::RgbTriplet(r, g, b) => (*r, *g, *b),
+                ColorValue::HexValue3(hex3) => {
+                    let (r, gb) = (hex3 / 256, hex3 % 256);
+                    let (g, b) = (gb / 16, gb % 16);
+
+                    ((r * 17) as u8, (g * 17) as u8, (b * 17) as u8)
+                }
+                ColorValue::HexValue6(hex6) => {
+                    let (r, gb) = (hex6 / (1 << 16), hex6 % (1 << 16));
+                    let (g, b) = (gb / 256, gb % 256);
+
+                    (r as u8, g as u8, b as u8)
+                }
+                // https://www.rapidtables.com/web/color/RGB_Color.html#color-table
+                ColorValue::CommonName(name) => match name.to_lowercase().as_str() {
+                    "black" => (0, 0, 0),
+                    "white" => (255, 255, 255),
+                    "red" => (255, 0, 0),
+                    "lime" => (0, 255, 0),
+                    "blue" => (0, 0, 255),
+                    "yellow" => (255, 255, 0),
+                    "cyan" => (0, 255, 255),
+                    "aqua" => (0, 255, 255),
+                    "magenta" => (255, 0, 255),
+                    "fuchsia" => (255, 0, 255),
+                    "silver" => (192, 192, 192),
+                    "gray" => (128, 128, 128),
+                    "maroon" => (128, 0, 0),
+                    "olive" => (128, 128, 0),
+                    "green" => (0, 128, 0),
+                    "purple" => (128, 0, 128),
+                    "teal" => (0, 128, 128),
+                    "navy" => (0, 0, 128),
+                    _unknown_color => (0, 0, 0),
+                },
+            }
+        }
     }
 
     pub type ColorId = u32;
@@ -213,6 +266,10 @@ pub mod color {
 
         pub fn name(&self) -> &str {
             self.name.as_str()
+        }
+
+        pub fn rgb_value(&self) -> (u8, u8, u8) {
+            self.value.to_rgb()
         }
     }
 
