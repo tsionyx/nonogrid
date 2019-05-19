@@ -49,3 +49,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Updated
 - fix imports to use `crate::` instead of `super::`
 - switch to upstream priority-queue (after merging https://github.com/garro95/priority-queue/pull/14)
+
+
+## [0.4.1] - 2019-05-19
+### Added
+-  add `ColorDesc::rgb_value` to use in web renderer
+
+### Fixed
+- restore backtracking timeouts with `Instant::now()` by enabling `std_time` default feature
+
+### Updated
+- published on crates.io repository
