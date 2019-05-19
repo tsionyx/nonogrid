@@ -4,7 +4,10 @@ use crate::solver::{
     line::LineSolver,
     probing::{Impact, ProbeSolver},
 };
-use crate::utils::rc::{MutRc, ReadRef};
+use crate::utils::{
+    rc::{MutRc, ReadRef},
+    time,
+};
 
 use std::cmp::Reverse;
 use std::fmt;
@@ -243,7 +246,7 @@ where
             return Ok(());
         }
 
-        //self.start_time = Some(Instant::now());
+        self.start_time = time::now();
 
         let directions = self.choose_directions(&impact);
         warn!(

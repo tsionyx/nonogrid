@@ -26,6 +26,9 @@ colored = "1.7"
 lru = "*"
 
 [features]
+default = ["std_time"]
+std_time = []
+
 web = ["reqwest"]
 # slower, but allows to use with concurrency
 threaded = []

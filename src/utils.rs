@@ -196,6 +196,20 @@ where
         .collect()
 }
 
+pub mod time {
+    use std::time::Instant;
+
+    #[cfg(feature = "std_time")]
+    pub fn now() -> Option<Instant> {
+        Some(Instant::now())
+    }
+
+    #[cfg(not(feature = "std_time"))]
+    pub fn now() -> Option<Instant> {
+        None
+    }
+}
+
 pub mod rc {
     #[cfg(not(feature = "threaded"))]
     use std::{
