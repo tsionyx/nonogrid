@@ -390,7 +390,7 @@ pub mod color {
             let occupied_symbols: HashSet<_> =
                 self.vec.iter().map(|(_name, color)| color.symbol).collect();
 
-            let next_symbol = self
+            let &next_symbol = self
                 .symbols
                 .iter()
                 .find_map(|available_symbol| {
@@ -402,7 +402,7 @@ pub mod color {
                 })
                 .expect("Cannot create color: No more symbols available.");
 
-            self.color_with_name_value_and_symbol(name, value, *next_symbol)
+            self.color_with_name_value_and_symbol(name, value, next_symbol)
         }
     }
 }

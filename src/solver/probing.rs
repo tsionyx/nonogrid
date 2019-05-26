@@ -166,7 +166,8 @@ where
                         &color,
                     )?;
                 }
-                for (point, priority) in self.propagate_point::<S>(&contradiction)? {
+                let new_probes = self.propagate_point::<S>(&contradiction)?;
+                for (point, priority) in new_probes {
                     probes.push(point, priority);
                 }
             } else {

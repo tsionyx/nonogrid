@@ -155,7 +155,7 @@ where
     }
 
     fn update_solved(&mut self, position: usize, color: B::Color) {
-        let current = &self.solved_line[position];
+        let &current = &self.solved_line[position];
         self.set_solved(position, current.add_color(color))
     }
 

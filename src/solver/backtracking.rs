@@ -691,7 +691,8 @@ where
 
         let mut probes = vec![];
         Board::set_color_with_callback(MutRc::clone(&self.board), &point, &color);
-        for (new_point, priority) in self.probe_solver.propagate_point::<S>(&point)? {
+        let new_probes = self.probe_solver.propagate_point::<S>(&point)?;
+        for (new_point, priority) in new_probes {
             probes.push((new_point, priority));
         }
         if self.board().is_solved_full() {
