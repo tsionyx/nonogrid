@@ -6,7 +6,11 @@ use crate::block::{
     Block, Description,
 };
 use crate::board::Board;
-use crate::utils::{iter::FindOk, product};
+use crate::utils::{
+    iter::FindOk,
+    product,
+    rc::{mutate_ref, read_ref, InteriorMutableRef},
+};
 
 use std::fs;
 
@@ -265,7 +269,8 @@ impl Paletted for MyFormat {
 
 pub struct WebPbn {
     package: sxd_document::Package,
-    //board_str: String,
+    cached_colors: InteriorMutableRef<Option<Vec<(String, char, String)>>>,
+    cached_palette: InteriorMutableRef<Option<ColorPalette>>,
 }
 
 impl LocalReader for WebPbn {}
@@ -289,7 +294,8 @@ impl BoardParser for WebPbn {
 
         Ok(Self {
             package,
-            //board_str: content,
+            cached_colors: InteriorMutableRef::new(None),
+            cached_palette: InteriorMutableRef::new(None),
         })
     }
 
@@ -389,8 +395,8 @@ impl WebPbn {
     }
 }
 
-impl Paletted for WebPbn {
-    fn get_colors(&self) -> Vec<(String, char, String)> {
+impl WebPbn {
+    fn _get_colors(&self) -> Vec<(String, char, String)> {
         let document = self.package.as_document();
         let value = evaluate_xpath(&document, ".//color").expect("XPath evaluation failed");
 
@@ -422,7 +428,7 @@ impl Paletted for WebPbn {
         }
     }
 
-    fn get_palette(&self) -> ColorPalette {
+    fn _get_palette(&self) -> ColorPalette {
         let mut palette = ColorPalette::with_white_and_black("white", "black");
 
         let colors = self.get_colors();
@@ -443,6 +449,30 @@ impl Paletted for WebPbn {
             }
         }
         palette
+    }
+}
+
+impl Paletted for WebPbn {
+    fn get_colors(&self) -> Vec<(String, char, String)> {
+        if let Some(ref colors) = *read_ref(&self.cached_colors) {
+            return colors.clone();
+        }
+
+        let result = self._get_colors();
+        let mut cache = mutate_ref(&self.cached_colors);
+        *cache = Some(result.clone());
+        result
+    }
+
+    fn get_palette(&self) -> ColorPalette {
+        if let Some(ref palette) = *read_ref(&self.cached_palette) {
+            return palette.clone();
+        }
+
+        let result = self._get_palette();
+        let mut cache = mutate_ref(&self.cached_palette);
+        *cache = Some(result.clone());
+        result
     }
 }
 

@@ -252,7 +252,7 @@ pub mod rc {
     pub type MutRef<'a, T> = RwLockWriteGuard<'a, T>;
 
     #[cfg(feature = "threaded")]
-    fn read_ref<T>(cell_value: &InteriorMutableRef<T>) -> ReadRef<T> {
+    pub fn read_ref<T>(cell_value: &InteriorMutableRef<T>) -> ReadRef<T> {
         cell_value
             .read()
             .expect("Cannot read the value under mutable reference: already locked for writing.")
@@ -275,7 +275,7 @@ pub mod rc {
     pub type MutRef<'a, T> = RefMut<'a, T>;
 
     #[cfg(not(feature = "threaded"))]
-    fn read_ref<T>(cell_value: &InteriorMutableRef<T>) -> ReadRef<T> {
+    pub fn read_ref<T>(cell_value: &InteriorMutableRef<T>) -> ReadRef<T> {
         cell_value.borrow()
     }
 
