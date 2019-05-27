@@ -7,8 +7,6 @@ mkdir -p puzzles
 
 export RUST_LOG=nonogrid=warn
 export RUST_BACKTRACE=1
-# 5-10% speedup with this tip https://vfoley.xyz/rust-compilation-tip/
-export RUSTFLAGS="-C target-cpu=native"
 cargo build --release
 
 echo "Start at $(date)"
