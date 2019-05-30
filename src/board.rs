@@ -534,7 +534,7 @@ mod tests {
     use super::Board;
     use crate::block::{
         binary::{BinaryBlock, BinaryColor::Undefined},
-        Block, Description,
+        Description,
     };
 
     #[test]
@@ -556,12 +556,6 @@ mod tests {
         let board = Board::with_descriptions(rows, columns);
         assert_eq!(board.cells.len(), 9);
         assert_eq!(board.get_row(0), &[Undefined, Undefined, Undefined]);
-    }
-
-    #[test]
-    fn check_partial_sums() {
-        let d = Description::new(vec![BinaryBlock(1), BinaryBlock(2), BinaryBlock(3)]);
-        assert_eq!(BinaryBlock::partial_sums(&d.vec), vec![1, 4, 8]);
     }
 
     #[test]

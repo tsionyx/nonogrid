@@ -140,20 +140,17 @@ impl Block for BinaryBlock {
     }
 
     fn partial_sums(desc: &[Self]) -> Vec<usize> {
-        if desc.is_empty() {
-            return vec![];
-        }
-
         desc.iter()
-            .fold(Vec::with_capacity(desc.len()), |mut acc, block| {
-                if acc.is_empty() {
-                    vec![block.0]
+            .scan(None, |prev, block| {
+                let current = if let Some(ref prev_size) = prev {
+                    prev_size + block.0 + 1
                 } else {
-                    let &last = acc.last().expect("Partial sums vector should be non-empty");
-                    acc.push(last + block.0 + 1);
-                    acc
-                }
+                    block.0
+                };
+                *prev = Some(current);
+                *prev
             })
+            .collect()
     }
 
     fn size(&self) -> usize {
@@ -168,5 +165,29 @@ impl Block for BinaryBlock {
 impl fmt::Display for BinaryBlock {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BinaryBlock;
+    use crate::block::{Block, Description};
+
+    #[test]
+    fn partial_sums_empty() {
+        let d = Description::new(vec![]);
+        assert_eq!(BinaryBlock::partial_sums(&d.vec), Vec::<usize>::new());
+    }
+
+    #[test]
+    fn partial_sums_single() {
+        let d = Description::new(vec![BinaryBlock(5)]);
+        assert_eq!(BinaryBlock::partial_sums(&d.vec), vec![5]);
+    }
+
+    #[test]
+    fn check_partial_sums() {
+        let d = Description::new(vec![BinaryBlock(1), BinaryBlock(2), BinaryBlock(3)]);
+        assert_eq!(BinaryBlock::partial_sums(&d.vec), vec![1, 4, 8]);
     }
 }

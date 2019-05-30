@@ -169,30 +169,24 @@ impl Block for ColoredBlock {
         Self { size, color }
     }
 
-    fn partial_sums(desc: &[Self]) -> Vec<usize>
-    where
-        Self: Sized,
-    {
-        if desc.is_empty() {
-            return vec![];
-        }
-
+    fn partial_sums(desc: &[Self]) -> Vec<usize> {
         desc.iter()
-            .enumerate()
-            .fold(Vec::with_capacity(desc.len()), |mut acc, (i, block)| {
-                if acc.is_empty() {
-                    vec![block.size()]
-                } else {
-                    let last = acc.last().expect("Partial sums vector should be non-empty");
-                    let mut sum = last + block.size();
-                    if desc[i - 1].color() == block.color() {
-                        // plus at least one space
-                        sum += 1;
+            .scan(None, |prev: &mut Option<ColoredBlock>, block| {
+                let current = if let Some(ref prev) = prev {
+                    let sum = prev.size() + block.size();
+                    if prev.color() == block.color() {
+                        sum + 1
+                    } else {
+                        sum
                     }
-                    acc.push(sum);
-                    acc
-                }
+                } else {
+                    block.size()
+                };
+
+                *prev = Some(Self::from_size_and_color(current, block.color));
+                Some(current)
             })
+            .collect()
     }
 
     fn size(&self) -> usize {
@@ -207,5 +201,33 @@ impl Block for ColoredBlock {
 impl fmt::Display for ColoredBlock {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.size)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ColoredBlock;
+    use crate::block::{Block, Description};
+
+    #[test]
+    fn partial_sums_empty() {
+        let d = Description::new(vec![]);
+        assert_eq!(ColoredBlock::partial_sums(&d.vec), Vec::<usize>::new());
+    }
+
+    #[test]
+    fn partial_sums_single() {
+        let d = Description::new(vec![ColoredBlock::from_size_and_color(5, 1)]);
+        assert_eq!(ColoredBlock::partial_sums(&d.vec), vec![5]);
+    }
+
+    #[test]
+    fn check_partial_sums() {
+        let d = Description::new(vec![
+            ColoredBlock::from_size_and_color(1, 1),
+            ColoredBlock::from_size_and_color(2, 1),
+            ColoredBlock::from_size_and_color(3, 2),
+        ]);
+        assert_eq!(ColoredBlock::partial_sums(&d.vec), vec![1, 4, 7]);
     }
 }
