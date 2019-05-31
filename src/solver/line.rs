@@ -11,7 +11,21 @@ pub trait LineSolver {
         desc: ReadRc<Description<Self::BlockType>>,
         line: ReadRc<Vec<<<Self as LineSolver>::BlockType as Block>::Color>>,
     ) -> Self;
-    fn solve(&mut self) -> Result<Vec<<<Self as LineSolver>::BlockType as Block>::Color>, String>;
+    fn solve(&mut self) -> Result<(), String>;
+    fn get_solution(self) -> Vec<<<Self as LineSolver>::BlockType as Block>::Color>;
+}
+
+pub fn solve<L, B>(
+    desc: ReadRc<Description<B>>,
+    line: ReadRc<Vec<B::Color>>,
+) -> Result<Vec<B::Color>, String>
+where
+    L: LineSolver<BlockType = B>,
+    B: Block,
+{
+    let mut solver = L::new(desc, line);
+    solver.solve()?;
+    Ok(solver.get_solution())
 }
 
 pub trait DynamicColor: Color
@@ -21,7 +35,9 @@ where
     // it can be implemented very simple with generics specialization
     // https://github.com/aturon/rfcs/blob/impl-specialization/text/0000-impl-specialization.md
     // https://github.com/rust-lang/rfcs/issues/1053
-    fn set_additional_blank(line: ReadRc<Vec<Self>>) -> (ReadRc<Vec<Self>>, bool);
+    fn set_additional_blank(line: ReadRc<Vec<Self>>) -> (ReadRc<Vec<Self>>, bool) {
+        (line, false)
+    }
     fn both_colors() -> Option<Self>;
 
     fn can_be_blank(&self) -> bool;
@@ -63,7 +79,7 @@ where
         }
     }
 
-    fn solve(&mut self) -> Result<Vec<B::Color>, String> {
+    fn solve(&mut self) -> Result<(), String> {
         if self.try_solve() {
             let mut solved = &mut self.solved_line;
             if self.additional_space {
@@ -73,13 +89,16 @@ where
             let both = B::Color::both_colors();
             if let Some(both) = both {
                 let init = B::Color::default();
-
                 utils::replace(&mut solved, &both, init);
             }
-            Ok(solved.to_vec())
+            Ok(())
         } else {
             Err("Bad line".to_string())
         }
+    }
+
+    fn get_solution(self) -> Vec<B::Color> {
+        self.solved_line
     }
 }
 
@@ -282,15 +301,16 @@ where
 }
 
 impl DynamicColor for BinaryColor {
-    fn set_additional_blank(line: ReadRc<Vec<Self>>) -> (ReadRc<Vec<Self>>, bool) {
-        //let space = BinaryColor::White;
-        //
-        //if line.last().unwrap_or(&space) != &space {
-        //    let mut with_space = line.to_vec();
-        //    with_space.push(space);
-        //    return (ReadRc::new(with_space), true);
-        (line, false)
-    }
+    //fn set_additional_blank(line: ReadRc<Vec<Self>>) -> (ReadRc<Vec<Self>>, bool) {
+    //    let space = BinaryColor::White;
+    //
+    //    if line.last().unwrap_or(&space) != &space {
+    //        let mut with_space = line.to_vec();
+    //        with_space.push(space);
+    //        return (ReadRc::new(with_space), true);
+    //    }
+    //    (line, false)
+    //}
 
     fn both_colors() -> Option<Self> {
         Some(BinaryColor::BlackOrWhite)
@@ -323,10 +343,6 @@ impl DynamicColor for BinaryColor {
 }
 
 impl DynamicColor for MultiColor {
-    fn set_additional_blank(line: ReadRc<Vec<Self>>) -> (ReadRc<Vec<Self>>, bool) {
-        (line, false)
-    }
-
     fn both_colors() -> Option<Self> {
         None
     }
@@ -350,7 +366,7 @@ impl DynamicColor for MultiColor {
 
 #[cfg(test)]
 mod tests {
-    use super::{DynamicSolver, LineSolver};
+    use super::{solve, DynamicSolver, LineSolver};
     use crate::block::{
         binary::{
             BinaryBlock,
@@ -446,8 +462,10 @@ mod tests {
     #[test]
     fn solve_basic() {
         let l = vec![Undefined; 3];
-        let mut ds = DynamicSolver::new(simple_description(), ReadRc::new(l));
-        assert_eq!(ds.solve().unwrap(), vec![Black; 3]);
+        assert_eq!(
+            solve::<DynamicSolver<_>, _>(simple_description(), ReadRc::new(l)).unwrap(),
+            vec![Black; 3]
+        );
     }
 
     #[test]
@@ -459,15 +477,16 @@ mod tests {
             let original_line = line.clone();
 
             let mut ds = DynamicSolver::new(ReadRc::new(desc), ReadRc::new(line));
-            assert_eq!(ds.solve().unwrap(), expected);
+            ds.solve().unwrap();
             assert_eq!(*ds.line, original_line);
+            assert_eq!(ds.get_solution(), expected);
         }
     }
 }
 
 #[cfg(test)]
 mod tests_solve_color {
-    use super::{DynamicSolver, LineSolver};
+    use super::{solve, DynamicSolver, LineSolver};
     use crate::block::{
         base::{
             color::{ColorId, ColorPalette},
@@ -495,8 +514,10 @@ mod tests_solve_color {
 
     fn check_solve(desc: &[ColoredBlock], initial: &[MultiColor], solved: &[ColorId]) {
         let desc = desc_from_slice(desc);
-        let mut ds = DynamicSolver::new(desc, ReadRc::new(initial.to_vec()));
-        assert_eq!(ds.solve().unwrap(), id_to_color_line(solved));
+        assert_eq!(
+            solve::<DynamicSolver<_>, _>(desc, ReadRc::new(initial.to_vec())).unwrap(),
+            id_to_color_line(solved)
+        );
     }
 
     #[test]

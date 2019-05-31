@@ -1,6 +1,6 @@
 use crate::block::{Block, Description};
 use crate::board::{Board, Point};
-use crate::solver::line::LineSolver;
+use crate::solver::line::{self, LineSolver};
 use crate::utils::rc::{MutRc, ReadRc};
 
 //use std::time::Instant;
@@ -324,8 +324,7 @@ where
             return cached;
         }
 
-        let mut line_solver = S::new(line_desc, line);
-        let value = line_solver.solve();
+        let value = line::solve::<S, _>(line_desc, line);
 
         let rc_value = value.map(ReadRc::new);
         self.board
