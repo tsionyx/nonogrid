@@ -51,7 +51,8 @@ pub struct DynamicSolver<B: Block, S = <B as Block>::Color> {
     line: ReadRc<Vec<S>>,
     additional_space: bool,
     block_sums: Vec<usize>,
-    solution_matrix: Vec<Vec<Option<bool>>>,
+    job_size: usize,
+    solution_matrix: Vec<Option<bool>>,
     solved_line: Vec<S>,
 }
 
@@ -66,7 +67,10 @@ where
         let (line, additional_space) = B::Color::set_additional_blank(line);
 
         let block_sums = Self::calc_block_sum(&*desc);
-        let solution_matrix = Self::build_solution_matrix(&*desc, &line);
+
+        let job_size = desc.vec.len() + 1;
+        let solution_matrix = vec![None; job_size * line.len()];
+
         let solved_line = line.iter().map(DynamicColor::solved_copy).collect();
 
         Self {
@@ -74,6 +78,7 @@ where
             line,
             additional_space,
             block_sums,
+            job_size,
             solution_matrix,
             solved_line,
         }
@@ -116,12 +121,6 @@ where
         min_indexes
     }
 
-    fn build_solution_matrix(desc: &Description<B>, line: &[B::Color]) -> Vec<Vec<Option<bool>>> {
-        let positions = line.len();
-        let job_size = desc.vec.len() + 1;
-        vec![vec![None; positions]; job_size]
-    }
-
     fn line(&self) -> ReadRc<Vec<B::Color>> {
         ReadRc::clone(&self.line)
     }
@@ -136,7 +135,7 @@ where
     }
 
     fn _get_sol(&self, position: usize, block: usize) -> Option<bool> {
-        self.solution_matrix[block][position]
+        self.solution_matrix[position * self.job_size + block]
     }
 
     fn get_sol(&mut self, position: isize, block: usize) -> bool {
@@ -158,7 +157,7 @@ where
     }
 
     fn set_sol(&mut self, position: usize, block: usize, can_be_solved: bool) {
-        self.solution_matrix[block][position] = Some(can_be_solved)
+        self.solution_matrix[position * self.job_size + block] = Some(can_be_solved)
     }
 
     fn color_at(&self, position: usize) -> B::Color {
