@@ -39,7 +39,7 @@ where
 
 pub trait Block
 where
-    Self: Debug + PartialEq + Eq + Hash + Default + Clone + Send + Sync,
+    Self: Debug + PartialEq + Eq + Hash + Default + Clone + Copy + Send + Sync,
 {
     type Color: Color;
 

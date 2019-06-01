@@ -41,7 +41,7 @@ where
     fn both_colors() -> Option<Self>;
 
     fn can_be_blank(&self) -> bool;
-    fn can_be(&self, color: &Self) -> bool;
+    fn can_be(&self, color: Self) -> bool;
     fn add_color(&self, color: Self) -> Self;
     fn solved_copy(&self) -> Self;
 }
@@ -158,8 +158,8 @@ where
         self.line[position]
     }
 
-    fn block_at(&self, block_position: usize) -> &B {
-        &self.desc.vec[block_position]
+    fn block_at(&self, block_position: usize) -> B {
+        self.desc.vec[block_position]
     }
 
     fn update_solved(&mut self, position: usize, color: B::Color) {
@@ -211,7 +211,7 @@ where
         if self.can_place_color(
             block_start,
             position,
-            &current_color,
+            current_color,
             should_have_trailing_space,
         ) {
             let has_color = self.get_sol(block_start - 1, block - 1);
@@ -247,7 +247,7 @@ where
         &self,
         start: isize,
         mut end: usize,
-        color: &B::Color,
+        color: B::Color,
         trailing_space: bool,
     ) -> bool {
         if start < 0 {
@@ -309,7 +309,7 @@ impl DynamicColor for BinaryColor {
         self != &BinaryColor::Black
     }
 
-    fn can_be(&self, _always_black: &Self) -> bool {
+    fn can_be(&self, _always_black: Self) -> bool {
         self != &Self::blank()
     }
 
@@ -340,8 +340,8 @@ impl DynamicColor for MultiColor {
         (self.0 & ColorPalette::WHITE_ID) == ColorPalette::WHITE_ID
     }
 
-    fn can_be(&self, color: &Self) -> bool {
-        self.0 & color.0 != 0
+    fn can_be(&self, color: Self) -> bool {
+        (self.0 & color.0) != 0
     }
 
     fn add_color(&self, color: Self) -> Self {

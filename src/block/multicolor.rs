@@ -148,7 +148,7 @@ impl fmt::Display for MultiColor {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Default, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 pub struct ColoredBlock {
     size: usize,
     color: ColorId,

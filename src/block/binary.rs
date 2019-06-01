@@ -129,7 +129,7 @@ impl Sub for BinaryColor {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Default, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 pub struct BinaryBlock(pub usize);
 
 impl Block for BinaryBlock {
