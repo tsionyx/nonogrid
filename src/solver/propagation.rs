@@ -152,7 +152,7 @@ where
         while let Some((is_column, index)) = queue.pop() {
             let new_jobs = self.update_line::<S>(index, is_column)?;
 
-            let new_states = new_jobs.iter().map(|(another_index, _color)| {
+            let new_states = new_jobs.iter().map(|another_index| {
                 let (x, y) = if is_column {
                     (&index, another_index)
                 } else {
@@ -166,7 +166,7 @@ where
             new_jobs
                 .into_iter()
                 .rev()
-                .map(|(new_index, _color)| (!is_column, new_index))
+                .map(|new_index| (!is_column, new_index))
                 .for_each(|job| queue.push(job));
 
             lines_solved += 1;
@@ -200,11 +200,7 @@ where
     /// If the line gets partially solved, put the crossed lines into queue.
     ///
     /// Return the list of indexes which was updated during this solution.
-    pub fn update_line<S>(
-        &self,
-        index: usize,
-        is_column: bool,
-    ) -> Result<Vec<(usize, B::Color)>, String>
+    pub fn update_line<S>(&self, index: usize, is_column: bool) -> Result<Vec<usize>, String>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -267,7 +263,7 @@ where
         is_column: bool,
         old: &[B::Color],
         new: &[B::Color],
-    ) -> Vec<(usize, B::Color)> {
+    ) -> Vec<usize> {
         // let new_solution_rate = Board::<B>::line_solution_rate(&updated);
         // if new_solution_rate > pre_solution_rate
 
@@ -293,7 +289,7 @@ where
                         "Diff on index={}: original={:?}, updated={:?}",
                         i, pre, &post
                     );
-                    Some((i, *post))
+                    Some(i)
                 } else {
                     None
                 }
