@@ -9,10 +9,10 @@ pub trait LineSolver {
 
     fn new(
         desc: ReadRc<Description<Self::BlockType>>,
-        line: ReadRc<Vec<<<Self as LineSolver>::BlockType as Block>::Color>>,
+        line: ReadRc<Vec<<Self::BlockType as Block>::Color>>,
     ) -> Self;
     fn solve(&mut self) -> Result<(), String>;
-    fn get_solution(self) -> Vec<<<Self as LineSolver>::BlockType as Block>::Color>;
+    fn get_solution(self) -> Vec<<Self::BlockType as Block>::Color>;
 }
 
 pub fn solve<L, B>(
@@ -121,16 +121,12 @@ where
         min_indexes
     }
 
-    fn line(&self) -> ReadRc<Vec<B::Color>> {
-        ReadRc::clone(&self.line)
-    }
-
     fn try_solve(&mut self) -> bool {
-        if self.line().is_empty() {
+        if self.line.is_empty() {
             return true;
         }
 
-        let (position, block) = (self.line().len() - 1, self.desc.vec.len());
+        let (position, block) = (self.line.len() - 1, self.desc.vec.len());
         self.get_sol(position as isize, block)
     }
 
@@ -147,13 +143,11 @@ where
         let position = position as usize;
 
         let can_be_solved = self._get_sol(position, block);
-        if let Some(result) = can_be_solved {
-            result
-        } else {
+        can_be_solved.unwrap_or_else(|| {
             let can_be_solved = self.fill_matrix(position, block);
             self.set_sol(position, block, can_be_solved);
             can_be_solved
-        }
+        })
     }
 
     fn set_sol(&mut self, position: usize, block: usize, can_be_solved: bool) {
@@ -161,20 +155,16 @@ where
     }
 
     fn color_at(&self, position: usize) -> B::Color {
-        self.line()[position]
+        self.line[position]
     }
 
     fn block_at(&self, block_position: usize) -> &B {
         &self.desc.vec[block_position]
     }
 
-    fn set_solved(&mut self, position: usize, color: B::Color) {
-        self.solved_line[position] = color;
-    }
-
     fn update_solved(&mut self, position: usize, color: B::Color) {
-        let &current = &self.solved_line[position];
-        self.set_solved(position, current.add_color(color))
+        let current = self.solved_line[position];
+        self.solved_line[position] = current.add_color(color);
     }
 
     fn fill_matrix(&mut self, position: usize, block: usize) -> bool {
@@ -273,7 +263,7 @@ where
         }
 
         // the color can be placed in every cell
-        self.line()[start as usize..end]
+        self.line[start as usize..end]
             .iter()
             .all(|cell| cell.can_be(color))
     }
