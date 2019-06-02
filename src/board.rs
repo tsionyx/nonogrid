@@ -321,14 +321,9 @@ where
     /// the neighbour cells
     /// that are not completely solved yet.
     pub fn unsolved_neighbours(&self, point: &Point) -> impl Iterator<Item = Point> + '_ {
-        #[allow(clippy::unnecessary_filter_map)]
-        self.neighbours(&point).into_iter().filter_map(move |n| {
-            if self.cell(&n).is_solved() {
-                None
-            } else {
-                Some(n)
-            }
-        })
+        self.neighbours(&point)
+            .into_iter()
+            .filter(move |n| !self.cell(n).is_solved())
     }
 
     pub fn init_cache(&mut self) {
@@ -400,7 +395,7 @@ where
 
         let other = other.chunks(self.width());
         for (y, (row, other_row)) in self.iter_rows().zip(other).enumerate() {
-            for (x, (cell, other_cell)) in row.iter().zip(other_row.iter()).enumerate() {
+            for (x, (cell, other_cell)) in row.iter().zip(other_row).enumerate() {
                 if cell != other_cell {
                     let p = Point::new(x, y);
 

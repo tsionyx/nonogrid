@@ -25,6 +25,8 @@
 
 ## Optimizations
 - remove contradiction mode?
+- move dependencies into optional features (toml, xml, clap, colored)
+- load puzzles in other formats (syr for black, olsak for multi) to reduce network latency
 
 
 ## Refactoring
