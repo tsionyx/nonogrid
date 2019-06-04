@@ -16,9 +16,12 @@ where
 }
 
 pub fn pad_with<T: Clone>(v: &mut Vec<T>, el: T, max_size: usize, right: bool) {
-    let v_len = v.len();
-    if max_size > v_len {
-        let plus = vec![el; max_size - v_len];
+    if let Some(additional) = max_size.checked_sub(v.len()) {
+        if additional == 0 {
+            return
+        }
+        
+        let plus = std::iter::repeat(el).take(additional);
 
         if right {
             v.extend(plus);
@@ -50,23 +53,10 @@ pub fn replace<T>(vec: &mut Vec<T>, what: &T, with_what: T)
 where
     T: PartialEq + Clone,
 {
-    if what == &with_what {
-        return;
-    }
-
-    if !vec.contains(what) {
-        return;
-    }
-
-    let replaced_indexes: Vec<_> = vec
-        .iter()
-        .enumerate()
-        .filter_map(|(index, val)| if val == what { Some(index) } else { None })
-        .collect();
-
-    vec.extend(vec![with_what; replaced_indexes.len()]);
-    for index in replaced_indexes {
-        vec.swap_remove(index);
+    for x in vec {
+        if *x == *what {
+            *x = with_what.clone();
+        }
     }
 }
 
@@ -74,20 +64,7 @@ pub fn remove<T>(vec: &mut Vec<T>, what: &T)
 where
     T: PartialEq,
 {
-    if !vec.contains(what) {
-        return;
-    }
-
-    let mut removed_indexes: Vec<_> = vec
-        .iter()
-        .enumerate()
-        .filter_map(|(index, val)| if val == what { Some(index) } else { None })
-        .collect();
-
-    removed_indexes.sort_by_key(|&n| Reverse(n));
-    for index in removed_indexes {
-        vec.remove(index);
-    }
+    vec.retain(|x| x != what);
 }
 
 pub fn two_powers(mut num: u32) -> Vec<u32> {
@@ -114,10 +91,20 @@ pub fn is_power_of_2(x: u32) -> bool {
 
 pub fn dedup<T>(vec: &[T]) -> Vec<T>
 where
-    T: Eq + Hash + Clone,
+    T: Eq + Clone,
 {
     let set: HashSet<_> = vec.iter().cloned().collect();
     set.into_iter().collect()
+    
+    // The following variant is more performant,
+    // however, it requires `Ord` bound on `T`,
+    // so it would be a breaking change
+    //
+    // let mut set = vec.to_vec();
+    // let mut set = vec.to_vec();
+    // set.sort_unstable();
+    // set.dedup();
+    // set
 }
 
 pub mod iter {
@@ -136,17 +123,14 @@ pub mod iter {
         {
             let mut return_err = on_empty_error;
 
-            loop {
-                if let Some(x) = self.next() {
-                    let res = f(x).into_result();
-                    match res {
-                        Ok(res) => break Try::from_ok(res),
-                        Err(err) => return_err = err,
-                    }
-                } else {
-                    break Try::from_error(return_err);
+            for x in self {
+                match f(x).into_result() {
+                    Ok(res) => return Try::from_ok(res),
+                    Err(e) => return_err = e,
                 }
             }
+            
+            Try::from_error(return_err)
         }
 
         #[cfg(not(feature = "try_trait"))]
@@ -159,16 +143,14 @@ pub mod iter {
         {
             let mut return_err = on_empty_error;
 
-            loop {
-                if let Some(x) = self.next() {
-                    match f(x) {
-                        Ok(res) => break Ok(res),
-                        Err(err) => return_err = err,
-                    }
-                } else {
-                    break Err(return_err);
+            for x in self {
+                match f(x) {
+                    Ok(res) => return Ok(res),
+                    Err(e) => return_err = e,
                 }
             }
+            
+            Err(return_err)
         }
 
         /// Generalization of `find_map` for `Result` type.
