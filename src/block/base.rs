@@ -87,7 +87,7 @@ where
         let block_begin = index;
         let color_number = line[index];
 
-        index += line.iter().take_while(|&&x| x == color_number).count();
+        index += line[index..].iter().take_while(|&&x| x == color_number).count();
 
         let block_size = index - block_begin;
         if (block_size > 0) && (color_number != blank_code) {
@@ -300,7 +300,7 @@ pub mod color {
         }
 
         fn with_colors(colors: HashMap<String, ColorDesc>) -> Self {
-            let symbols: Vec<_> = (0..0xFF)
+            let symbols = (0..0xFF)
                 .filter(u8::is_ascii_punctuation)
                 .map(char::from)
                 .collect();
@@ -330,7 +330,7 @@ pub mod color {
         }
 
         pub fn desc_by_id(&self, id: ColorId) -> Option<ColorDesc> {
-            self.vec.values().find(|color_desc| color_desc.id == id)
+            self.vec.values().find(|color_desc| color_desc.id == id).cloned()
         }
 
         fn add(&mut self, color: ColorDesc) {
