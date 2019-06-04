@@ -4,14 +4,16 @@ use crate::block::{
 };
 use crate::utils::{self, rc::ReadRc};
 
+pub type LineColor<T> = <<T as LineSolver>::BlockType as Block>::Color;
+
 pub trait LineSolver {
     type BlockType: Block;
 
     fn new(
         desc: ReadRc<Description<Self::BlockType>>,
-        line: ReadRc<Vec<<<Self as LineSolver>::BlockType as Block>::Color>>,
+        line: ReadRc<Vec<LineColor<Self>>>,
     ) -> Self;
-    fn solve(&mut self) -> Result<Vec<<<Self as LineSolver>::BlockType as Block>::Color>, String>;
+    fn solve(&mut self) -> Result<Vec<LineColor<Self>>, String>;
 }
 
 pub trait DynamicColor: Color
