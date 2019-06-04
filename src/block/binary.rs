@@ -7,7 +7,7 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::ops::{Add, Sub};
 
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 pub enum BinaryColor {
     Undefined,
     White,
@@ -96,12 +96,6 @@ impl BinaryColor {
             BinaryColor::Black => 2,
             _ => 3,
         }
-    }
-}
-
-impl Ord for BinaryColor {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.order().cmp(&other.order())
     }
 }
 
