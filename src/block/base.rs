@@ -9,15 +9,12 @@ use std::ops::{Add, Sub};
 pub trait Color
 where
     Self: Debug
-        + PartialEq
         + Eq
         + Hash
         + Default
         + Copy
-        + Clone
         + Send
         + Sync
-        + PartialOrd
         + Ord
         + Add<Output = Self>
         + Sub<Output = Result<Self, String>>,
@@ -39,7 +36,7 @@ where
 
 pub trait Block
 where
-    Self: Debug + PartialEq + Eq + Hash + Default + Clone + Send + Sync,
+    Self: Debug + Eq + Hash + Default + Clone + Send + Sync,
 {
     type Color: Color;
 
