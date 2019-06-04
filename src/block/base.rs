@@ -67,8 +67,8 @@ where
     T: Block,
 {
     pub fn new(mut vec: Vec<T>) -> Self {
-        // remove zero blocks
-        utils::remove(&mut vec, &T::default());
+        let zero = T::default();
+        vec.retain(|x| *x != zero);
         Self { vec }
     }
 }
@@ -87,9 +87,7 @@ where
         let block_begin = index;
         let color_number = line[index];
 
-        while (index < size) && (line[index] == color_number) {
-            index += 1;
-        }
+        index += line.iter().take_while(|&&x| x == color_number).count();
 
         let block_size = index - block_begin;
         if (block_size > 0) && (color_number != blank_code) {
@@ -126,12 +124,10 @@ where
             line_clues(&column, blank_code)
         })
         .collect();
-    let rows = (0..height)
-        .map(|row_index| {
-            let row = &solution_matrix[row_index];
-            line_clues(row, blank_code)
-        })
+    let rows = solution_matrix.iter()
+        .map(|row| line_clues(row, blank_code))
         .collect();
+    
     (columns, rows)
 }
 
@@ -304,15 +300,9 @@ pub mod color {
         }
 
         fn with_colors(colors: HashMap<String, ColorDesc>) -> Self {
-            let symbols: Vec<_> = (0_u8..0xFF)
-                .filter_map(|x| {
-                    let ch = x as char;
-                    if ch.is_ascii_punctuation() {
-                        Some(ch)
-                    } else {
-                        None
-                    }
-                })
+            let symbols: Vec<_> = (0..0xFF)
+                .filter(u8::is_ascii_punctuation)
+                .map(char::from)
                 .collect();
 
             Self {
@@ -340,13 +330,7 @@ pub mod color {
         }
 
         pub fn desc_by_id(&self, id: ColorId) -> Option<ColorDesc> {
-            self.vec.iter().find_map(|(_name, color_desc)| {
-                if color_desc.id == id {
-                    Some(color_desc.clone())
-                } else {
-                    None
-                }
-            })
+            self.vec.values().find(|color_desc| color_desc.id == id)
         }
 
         fn add(&mut self, color: ColorDesc) {
@@ -377,26 +361,19 @@ pub mod color {
             value: ColorValue,
             symbol: char,
         ) {
-            let current_max = self.vec.iter().map(|(_name, color)| color.id).max();
+            let current_max = self.vec.values().map(|color| color.id).max();
             let id = current_max.map_or(1, |val| val * 2);
             self.color_with_name_value_symbol_and_id(name, value, symbol, id)
         }
 
         #[allow(dead_code)]
         pub fn color_with_name_and_value(&mut self, name: &str, value: ColorValue) {
-            let occupied_symbols: HashSet<_> =
-                self.vec.iter().map(|(_name, color)| color.symbol).collect();
+            let occupied_symbols: HashSet<_> = self.vec.values().collect();
 
             let next_symbol = self
                 .symbols
                 .iter()
-                .find_map(|available_symbol| {
-                    if occupied_symbols.contains(&available_symbol) {
-                        None
-                    } else {
-                        Some(available_symbol)
-                    }
-                })
+                .find(|available_symbol| !occupied_symbols.contains(&available_symbol))
                 .expect("Cannot create color: No more symbols available.");
 
             self.color_with_name_value_and_symbol(name, value, *next_symbol)
