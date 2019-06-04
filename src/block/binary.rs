@@ -28,7 +28,7 @@ impl Color for BinaryColor {
     }
 
     fn is_solved(&self) -> bool {
-        self == &BinaryColor::Black || self == &BinaryColor::White
+        *self == BinaryColor::Black || *self == BinaryColor::White
     }
 
     fn solution_rate(&self, _all_colors: &[ColorId]) -> f64 {
@@ -47,7 +47,7 @@ impl Color for BinaryColor {
         if self != &BinaryColor::Undefined {
             return Err("Can only update undefined".to_string());
         }
-        if !new.is_solved() {
+        if !new.is_solved() { //this line seems suspicious -- logical error?
             return Err("Cannot update already solved".to_string());
         }
 
@@ -134,19 +134,11 @@ impl Block for BinaryBlock {
     }
 
     fn partial_sums(desc: &[Self]) -> Vec<usize> {
-        if desc.is_empty() {
-            return vec![];
-        }
-
         desc.iter()
             .fold(Vec::with_capacity(desc.len()), |mut acc, block| {
-                if acc.is_empty() {
-                    vec![block.0]
-                } else {
-                    let last = acc.last().expect("Partial sums vector should be non-empty");
-                    acc.push(last + block.0 + 1);
-                    acc
-                }
+                let new = acc.last().cloned().map_or(0, |x| x + 1) + block.0;
+                acc.push(new);
+                acc
             })
     }
 
