@@ -18,7 +18,7 @@ impl Color for MultiColor {
     }
 
     fn is_solved(&self) -> bool {
-        is_power_of_2(self.0)
+        self.0.is_power_of_two()
     }
 
     fn memoize_rate() -> bool {
@@ -173,25 +173,19 @@ impl Block for ColoredBlock {
     where
         Self: Sized,
     {
+        use std::iter::once;
+        
         if desc.is_empty() {
             return vec![];
         }
 
         desc.iter()
-            .enumerate()
-            .fold(Vec::with_capacity(desc.len()), |mut acc, (i, block)| {
-                if acc.is_empty() {
-                    vec![block.size()]
-                } else {
-                    let last = acc.last().expect("Partial sums vector should be non-empty");
-                    let mut sum = last + block.size();
-                    if desc[i - 1].color() == block.color() {
-                        // plus at least one space
-                        sum += 1;
-                    }
-                    acc.push(sum);
-                    acc
-                }
+            .zip(once(None).chain(desc.iter().map(Some)))
+            .map(|(curr, prev)| curr.size() + prev.map_or(0, |x| (x.color() == curr.color()) as usize))
+            .fold(Vec::with_capacity(desc.len()), |mut acc, size| {
+                let new = acc.last().cloned().unwrap_or(0) + size;
+                acc.push(new);
+                acc
             })
     }
 
