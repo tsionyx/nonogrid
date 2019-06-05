@@ -133,58 +133,64 @@ where
     K: fmt::Debug,
     V: Clone + fmt::Display,
 {
-    fn format(&self, spaces: usize, indent_size: usize) -> String {
+    fn format(&self, f: &mut fmt::Formatter, spaces: usize, indent_size: usize) -> fmt::Result {
         if self.children.is_empty() {
-            self.format_value()
+            self.format_value(f)
         } else {
-            self.format_with_children(spaces, indent_size)
+            self.format_with_children(f, spaces, indent_size)
         }
     }
 
-    fn format_value(&self) -> String {
+    fn format_value(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let Some(value) = self.value.clone() {
-            format!("{:.6}", value)
+            write!(f, "{:.6}", value)
         } else {
-            "None".to_string()
+            write!(f, "None")
         }
     }
 
-    fn format_with_children(&self, spaces: usize, indent_size: usize) -> String {
-        let mut res = vec![
-            format!("{}{}", indent_space(spaces * indent_size), '{'),
-            format!(
-                "{}{:?}: {},",
-                indent_space((spaces + 1) * indent_size),
-                "value",
-                self.format_value()
-            ),
-            format!(
-                "{}{:?}: {}",
-                indent_space((spaces + 1) * indent_size),
-                "children",
-                '{'
-            ),
-        ];
+    fn format_with_children(
+        &self,
+        f: &mut fmt::Formatter,
+        spaces: usize,
+        indent_size: usize,
+    ) -> fmt::Result {
+        let start_indent = ""; // indent_space(spaces * indent_size)
+        writeln!(f, "{}{{", start_indent)?;
+        write!(
+            f,
+            "{}{:?}: ",
+            indent_space((spaces + 1) * indent_size),
+            "value"
+        )?;
+
+        self.format_value(f)?;
+        writeln!(f, ",")?;
+
+        writeln!(
+            f,
+            "{}{:?}: {{",
+            indent_space((spaces + 1) * indent_size),
+            "children",
+        )?;
 
         let last_index = self.children.len() - 1;
 
         for (i, (child_key, child)) in self.children.iter().enumerate() {
-            let child_format = child.read().format(spaces + 2, indent_size);
-            let trail_comma = if i == last_index { "" } else { "," };
-            res.push(format!(
-                "{}{:?}: {}{}",
+            write!(
+                f,
+                "{}{:?}: ",
                 indent_space((spaces + 2) * indent_size),
-                child_key,
-                child_format.trim_start(),
-                trail_comma,
-            ));
+                child_key
+            )?;
+
+            child.read().format(f, spaces + 2, indent_size)?;
+
+            writeln!(f, "{}", if i < last_index { "," } else { "" })?;
         }
 
-        res.extend_from_slice(&[
-            format!("{}{}", indent_space((spaces + 1) * indent_size), '}'),
-            format!("{}{}", indent_space(spaces * indent_size), '}'),
-        ]);
-        res.join("\n")
+        writeln!(f, "{}}}", indent_space((spaces + 1) * indent_size))?;
+        write!(f, "{}}}", indent_space(spaces * indent_size))
     }
 }
 
@@ -199,7 +205,7 @@ where
     V: Clone + fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.format(0, 2))
+        self.format(f, 0, 2)
     }
 }
 
