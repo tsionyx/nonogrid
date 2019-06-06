@@ -6,7 +6,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::io;
 use std::marker::Sized;
-use std::ops::{Add, Sub};
+use std::ops::Sub;
 use std::rc::Rc;
 use std::slice::Chunks;
 
@@ -16,16 +16,8 @@ use probing::ProbeSolver;
 
 pub trait Color
 where
-    Self: Debug
-        + Eq
-        + Hash
-        + Default
-        + Copy
-        + Send
-        + Sync
-        + Ord
-        + Add<Output = Self>
-        + Sub<Output = Result<Self, String>>,
+    Self:
+        Debug + Eq + Hash + Default + Copy + Send + Sync + Ord + Sub<Output = Result<Self, String>>,
 {
     fn blank() -> Self;
     fn is_solved(&self) -> bool;
@@ -117,14 +109,6 @@ impl fmt::Display for BinaryColor {
             Undefined | BlackOrWhite => '?',
         };
         write!(f, "{}", symbol)
-    }
-}
-
-impl Add for BinaryColor {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        rhs
     }
 }
 
@@ -683,10 +667,9 @@ where
     B::Color: Copy,
 {
     fn set_color(&mut self, point: &Point, color: &B::Color) {
-        let old_value = self.cell(point);
         let Point { x, y } = *point;
         let index = self.linear_index(y, x);
-        self.cells[index] = old_value + *color;
+        self.cells[index] = *color;
     }
 
     fn unset_color(&mut self, point: &Point, color: &B::Color) -> Result<(), String> {
