@@ -14,7 +14,7 @@ use iter::StepByIter;
 use line::LineSolver;
 use probing::ProbeSolver;
 
-pub trait Color
+pub trait Cell
 where
     Self:
         Debug + Eq + Hash + Default + Copy + Send + Sync + Ord + Sub<Output = Result<Self, String>>,
@@ -32,7 +32,7 @@ pub trait Block
 where
     Self: Debug + Eq + Hash + Default + Copy + Send + Sync,
 {
-    type Color: Color;
+    type Color: Cell;
 
     fn from_size(size: usize) -> Self;
     fn partial_sums(desc: &[Self]) -> Vec<usize>
@@ -44,26 +44,26 @@ where
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
-enum BinaryColor {
+enum BW {
     Undefined,
     White,
     Black,
     BlackOrWhite,
 }
 
-impl Default for BinaryColor {
+impl Default for BW {
     fn default() -> Self {
-        BinaryColor::Undefined
+        BW::Undefined
     }
 }
 
-impl Color for BinaryColor {
+impl Cell for BW {
     fn blank() -> Self {
-        BinaryColor::White
+        BW::White
     }
 
     fn is_solved(&self) -> bool {
-        *self == BinaryColor::Black || *self == BinaryColor::White
+        *self == BW::Black || *self == BW::White
     }
 
     fn solution_rate(&self) -> f64 {
@@ -79,7 +79,7 @@ impl Color for BinaryColor {
             return Ok(false);
         }
 
-        if self != &BinaryColor::Undefined {
+        if self != &BW::Undefined {
             return Err("Can only update undefined".to_string());
         }
         if !new.is_solved() {
@@ -93,14 +93,14 @@ impl Color for BinaryColor {
         if self.is_solved() {
             vec![*self]
         } else {
-            vec![BinaryColor::White, BinaryColor::Black]
+            vec![BW::White, BW::Black]
         }
     }
 }
 
-impl fmt::Display for BinaryColor {
+impl fmt::Display for BW {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use BinaryColor::*;
+        use BW::*;
 
         let symbol = match *self {
             White => '.',
@@ -111,7 +111,7 @@ impl fmt::Display for BinaryColor {
     }
 }
 
-impl Sub for BinaryColor {
+impl Sub for BW {
     type Output = Result<Self, String>;
 
     fn sub(self, rhs: Self) -> Self::Output {
@@ -120,21 +120,21 @@ impl Sub for BinaryColor {
         }
 
         Ok(match rhs {
-            BinaryColor::Black => BinaryColor::White,
-            BinaryColor::White => BinaryColor::Black,
+            BW::Black => BW::White,
+            BW::White => BW::Black,
             _ => self,
         })
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
-struct BinaryBlock(usize);
+struct BB(usize);
 
-impl Block for BinaryBlock {
-    type Color = BinaryColor;
+impl Block for BB {
+    type Color = BW;
 
     fn from_size(size: usize) -> Self {
-        BinaryBlock(size)
+        BB(size)
     }
 
     fn partial_sums(desc: &[Self]) -> Vec<usize> {
@@ -156,32 +156,26 @@ impl Block for BinaryBlock {
     }
 
     fn color(&self) -> Self::Color {
-        BinaryColor::Black
-    }
-}
-
-impl fmt::Display for BinaryBlock {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
+        BW::Black
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub struct Description<T: Block>
+pub struct Clues<T: Block>
 where
     T: Block,
 {
     vec: Vec<T>,
 }
 
-impl<T> Description<T>
+impl<T> Clues<T>
 where
     T: Block,
 {
     fn new(mut vec: Vec<T>) -> Self {
         let zero = T::default();
         vec.retain(|x| *x != zero);
-        Description::<T> { vec: vec }
+        Clues::<T> { vec: vec }
     }
 }
 
@@ -386,8 +380,8 @@ where
     B: Block,
 {
     cells: Vec<B::Color>,
-    desc_rows: Vec<Rc<Description<B>>>,
-    desc_cols: Vec<Rc<Description<B>>>,
+    desc_rows: Vec<Rc<Clues<B>>>,
+    desc_cols: Vec<Rc<Clues<B>>>,
     cache_rows: Option<LineSolverCache<B>>,
     cache_cols: Option<LineSolverCache<B>>,
     rows_cache_indexes: Vec<usize>,
@@ -445,7 +439,7 @@ where
     B: Block,
     B::Color: Copy,
 {
-    fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Self {
+    fn with_descriptions(rows: Vec<Clues<B>>, columns: Vec<Clues<B>>) -> Self {
         let height = rows.len();
         let width = columns.len();
 
@@ -496,7 +490,7 @@ where
         self.cells.chunks(self.width())
     }
 
-    fn descriptions(&self, rows: bool) -> &[Rc<Description<B>>] {
+    fn descriptions(&self, rows: bool) -> &[Rc<Clues<B>>] {
         if rows {
             &self.desc_rows
         } else {
@@ -513,7 +507,7 @@ where
     }
 
     fn is_solved_full(&self) -> bool {
-        self.cells.iter().all(Color::is_solved)
+        self.cells.iter().all(Cell::is_solved)
     }
 
     fn get_row_slice(&self, index: usize) -> &[B::Color] {
@@ -698,23 +692,20 @@ where
 mod line {
     use std::rc::Rc;
 
-    use super::{replace, Block, Color, Description};
+    use super::{replace, Block, Cell, Clues};
 
     pub trait LineSolver {
         type BlockType: Block;
 
         fn new(
-            desc: Rc<Description<Self::BlockType>>,
+            desc: Rc<Clues<Self::BlockType>>,
             line: Rc<Vec<<Self::BlockType as Block>::Color>>,
         ) -> Self;
         fn solve(&mut self) -> Result<(), String>;
         fn get_solution(self) -> Vec<<Self::BlockType as Block>::Color>;
     }
 
-    pub fn solve<L, B>(
-        desc: Rc<Description<B>>,
-        line: Rc<Vec<B::Color>>,
-    ) -> Result<Vec<B::Color>, String>
+    pub fn solve<L, B>(desc: Rc<Clues<B>>, line: Rc<Vec<B::Color>>) -> Result<Vec<B::Color>, String>
     where
         L: LineSolver<BlockType = B>,
         B: Block,
@@ -724,7 +715,7 @@ mod line {
         Ok(solver.get_solution())
     }
 
-    pub trait DynamicColor: Color
+    pub trait DynamicColor: Cell
     where
         Self: Sized,
     {
@@ -737,7 +728,7 @@ mod line {
     }
 
     pub struct DynamicSolver<B: Block, S = <B as Block>::Color> {
-        desc: Rc<Description<B>>,
+        desc: Rc<Clues<B>>,
         line: Rc<Vec<S>>,
         block_sums: Vec<usize>,
         job_size: usize,
@@ -752,7 +743,7 @@ mod line {
     {
         type BlockType = B;
 
-        fn new(desc: Rc<Description<B>>, line: Rc<Vec<B::Color>>) -> Self {
+        fn new(desc: Rc<Clues<B>>, line: Rc<Vec<B::Color>>) -> Self {
             let block_sums = Self::calc_block_sum(&*desc);
 
             let job_size = desc.vec.len() + 1;
@@ -795,7 +786,7 @@ mod line {
         B: Block,
         B::Color: DynamicColor,
     {
-        fn calc_block_sum(desc: &Description<B>) -> Vec<usize> {
+        fn calc_block_sum(desc: &Clues<B>) -> Vec<usize> {
             let mut min_indexes: Vec<_> = B::partial_sums(&desc.vec)
                 .iter()
                 .map(|size| size - 1)
@@ -942,13 +933,13 @@ mod line {
     }
 }
 
-impl line::DynamicColor for BinaryColor {
+impl line::DynamicColor for BW {
     fn both_colors() -> Option<Self> {
-        Some(BinaryColor::BlackOrWhite)
+        Some(BW::BlackOrWhite)
     }
 
     fn can_be_blank(&self) -> bool {
-        self != &BinaryColor::Black
+        self != &BW::Black
     }
 
     fn can_be(&self) -> bool {
@@ -957,12 +948,12 @@ impl line::DynamicColor for BinaryColor {
 
     fn add_color(&self, color: Self) -> Self {
         match *self {
-            BinaryColor::Undefined => color,
+            BW::Undefined => color,
             value => {
                 if value == color {
                     value
                 } else {
-                    BinaryColor::BlackOrWhite
+                    BW::BlackOrWhite
                 }
             }
         }
@@ -980,7 +971,7 @@ mod propagation {
 
     use super::line;
     use super::line::LineSolver;
-    use super::{Block, Board, Description, Point};
+    use super::{Block, Board, Clues, Point};
 
     pub struct Solver<B>
     where
@@ -1189,7 +1180,7 @@ mod propagation {
             &self,
             index: usize,
             is_column: bool,
-            line_desc: Rc<Description<B>>,
+            line_desc: Rc<Clues<B>>,
             line: Rc<Vec<B::Color>>,
         ) -> Result<Rc<Vec<B::Color>>, String>
         where
@@ -1230,7 +1221,7 @@ mod probing {
     use std::rc::Rc;
 
     use super::line::LineSolver;
-    use super::{priority_ord, propagation, Block, Board, Color, Point};
+    use super::{priority_ord, propagation, Block, Board, Cell, Point};
 
     pub type Impact<B> = HashMap<(Point, <B as Block>::Color), (usize, u32)>;
     type FloatPriorityQueue<K> = BinaryHeap<K>;
@@ -1464,7 +1455,7 @@ mod backtracking {
     use super::line::LineSolver;
     use super::probing::{Impact, ProbeSolver};
     use super::rev::Reverse;
-    use super::{priority_ord, Block, Board, Color, Point};
+    use super::{priority_ord, Block, Board, Cell, Point};
 
     type Solution<B> = Vec<<B as Block>::Color>;
 
@@ -1883,16 +1874,16 @@ fn read_next_line() -> Vec<usize> {
         .collect()
 }
 
-fn read_description() -> Description<BinaryBlock> {
+fn read_description() -> Clues<BB> {
     let mut row = read_next_line();
     let last = row.pop().unwrap();
     if last != 0 {
         row.push(last);
     }
-    Description::new(row.into_iter().map(|x| BinaryBlock(x)).collect())
+    Clues::new(row.into_iter().map(|x| BB(x)).collect())
 }
 
-fn read() -> Vec<(Vec<Description<BinaryBlock>>, Vec<Description<BinaryBlock>>)> {
+fn read() -> Vec<(Vec<Clues<BB>>, Vec<Clues<BB>>)> {
     let mut _n;
     loop {
         let first_line = read_next_line();
