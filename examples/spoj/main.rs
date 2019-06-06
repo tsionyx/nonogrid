@@ -1,8 +1,4 @@
-/// Assignment for the problem https://www.spoj.com/problems/JCROSS/
-/// Should be run with rust 1.14.0:
-/// ```rustup run 1.14.0 rustc main.rs```
 use std::cell::RefCell;
-use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -21,15 +17,12 @@ use probing::ProbeSolver;
 pub trait Color
 where
     Self: Debug
-        + PartialEq
         + Eq
         + Hash
         + Default
         + Copy
-        + Clone
         + Send
         + Sync
-        + PartialOrd
         + Ord
         + Add<Output = Self>
         + Sub<Output = Result<Self, String>>,
@@ -45,7 +38,7 @@ where
 
 pub trait Block
 where
-    Self: Debug + PartialEq + Eq + Hash + Default + Clone + Copy + Send + Sync,
+    Self: Debug + Eq + Hash + Default + Copy + Send + Sync,
 {
     type Color: Color;
 
@@ -58,7 +51,7 @@ where
     fn color(&self) -> Self::Color;
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 pub enum BinaryColor {
     Undefined,
     White,
@@ -124,23 +117,6 @@ impl fmt::Display for BinaryColor {
             Undefined | BlackOrWhite => '?',
         };
         write!(f, "{}", symbol)
-    }
-}
-
-impl BinaryColor {
-    fn order(self) -> u8 {
-        match self {
-            BinaryColor::Undefined => 0,
-            BinaryColor::White => 1,
-            BinaryColor::Black => 2,
-            _ => 3,
-        }
-    }
-}
-
-impl Ord for BinaryColor {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.order().cmp(&other.order())
     }
 }
 
@@ -376,8 +352,6 @@ where
     desc_cols: Vec<Rc<Description<B>>>,
     cache_rows: Option<LineSolverCache<B>>,
     cache_cols: Option<LineSolverCache<B>>,
-    // use with caching duplicated clues
-    // https://webpbn.com/survey/caching.html
     rows_cache_indexes: Vec<usize>,
     cols_cache_indexes: Vec<usize>,
 }
@@ -438,7 +412,6 @@ where
         let width = columns.len();
 
         let init = B::Color::default();
-        //warn!("Initializing board: height={}, width={}", height, width);
         let cells = vec![init; width * height];
 
         let uniq_rows = dedup(&rows.iter().map(|desc| desc.vec.clone()).collect::<Vec<_>>());
@@ -448,15 +421,6 @@ where
                 .map(|desc| desc.vec.clone())
                 .collect::<Vec<_>>(),
         );
-
-        if uniq_rows.len() < rows.len() {
-            //warn!(
-            //    "Reducing number of rows clues: {} --> {}", rows.len(), uniq_rows.len());
-        }
-        if uniq_cols.len() < columns.len() {
-            //warn!(
-            //    "Reducing number of columns clues: {} --> {}", columns.len(), uniq_cols.len());
-        }
 
         let rows_cache_indexes = rows
             .iter()
@@ -515,9 +479,6 @@ where
     }
 
     fn get_row_slice(&self, index: usize) -> &[B::Color] {
-        //let width = self.width();
-        //let start_index = width * index;
-        //self.cells.iter().skip(start_index).take(width)
         self.iter_rows().nth(index).expect("Invalid row index")
     }
 
@@ -1027,17 +988,6 @@ mod line {
 }
 
 impl line::DynamicColor for BinaryColor {
-    //fn set_additional_blank(line: Rc<Vec<Self>>) -> (Rc<Vec<Self>>, bool) {
-    //    let space = BinaryColor::White;
-    //
-    //    if line.last().unwrap_or(&space) != &space {
-    //        let mut with_space = line.to_vec();
-    //        with_space.push(space);
-    //        return (Rc::new(with_space), true);
-    //    }
-    //    (line, false)
-    //}
-
     fn both_colors() -> Option<Self> {
         Some(BinaryColor::BlackOrWhite)
     }
@@ -1116,15 +1066,7 @@ mod propagation {
             }
 
             let top_job = top_job.unwrap();
-            //let before_retain_size = pq.len();
-            // remove all the previous occurrences of the new job
             self.vec.retain(|&x| x != top_job);
-
-            //if log_enabled!(Level::Debug) {
-            //    let (is_column, index) = top_job;
-            //    let line_description = if is_column { "column" } else { "row" };
-            //    debug!("Solving {} {}", index, line_description);
-            //}
             Some(top_job)
         }
     }
@@ -1170,12 +1112,6 @@ mod propagation {
             }
             // mark the job as visited
             self.visited.insert(top_job);
-
-            //if log_enabled!(Level::Debug) {
-            //    let (is_column, index) = top_job;
-            //    let line_description = if is_column { "column" } else { "row" };
-            //    debug!("Solving {} {}", index, line_description);
-            //}
             Some(top_job)
         }
     }
@@ -1203,7 +1139,6 @@ mod propagation {
             S: LineSolver<BlockType = B>,
         {
             if let Some(point) = self.point {
-                //debug!("Solving {:?}", &point);
                 let queue = SmallJobQueue::with_point(point);
                 self.run_jobs::<S, _>(queue)
             } else {
@@ -1228,8 +1163,6 @@ mod propagation {
             S: LineSolver<BlockType = B>,
             Q: JobQueue,
         {
-            //let start = Instant::now();
-            //let mut lines_solved = 0_u32;
             let mut solved_cells = vec![];
 
             while let Some((is_column, index)) = queue.pop() {
@@ -1249,8 +1182,6 @@ mod propagation {
                 for new_index in new_jobs.iter().rev() {
                     queue.push((!is_column, *new_index))
                 }
-
-                //lines_solved += 1;
             }
 
             Ok(solved_cells)
@@ -1264,7 +1195,6 @@ mod propagation {
         where
             S: LineSolver<BlockType = B>,
         {
-            //let start = Instant::now();
             let (line_desc, line) = {
                 let board = self.board.borrow();
                 if is_column {
@@ -1280,39 +1210,9 @@ mod propagation {
                 }
             };
 
-            //let pre_solution_rate = Board::<B>::line_solution_rate(&line);
-            //if pre_solution_rate == 1 {
-            //    // do not check solved lines in trusted mode
-            //    if ! contradiction_mode {
-            //        return vec![];
-            //     }
-            //}
-
-            //if log_enabled!(Level::Debug) {
-            //    let name = if is_column { "column" } else { "row" };
-            //    debug!(
-            //        "Solving {} {}: {:?}. Partial: {:?}",
-            //        index, name, line_desc, line
-            //    );
-            //}
-
             let line = Rc::new(line);
             let solution = self.solve::<S>(index, is_column, line_desc, Rc::clone(&line))?;
             let indexes = self.update_solved(index, is_column, &line, &solution);
-
-            //if log_enabled!(Level::Debug) {
-            //    let name = if is_column { "column" } else { "row" };
-            //    //let total_time = start.elapsed();
-            //    //debug!(
-            //    //    "{}s solution: {}.{:06} sec",
-            //    //    name,
-            //    //    total_time.as_secs(),
-            //    //    total_time.subsec_micros()
-            //    //);
-            //    if !indexes.is_empty() {
-            //        debug!("New info on {} {}: {:?}", name, index, indexes);
-            //    }
-            //}
 
             Ok(indexes)
         }
@@ -1324,9 +1224,6 @@ mod propagation {
             old: &[B::Color],
             new: &[B::Color],
         ) -> Vec<usize> {
-            // let new_solution_rate = Board::<B>::line_solution_rate(&updated);
-            // if new_solution_rate > pre_solution_rate
-
             if old == new {
                 return vec![];
             }
@@ -1337,21 +1234,10 @@ mod propagation {
                 self.board.borrow_mut().set_row(index, new);
             }
 
-            //debug!("Original: {:?}", old);
-            //debug!("Updated: {:?}", new);
-
             old.iter()
                 .zip(new)
                 .enumerate()
-                .filter_map(|(i, (pre, post))| {
-                    if pre != post {
-                        //debug!(
-                        //    "Diff on index={}: original={:?}, updated={:?}", i, pre, &post);
-                        Some(i)
-                    } else {
-                        None
-                    }
-                })
+                .filter_map(|(i, (pre, post))| if pre != post { Some(i) } else { None })
                 .collect()
         }
 
@@ -1487,7 +1373,6 @@ mod probing {
                 ));
             }
 
-            //info!("Solution rate: {}", self.board().solution_rate());
             Ok(new_jobs)
         }
 
@@ -1498,10 +1383,6 @@ mod probing {
         where
             S: LineSolver<BlockType = B>,
         {
-            //let start = Instant::now();
-            //let mut contradictions_number = 0;
-            //let mut iteration_probes = HashSet::new();
-
             let mut impact;
             loop {
                 impact = HashMap::new();
@@ -1511,17 +1392,8 @@ mod probing {
                 }
 
                 let mut false_probes = None;
-                //let mut probe_counter = 0_u32;
 
                 while let Some((priority, point)) = probes.pop() {
-                    //probe_counter += 1;
-                    //if iteration_probes.contains(&point) {
-                    //    warn!("The probe {:?} with priority {} has been already tried before last contradiction", &point, priority.0);
-                    //    continue;
-                    //}
-
-                    //info!(
-                    //    "Trying probe #{} {:?} with priority {}", probe_counter, &point, priority.0);
                     let probe_results = self.probe::<S>(point);
 
                     let (contradictions, non_contradictions): (Vec<_>, Vec<_>) = probe_results
@@ -1543,13 +1415,9 @@ mod probing {
                             impact.insert((point, color), (updated_cells, priority));
                         }
                     }
-                    //iteration_probes.insert(point);
                 }
 
                 if let Some((contradiction, colors)) = false_probes {
-                    //contradictions_number += 1;
-                    //iteration_probes.clear();
-
                     for color in colors {
                         self.board
                             .borrow_mut()
@@ -1564,15 +1432,6 @@ mod probing {
                 }
             }
 
-            //if contradictions_number > 0 {
-            //    //let total_time = start.elapsed();
-            //    //warn!(
-            //    //    "Full solution: {}.{:06} sec",
-            //    //    total_time.as_secs(),
-            //    //    total_time.subsec_micros()
-            //    //);
-            //    warn!("Contradictions found: {}", contradictions_number);
-            //}
             Ok(impact)
         }
     }
@@ -1597,20 +1456,13 @@ mod probing {
             self.board().is_solved_full()
         }
 
-        /// Try every color for given cell
-        /// and return the number of solved cells (Some) or contradiction (None)
         fn probe<S>(&self, point: Point) -> HashMap<B::Color, Option<usize>>
         where
             S: LineSolver<BlockType = B>,
         {
             let mut changes = HashMap::new();
 
-            //if self.board().cell(&point).is_solved() {
-            //    info!("Probing expired! {:?}", &point);
-            //}
-
             let vars = self.board().cell(&point).variants();
-            //debug!("Probing {:?} for variants: {:?}", point, &vars);
 
             for assumption in vars {
                 let save = self.board().make_snapshot();
@@ -1619,19 +1471,9 @@ mod probing {
                 let solved = self.run_propagation::<S>(&point);
                 self.board.borrow_mut().restore(save);
 
-                if let Ok(new_cells) = solved {
-                    //if !new_cells.is_empty() {
-                    //    info!("Probing {:?}: {:?}", point, assumption);
-                    //    debug!("New info: {:?}", new_cells);
-                    //}
-                    changes.insert(assumption, Some(new_cells.len()));
-                } else {
-                    //info!("Contradiction found! {:?}: {:?}", &point, &assumption);
-                    changes.insert(assumption, None);
-                }
+                changes.insert(assumption, solved.ok().map(|new_cells| new_cells.len()));
             }
 
-            //debug!("Found impact: {:?}", changes);
             changes
         }
     }
@@ -1672,10 +1514,8 @@ mod rev {
 mod backtracking {
     use std::cell::{Ref, RefCell};
     use std::collections::{HashMap, HashSet};
-    use std::fmt;
     use std::marker::PhantomData;
     use std::rc::Rc;
-    use std::time::Instant;
 
     use super::line::LineSolver;
     use super::probing::{priority_ord, Impact, ProbeSolver};
@@ -1695,15 +1535,10 @@ mod backtracking {
 
         // search options
         max_solutions: Option<usize>,
-        timeout: Option<u32>,
-        max_depth: Option<usize>,
 
         // dynamic variables
         pub solutions: Vec<Solution<B>>,
-        depth_reached: usize,
-        start_time: Option<Instant>,
         explored_paths: HashSet<Vec<(Point, B::Color)>>,
-        pub search_tree: SearchTreeRef<(Point, B::Color), f64>,
 
         _phantom: PhantomData<S>,
     }
@@ -1719,152 +1554,6 @@ mod backtracking {
         MinLogd,
     }
 
-    type SearchTreeRef<K, V> = Rc<RefCell<SearchTree<K, V>>>;
-
-    pub struct SearchTree<K, V> {
-        value: Option<V>,
-        children: Vec<(K, SearchTreeRef<K, V>)>,
-    }
-
-    impl<K, V> SearchTree<K, V>
-    where
-        K: PartialEq + Clone,
-        V: Clone,
-    {
-        fn new() -> Self {
-            Self::with_option(None)
-        }
-
-        #[allow(dead_code)]
-        fn with_value(value: V) -> Self {
-            Self::with_option(Some(value))
-        }
-
-        fn with_option(value: Option<V>) -> Self {
-            SearchTree::<K, V> {
-                value: value,
-                children: vec![],
-            }
-        }
-
-        fn new_children(&mut self, key: K, value: Option<V>) {
-            self.children
-                .push((key, Rc::new(RefCell::new(SearchTree::with_option(value)))));
-        }
-
-        fn get(&self, key: &K) -> Option<Rc<RefCell<Self>>> {
-            self.children
-                .iter()
-                .find(|&&(ref child_key, ref _child)| child_key == key)
-                .map(|&(ref _child_key, ref child)| Rc::clone(child))
-        }
-
-        fn add(this: Rc<RefCell<Self>>, path: &[K], value: Option<V>) {
-            if path.is_empty() && this.borrow().value.is_none() {
-                this.borrow_mut().value = value;
-                return;
-            }
-
-            let mut current = this;
-            for (i, node) in path.iter().enumerate() {
-                let child = current.borrow().get(node);
-                if child.is_none() {
-                    let child_value = if i == path.len() - 1 {
-                        value.clone()
-                    } else {
-                        None
-                    };
-                    current.borrow_mut().new_children(node.clone(), child_value);
-                }
-
-                let child = current
-                    .borrow()
-                    .get(node)
-                    .expect("The node should be present second time");
-                current = child;
-            }
-        }
-
-        pub fn is_empty(&self) -> bool {
-            self.value.is_none() && self.children.is_empty()
-        }
-    }
-
-    impl<K, V> SearchTree<K, V>
-    where
-        K: fmt::Debug,
-        V: Clone + fmt::Display,
-    {
-        fn format(&self, spaces: usize, indent_size: usize) -> String {
-            if self.children.is_empty() {
-                self.format_value()
-            } else {
-                self.format_with_children(spaces, indent_size)
-            }
-        }
-
-        fn format_value(&self) -> String {
-            if let Some(value) = self.value.clone() {
-                format!("{:.6}", value)
-            } else {
-                "None".to_string()
-            }
-        }
-
-        fn format_with_children(&self, spaces: usize, indent_size: usize) -> String {
-            let mut res = vec![
-                format!("{}{}", indent_space(spaces * indent_size), '{'),
-                format!(
-                    "{}{:?}: {},",
-                    indent_space((spaces + 1) * indent_size),
-                    "value",
-                    self.format_value()
-                ),
-                format!(
-                    "{}{:?}: {}",
-                    indent_space((spaces + 1) * indent_size),
-                    "children",
-                    '{'
-                ),
-            ];
-
-            let last_index = self.children.len() - 1;
-
-            for (i, &(ref child_key, ref child)) in self.children.iter().enumerate() {
-                let child_format = child.borrow().format(spaces + 2, indent_size);
-                let trail_comma = if i == last_index { "" } else { "," };
-                res.push(format!(
-                    "{}{:?}: {}{}",
-                    indent_space((spaces + 2) * indent_size),
-                    child_key,
-                    child_format.trim_left(),
-                    trail_comma,
-                ));
-            }
-
-            res.extend_from_slice(&[
-                format!("{}{}", indent_space((spaces + 1) * indent_size), '}'),
-                format!("{}{}", indent_space(spaces * indent_size), '}'),
-            ]);
-            res.join("\n")
-        }
-    }
-
-    fn indent_space(size: usize) -> String {
-        //String::from_utf8(vec![b' '; size]).unwrap()
-        (0..size).map(|_| " ").collect()
-    }
-
-    impl<K, V> fmt::Display for SearchTree<K, V>
-    where
-        K: fmt::Debug,
-        V: Clone + fmt::Display,
-    {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(f, "{}", self.format(0, 2))
-        }
-    }
-
     impl<B, P, S> Solver<B, P, S>
     where
         B: Block,
@@ -1873,27 +1562,17 @@ mod backtracking {
     {
         #[allow(dead_code)]
         pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
-            Self::with_options(board, None, None, None)
+            Self::with_options(board, None)
         }
 
-        pub fn with_options(
-            board: Rc<RefCell<Board<B>>>,
-            max_solutions: Option<usize>,
-            timeout: Option<u32>,
-            max_depth: Option<usize>,
-        ) -> Self {
+        pub fn with_options(board: Rc<RefCell<Board<B>>>, max_solutions: Option<usize>) -> Self {
             let probe_solver = P::with_board(Rc::clone(&board));
             Solver::<B, P, S> {
                 board: board,
                 probe_solver: probe_solver,
                 max_solutions: max_solutions,
-                timeout: timeout,
-                max_depth: max_depth,
                 solutions: vec![],
-                depth_reached: 0,
-                start_time: None,
                 explored_paths: HashSet::new(),
-                search_tree: Rc::new(RefCell::new(SearchTree::new())),
                 _phantom: PhantomData,
             }
         }
@@ -1908,25 +1587,8 @@ mod backtracking {
                 return Ok(());
             }
 
-            //self.start_time = time::now();
-
             let directions = self.choose_directions(&impact);
-            //warn!("Starting depth-first search (initial rate is {:.4})",
-            //    self.board().solution_rate());
             self.search(&directions, &[])?;
-
-            //warn!("Search completed (depth reached: {}, solutions found: {})",
-            //    self.depth_reached, self.solutions.len());
-
-            //if let Some(start_time) = self.start_time {
-            //    //.expect("Start time should be set in current function")
-            //    let total_time = start_time.elapsed();
-            //
-            //    //warn!("Full solution: {}.{:06} sec. The rate is {:.4}",
-            //    //    total_time.as_secs(), total_time.subsec_micros(),
-            //    //    self.board().solution_rate());
-            //}
-
             Ok(())
         }
 
@@ -1955,10 +1617,8 @@ mod backtracking {
                 let (removed, added) = self.board().diff(solution);
 
                 if removed.is_empty() && added.is_empty() {
-                    //info!("The solution is the same as {}-th", i);
                     return true;
                 }
-                //info!("The current solution differs from {}-th saved one: (added in current: {:?}, removed in current: {:?})", i, removed, added);
             }
 
             false
@@ -1968,10 +1628,7 @@ mod backtracking {
             // force to check the board
             self.probe_solver.run_unsolved::<S>()?;
 
-            //info!("Found one of solutions");
-            if self.already_found() {
-                //info!("Solution already exists.");
-            } else {
+            if !self.already_found() {
                 let cells = self.board().make_snapshot();
                 self.solutions.push(cells);
             }
@@ -1999,7 +1656,6 @@ mod backtracking {
                 })
                 .collect();
             points_rate.sort_by_key(|&(point, rate)| (Reverse(rate), point));
-            //dbg!(&points_rate[..10]);
 
             points_rate
                 .iter()
@@ -2069,8 +1725,7 @@ mod backtracking {
                 return Ok(true);
             }
 
-            let depth = path.len();
-            if self.limits_reached(depth) {
+            if self.limits_reached() {
                 return Ok(true);
             }
 
@@ -2091,12 +1746,6 @@ mod backtracking {
             directions: &[(Point, B::Color)],
             path: &[(Point, B::Color)],
         ) -> Result<bool, String> {
-            let depth = path.len();
-            // going to dive deeper, so increment it (full_path's length)
-            if depth + 1 > self.depth_reached {
-                self.depth_reached = depth + 1;
-            }
-
             // this variable shows whether the board changed after the last probing
             // when the probing occurs it should immediately set to 'false'
             // to prevent succeeded useless probing on the same board
@@ -2109,10 +1758,7 @@ mod backtracking {
             directions.reverse();
 
             while let Some(direction) = directions.pop() {
-                //let total_number_of_directions = directions.len() + 1;
-                //search_counter += 1;
-
-                if self.limits_reached(depth) {
+                if self.limits_reached() {
                     return Ok(true);
                 }
 
@@ -2125,18 +1771,12 @@ mod backtracking {
                     self.board().cell(&point).variants().into_iter().collect();
 
                 if !cell_colors.contains(&color) {
-                    //warn!("The color {:?} is already expired. Possible colors for {:?} are {:?}",
-                    //    color, point, cell_colors);
                     continue;
                 }
 
                 if cell_colors.len() == 1 {
-                    //info!("Only one color for {:?} left: {:?}. Solve it unconditionally",
-                    //    point, color);
                     assert!(cell_colors.contains(&color));
                     if !board_changed {
-                        //info!(
-                        //    "The board does not change since the last unconditional solving, skip.");
                         continue;
                     }
 
@@ -2145,16 +1785,11 @@ mod backtracking {
 
                     if impact.is_err() {
                         // the whole `path` branch of a search tree is a dead end
-                        //warn!("The last possible color {:?} for the {:?} lead to the contradiction. The path {:?} is invalid", color, point, path);
-                        // self._add_search_result(path, False)
                         return Ok(false);
                     }
 
-                    // rate = board.solution_rate
-                    // self._add_search_result(path, rate)
                     if self.board().is_solved_full() {
                         self.add_solution()?;
-                        //warn!("The only color {:?} for the {:?} lead to full solution. No need to traverse the path {:?} anymore", color, point, path);
                         return Ok(true);
                     }
                     continue;
@@ -2164,19 +1799,12 @@ mod backtracking {
                 full_path.push(direction);
 
                 if self.is_explored(&full_path) {
-                    //info!("The path {:?} already explored", &full_path);
                     continue;
                 }
 
-                let rate = self.board().solution_rate();
                 let guess_save = self.board().make_snapshot();
 
-                //info!("Trying direction ({}/{}): {:?} (depth={}, rate={:.4}, previous={:?})",
-                //    search_counter, total_number_of_directions, &direction, depth, rate, path);
-                self.add_search_score(path, rate);
-
                 let state_result = self.try_direction(&full_path);
-                //let is_solved = board.is_solved_full();
                 self.board.borrow_mut().restore(guess_save);
                 self.set_explored(&full_path);
 
@@ -2187,45 +1815,24 @@ mod backtracking {
                 let success = state_result.unwrap();
 
                 if !success {
-                    // TODO: add backjumping here
-                    //info!("Unset the color {:?} for {:?}. Solve it unconditionally",
-                    //    color, point);
-
                     let err = self.board.borrow_mut().unset_color(&point, &color).err();
                     board_changed = true;
                     if err.is_some() {
-                        // the whole `path` branch of a search tree is a dead end
-                        //warn!(
-                        //    "The last possible color {:?} for the {:?} cannot be unset. The whole branch (depth={}) is invalid.",
-                        //    color, point, depth);
-                        // self._add_search_result(path, False)
                         return Ok(false);
                     }
 
                     if !board_changed {
-                        //info!(
-                        //    "The board does not change since the last unconditional solving, skip.");
                         continue;
                     }
 
                     let err = self.probe_solver.run_unsolved::<S>();
                     board_changed = false;
                     if err.is_err() {
-                        // the whole `path` branch of a search tree is a dead end
-                        //warn!(
-                        //    "The last possible color {:?} for the {:?} lead to the contradiction. The whole branch (depth={}) is invalid.",
-                        //    color, point, depth);
-                        // self._add_search_result(path, False)
                         return Ok(false);
                     }
 
-                    // rate = board.solution_rate
-                    // self._add_search_result(path, rate)
                     if self.board().is_solved_full() {
                         self.add_solution()?;
-                        //warn!(
-                        //    "The negation of color {:?} for the {:?} lead to full solution. No need to traverse the path {:?} anymore.",
-                        //    color, point, path);
                         return Ok(true);
                     }
                 }
@@ -2246,12 +1853,6 @@ mod backtracking {
                         })
                         .collect();
 
-                    // if all(self.is_explored(path + (direction,)) for direction in states_to_try) {
-                    //     warn!("All other colors ({:?}) of {:?} already explored",
-                    //           states_to_try, cell)
-                    //     return true;
-                    // }
-
                     for direction in states_to_try {
                         if !directions.contains(&direction) {
                             directions.push(direction);
@@ -2262,20 +1863,11 @@ mod backtracking {
             Ok(true)
         }
 
-        fn add_search_score(&mut self, path: &[(Point, B::Color)], score: f64) {
-            SearchTree::add(Rc::clone(&self.search_tree), path, Some(score));
-        }
-
-        fn add_search_deadend(&mut self, path: &[(Point, B::Color)]) {
-            SearchTree::add(Rc::clone(&self.search_tree), path, None);
-        }
-
         /// Trying to search for solutions in the given direction.
         /// At first it set the given state and get a list of the
         /// further jobs for finding the contradictions.
         /// Later that jobs will be used as candidates for a deeper search.
         fn try_direction(&mut self, path: &[(Point, B::Color)]) -> Result<bool, String> {
-            let depth = path.len();
             let direction = *path.last().expect("Path should be non-empty");
 
             // add every cell to the jobs queue
@@ -2287,13 +1879,11 @@ mod backtracking {
                     probe_jobs.extend(new_jobs);
                 }
                 Err(_err) => {
-                    //warn!("Guess {:?} failed: {}", direction, err);
-                    self.add_search_deadend(path);
                     return Ok(false);
                 }
             }
 
-            if self.limits_reached(depth) {
+            if self.limits_reached() {
                 return Ok(true);
             }
 
@@ -2301,16 +1891,9 @@ mod backtracking {
 
             match impact {
                 Ok(impact) => {
-                    let rate = self.board().solution_rate();
-                    //info!("Reached rate {:.4} on {:?} path", rate, path);
-                    self.add_search_score(path, rate);
-
-                    if self.limits_reached(depth) || self.board().is_solved_full() {
+                    if self.limits_reached() || self.board().is_solved_full() {
                         return Ok(true);
                     }
-
-                    //let cells_left = round((1 - rate) * board.width * board.height);
-                    //LOG.info('Unsolved cells left: %d', cells_left)
 
                     let directions = self.choose_directions(&impact);
                     if directions.is_empty() {
@@ -2319,11 +1902,7 @@ mod backtracking {
                         self.search(&directions, path)
                     }
                 }
-                Err(_err) => {
-                    //warn!("Guess {:?} failed on probing stage: {}", direction, err);
-                    self.add_search_deadend(path);
-                    Ok(false)
-                }
+                Err(_err) => Ok(false),
             }
         }
 
@@ -2331,11 +1910,8 @@ mod backtracking {
             let (point, color) = guess;
 
             if !self.board().cell(&point).variants().contains(&color) {
-                //info!("The probe is useless: color {:?} already unset", color);
                 return Ok(vec![]);
             }
-
-            //let save = self.board().make_snapshot();
 
             let mut probes = vec![];
             self.board.borrow_mut().set_color(&point, &color);
@@ -2355,38 +1931,10 @@ mod backtracking {
         /// 1) number of solutions found
         /// 2) the maximum allowed run time
         /// 3) the maximum depth
-        fn limits_reached(&self, depth: usize) -> bool {
+        fn limits_reached(&self) -> bool {
             if let Some(max_solutions) = self.max_solutions {
                 let solutions_number = self.solutions.len();
                 if solutions_number >= max_solutions {
-                    //if depth == 0 {
-                    //    // only show log on the most top level
-                    //    warn!("{} solutions is enough", solutions_number);
-                    //}
-                    return true;
-                }
-            }
-
-            if let Some(timeout) = self.timeout {
-                if let Some(start_time) = self.start_time {
-                    let run_time = start_time.elapsed();
-                    if run_time.as_secs() >= timeout.into() {
-                        //if depth == 0 {
-                        //    // only show log on the most top level
-                        //    warn!("Searched too long: {:.4}s", run_time.as_secs());
-                        //}
-                        return true;
-                    }
-                }
-            }
-
-            if let Some(max_depth) = self.max_depth {
-                if depth > max_depth {
-                    //if depth == 0 {
-                    //    warn!(
-                    //        "Next step on the depth {} is deeper than the max ({})",
-                    //        depth, max_depth);
-                    //}
                     return true;
                 }
             }
@@ -2399,26 +1947,18 @@ mod backtracking {
 pub fn run<B, S, P>(
     board: Rc<RefCell<Board<B>>>,
     max_solutions: Option<usize>,
-    timeout: Option<u32>,
-    max_depth: Option<usize>,
 ) -> Result<Option<backtracking::Solver<B, P, S>>, String>
 where
     B: Block,
     S: LineSolver<BlockType = B>,
     P: ProbeSolver<BlockType = B>,
 {
-    //warn!("Solving with simple line propagation");
     let solver = propagation::Solver::new(Rc::clone(&board));
     solver.run::<S>()?;
 
     if !board.borrow().is_solved_full() {
-        //warn!("Trying to solve with backtracking");
-        let mut solver = backtracking::Solver::<_, P, S>::with_options(
-            Rc::clone(&board),
-            max_solutions,
-            timeout,
-            max_depth,
-        );
+        let mut solver =
+            backtracking::Solver::<_, P, S>::with_options(Rc::clone(&board), max_solutions);
         solver.run()?;
         return Ok(Some(solver));
     }
@@ -2496,8 +2036,7 @@ fn main() {
         let board = Rc::new(RefCell::new(board));
         //println!("{:#?}\n{:#?}", board.borrow().desc_rows, board.borrow().desc_cols);
         let backtracking =
-            run::<_, DynamicSolver<_>, FullProbe1<_>>(Rc::clone(&board), Some(1), None, None)
-                .unwrap();
+            run::<_, DynamicSolver<_>, FullProbe1<_>>(Rc::clone(&board), Some(1)).unwrap();
 
         if board.borrow().is_solved_full() {
             print!("{}", *board.borrow());
