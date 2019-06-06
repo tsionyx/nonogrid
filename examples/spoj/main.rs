@@ -22,7 +22,6 @@ where
     fn blank() -> Self;
     fn is_solved(&self) -> bool;
     fn solution_rate(&self) -> f64;
-    fn is_updated_with(&self, new: &Self) -> Result<bool, String>;
     fn variants(&self) -> Vec<Self>
     where
         Self: Sized;
@@ -72,21 +71,6 @@ impl Cell for BW {
         } else {
             0.0
         }
-    }
-
-    fn is_updated_with(&self, new: &Self) -> Result<bool, String> {
-        if self == new {
-            return Ok(false);
-        }
-
-        if self != &BW::Undefined {
-            return Err("Can only update undefined".to_string());
-        }
-        if !new.is_solved() {
-            return Err("Cannot update already solved".to_string());
-        }
-
-        Ok(true)
     }
 
     fn variants(&self) -> Vec<Self> {
@@ -317,28 +301,19 @@ where
     K: Eq + Hash,
 {
     store: HashMap<K, V, fx::FxHashBuilder>,
-    hits: u32,
-    misses: u32,
 }
 
 impl<K: Hash + Eq, V> GrowableCache<K, V> {
     fn with_capacity(size: usize) -> Self {
         GrowableCache::<K, V> {
             store: HashMap::with_capacity_and_hasher(size, <_>::default()),
-            hits: 0,
-            misses: 0,
         }
     }
 
     fn cache_get(&mut self, key: &K) -> Option<&V> {
-        if let Some(v) = self.store.get(key) {
-            self.hits += 1;
-            Some(v)
-        } else {
-            self.misses += 1;
-            None
-        }
+        self.store.get(key)
     }
+
     fn cache_set(&mut self, key: K, val: V) {
         self.store.insert(key, val);
     }
