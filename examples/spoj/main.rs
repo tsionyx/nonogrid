@@ -64,7 +64,7 @@ impl Color for BinaryColor {
     }
 
     fn is_solved(&self) -> bool {
-        self == &BinaryColor::Black || self == &BinaryColor::White
+        *self == BinaryColor::Black || *self == BinaryColor::White
     }
 
     fn solution_rate(&self) -> f64 {
@@ -194,19 +194,10 @@ where
         return;
     }
 
-    if !vec.contains(what) {
-        return;
-    }
-
-    let replaced_indexes: Vec<_> = vec
-        .iter()
-        .enumerate()
-        .filter_map(|(index, val)| if val == what { Some(index) } else { None })
-        .collect();
-
-    vec.extend(vec![with_what; replaced_indexes.len()]);
-    for index in replaced_indexes {
-        vec.swap_remove(index);
+    for x in vec {
+        if *x == *what {
+            *x = with_what.clone();
+        }
     }
 }
 
