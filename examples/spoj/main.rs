@@ -218,11 +218,122 @@ where
     set.into_iter().collect()
 }
 
+mod fx {
+    use std::default::Default;
+    use std::hash::{BuildHasherDefault, Hasher};
+    use std::intrinsics::copy_nonoverlapping;
+    use std::mem::size_of;
+    use std::ops::BitXor;
+
+    /// Type alias for a `HashBuilder` using the `fx` hash algorithm.
+    pub type FxHashBuilder = BuildHasherDefault<FxHasher>;
+
+    pub struct FxHasher {
+        hash: usize,
+    }
+
+    #[cfg(target_pointer_width = "32")]
+    const K: usize = 0x9e37_79b9;
+    #[cfg(target_pointer_width = "64")]
+    const K: usize = 0x517c_c1b7_2722_0a95;
+
+    impl Default for FxHasher {
+        #[inline]
+        fn default() -> Self {
+            FxHasher { hash: 0 }
+        }
+    }
+
+    impl FxHasher {
+        #[inline]
+        fn add_to_hash(&mut self, i: usize) {
+            self.hash = self.hash.rotate_left(5).bitxor(i).wrapping_mul(K);
+        }
+    }
+
+    impl Hasher for FxHasher {
+        #[inline]
+        fn write(&mut self, mut bytes: &[u8]) {
+            macro_rules! read_bytes {
+                ($ty:ty, $src:expr) => {{
+                    assert!(size_of::<$ty>() <= $src.len());
+                    let mut data: $ty = 0;
+                    unsafe {
+                        copy_nonoverlapping(
+                            $src.as_ptr(),
+                            &mut data as *mut $ty as *mut u8,
+                            size_of::<$ty>(),
+                        );
+                    }
+                    data
+                }};
+            }
+
+            let mut hash = FxHasher { hash: self.hash };
+            assert!(size_of::<usize>() <= 8);
+            while bytes.len() >= size_of::<usize>() {
+                hash.add_to_hash(read_bytes!(usize, bytes) as usize);
+                bytes = &bytes[size_of::<usize>()..];
+            }
+            if (size_of::<usize>() > 4) && (bytes.len() >= 4) {
+                hash.add_to_hash(read_bytes!(u32, bytes) as usize);
+                bytes = &bytes[4..];
+            }
+            if (size_of::<usize>() > 2) && bytes.len() >= 2 {
+                hash.add_to_hash(read_bytes!(u16, bytes) as usize);
+                bytes = &bytes[2..];
+            }
+            if (size_of::<usize>() > 1) && !bytes.is_empty() {
+                hash.add_to_hash(bytes[0] as usize);
+            }
+            self.hash = hash.hash;
+        }
+
+        #[inline]
+        fn write_u8(&mut self, i: u8) {
+            self.add_to_hash(i as usize);
+        }
+
+        #[inline]
+        fn write_u16(&mut self, i: u16) {
+            self.add_to_hash(i as usize);
+        }
+
+        #[inline]
+        fn write_u32(&mut self, i: u32) {
+            self.add_to_hash(i as usize);
+        }
+
+        #[cfg(target_pointer_width = "32")]
+        #[inline]
+        fn write_u64(&mut self, i: u64) {
+            self.add_to_hash(i as usize);
+            self.add_to_hash((i >> 32) as usize);
+        }
+
+        #[cfg(target_pointer_width = "64")]
+        #[inline]
+        fn write_u64(&mut self, i: u64) {
+            self.add_to_hash(i as usize);
+        }
+
+        #[inline]
+        fn write_usize(&mut self, i: usize) {
+            self.add_to_hash(i);
+        }
+
+        #[inline]
+        fn finish(&self) -> u64 {
+            self.hash as u64
+        }
+    }
+}
+
 struct GrowableCache<K, V>
 where
     K: Eq + Hash,
 {
-    store: HashMap<K, V>,
+    store: HashMap<K, V, fx::FxHashBuilder>,
     hits: u32,
     misses: u32,
 }
@@ -230,7 +341,7 @@ where
 impl<K: Hash + Eq, V> GrowableCache<K, V> {
     fn with_capacity(size: usize) -> Self {
         GrowableCache::<K, V> {
-            store: HashMap::with_capacity(size),
+            store: HashMap::with_capacity_and_hasher(size, <_>::default()),
             hits: 0,
             misses: 0,
         }
