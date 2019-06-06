@@ -44,7 +44,7 @@ where
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
-pub enum BinaryColor {
+enum BinaryColor {
     Undefined,
     White,
     Black,
@@ -129,7 +129,7 @@ impl Sub for BinaryColor {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
-pub struct BinaryBlock(pub usize);
+struct BinaryBlock(usize);
 
 impl Block for BinaryBlock {
     type Color = BinaryColor;
@@ -172,21 +172,21 @@ pub struct Description<T: Block>
 where
     T: Block,
 {
-    pub vec: Vec<T>,
+    vec: Vec<T>,
 }
 
 impl<T> Description<T>
 where
     T: Block,
 {
-    pub fn new(mut vec: Vec<T>) -> Self {
+    fn new(mut vec: Vec<T>) -> Self {
         let zero = T::default();
         vec.retain(|x| *x != zero);
         Description::<T> { vec: vec }
     }
 }
 
-pub fn replace<T>(vec: &mut Vec<T>, what: &T, with_what: T)
+fn replace<T>(vec: &mut Vec<T>, what: &T, with_what: T)
 where
     T: PartialEq + Clone,
 {
@@ -210,29 +210,7 @@ where
     }
 }
 
-pub fn two_powers(mut num: u32) -> Vec<u32> {
-    let mut res = vec![];
-    while num > 0 {
-        let rest = num & (num - 1);
-        res.push(num - rest);
-        num = rest
-    }
-    res
-}
-
-pub fn from_two_powers(numbers: &[u32]) -> u32 {
-    numbers.iter().fold(0, |acc, &x| acc | x)
-}
-
-pub fn is_power_of_2(x: u32) -> bool {
-    if x == 0 {
-        return false;
-    }
-
-    x & (x - 1) == 0
-}
-
-pub fn dedup<T>(vec: &[T]) -> Vec<T>
+fn dedup<T>(vec: &[T]) -> Vec<T>
 where
     T: Eq + Hash + Clone,
 {
@@ -240,31 +218,7 @@ where
     set.into_iter().collect()
 }
 
-pub fn product<T, U>(s1: &[T], s2: &[U]) -> Vec<(T, U)>
-where
-    T: Clone,
-    U: Clone,
-{
-    s1.iter()
-        .flat_map(|x| s2.iter().map(move |y| (x.clone(), y.clone())))
-        .collect()
-}
-
-pub mod time {
-    use std::time::Instant;
-
-    #[cfg(feature = "std_time")]
-    pub fn now() -> Option<Instant> {
-        Some(Instant::now())
-    }
-
-    #[cfg(not(feature = "std_time"))]
-    pub fn now() -> Option<Instant> {
-        None
-    }
-}
-
-pub struct GrowableCache<K, V>
+struct GrowableCache<K, V>
 where
     K: Eq + Hash,
 {
@@ -274,7 +228,7 @@ where
 }
 
 impl<K: Hash + Eq, V> GrowableCache<K, V> {
-    pub fn with_capacity(size: usize) -> Self {
+    fn with_capacity(size: usize) -> Self {
         GrowableCache::<K, V> {
             store: HashMap::with_capacity(size),
             hits: 0,
@@ -302,11 +256,11 @@ pub struct Point {
     y: usize,
 }
 
-pub type CacheKey<B> = (usize, Rc<Vec<<B as Block>::Color>>);
-pub type CacheValue<B> = Result<Rc<Vec<<B as Block>::Color>>, String>;
-pub type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
+type CacheKey<B> = (usize, Rc<Vec<<B as Block>::Color>>);
+type CacheValue<B> = Result<Rc<Vec<<B as Block>::Color>>, String>;
+type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
 
-pub fn new_cache<B>(capacity: usize) -> LineSolverCache<B>
+fn new_cache<B>(capacity: usize) -> LineSolverCache<B>
 where
     B: Block,
 {
@@ -314,15 +268,15 @@ where
 }
 
 impl Point {
-    pub fn new(x: usize, y: usize) -> Self {
+    fn new(x: usize, y: usize) -> Self {
         Point { x: x, y: y }
     }
 
-    pub fn x(&self) -> usize {
+    fn x(&self) -> usize {
         self.x
     }
 
-    pub fn y(&self) -> usize {
+    fn y(&self) -> usize {
         self.y
     }
 }
@@ -348,7 +302,7 @@ mod iter {
     }
 
     impl<I> StepBy<I> {
-        pub fn new(iter: I, step: usize) -> StepBy<I> {
+        fn new(iter: I, step: usize) -> StepBy<I> {
             StepBy {
                 iter: iter,
                 step: step - 1,
@@ -391,7 +345,7 @@ where
     B: Block,
     B::Color: Copy,
 {
-    pub fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Self {
+    fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Self {
         let height = rows.len();
         let width = columns.len();
 
@@ -438,11 +392,11 @@ where
         }
     }
 
-    pub fn iter_rows(&self) -> Chunks<B::Color> {
+    fn iter_rows(&self) -> Chunks<B::Color> {
         self.cells.chunks(self.width())
     }
 
-    pub fn descriptions(&self, rows: bool) -> &[Rc<Description<B>>] {
+    fn descriptions(&self, rows: bool) -> &[Rc<Description<B>>] {
         if rows {
             &self.desc_rows
         } else {
@@ -450,15 +404,15 @@ where
         }
     }
 
-    pub fn height(&self) -> usize {
+    fn height(&self) -> usize {
         self.desc_rows.len()
     }
 
-    pub fn width(&self) -> usize {
+    fn width(&self) -> usize {
         self.desc_cols.len()
     }
 
-    pub fn is_solved_full(&self) -> bool {
+    fn is_solved_full(&self) -> bool {
         self.cells.iter().all(Color::is_solved)
     }
 
@@ -466,11 +420,11 @@ where
         self.iter_rows().nth(index).expect("Invalid row index")
     }
 
-    pub fn get_row(&self, index: usize) -> Vec<B::Color> {
+    fn get_row(&self, index: usize) -> Vec<B::Color> {
         self.get_row_slice(index).to_vec()
     }
 
-    pub fn get_column(&self, index: usize) -> Vec<B::Color> {
+    fn get_column(&self, index: usize) -> Vec<B::Color> {
         self.cells
             .iter()
             .skip(index)
@@ -501,7 +455,7 @@ where
     }
 
     /// How many cells in the row with given index are known to be of particular color
-    pub fn row_solution_rate(&self, index: usize) -> f64 {
+    fn row_solution_rate(&self, index: usize) -> f64 {
         let solved: f64 = self
             .get_row_slice(index)
             .iter()
@@ -511,21 +465,14 @@ where
     }
 
     /// How many cells in the column with given index are known to be of particular color
-    pub fn column_solution_rate(&self, index: usize) -> f64 {
+    fn column_solution_rate(&self, index: usize) -> f64 {
         let column = self.cells.iter().skip(index).step_by(self.width());
 
         let solved: f64 = column.map(|cell| cell.solution_rate()).sum();
         solved / self.height() as f64
     }
 
-    /// How many cells in the whole grid are known to be of particular color
-    pub fn solution_rate(&self) -> f64 {
-        let solved: f64 = self.cells.iter().map(|cell| cell.solution_rate()).sum();
-        let size = self.height() * self.width();
-        solved / size as f64
-    }
-
-    pub fn unsolved_cells(&self) -> Vec<Point> {
+    fn unsolved_cells(&self) -> Vec<Point> {
         self.iter_rows()
             .enumerate()
             .flat_map(|(y, row)| {
@@ -540,7 +487,7 @@ where
             .collect()
     }
 
-    pub fn cell(&self, point: &Point) -> B::Color {
+    fn cell(&self, point: &Point) -> B::Color {
         let Point { x, y } = *point;
         self.cells[self.linear_index(y, x)]
     }
@@ -570,14 +517,14 @@ where
     /// For the given cell yield
     /// the neighbour cells
     /// that are not completely solved yet.
-    pub fn unsolved_neighbours(&self, point: &Point) -> Vec<Point> {
+    fn unsolved_neighbours(&self, point: &Point) -> Vec<Point> {
         self.neighbours(&point)
             .into_iter()
             .filter(move |n| !self.cell(n).is_solved())
             .collect()
     }
 
-    pub fn init_cache(&mut self) {
+    fn init_cache(&mut self) {
         let width = self.width();
         let height = self.height();
 
@@ -585,7 +532,7 @@ where
         self.cache_cols = Some(new_cache::<B>(2_000 * width));
     }
 
-    pub fn cached_solution(&mut self, is_column: bool, key: &CacheKey<B>) -> Option<CacheValue<B>> {
+    fn cached_solution(&mut self, is_column: bool, key: &CacheKey<B>) -> Option<CacheValue<B>> {
         let cache = if is_column {
             self.cache_cols.as_mut()
         } else {
@@ -595,12 +542,7 @@ where
         cache.and_then(|cache| cache.cache_get(key).cloned())
     }
 
-    pub fn set_cached_solution(
-        &mut self,
-        is_column: bool,
-        key: CacheKey<B>,
-        solved: CacheValue<B>,
-    ) {
+    fn set_cached_solution(&mut self, is_column: bool, key: CacheKey<B>, solved: CacheValue<B>) {
         let cache = if is_column {
             self.cache_cols.as_mut()
         } else {
@@ -612,11 +554,11 @@ where
         }
     }
 
-    pub fn row_cache_index(&self, row_index: usize) -> usize {
+    fn row_cache_index(&self, row_index: usize) -> usize {
         self.rows_cache_indexes[row_index]
     }
 
-    pub fn column_cache_index(&self, column_index: usize) -> usize {
+    fn column_cache_index(&self, column_index: usize) -> usize {
         self.cols_cache_indexes[column_index]
     }
 }
@@ -629,7 +571,7 @@ where
     /// Standard diff semantic as result:
     /// - first returned points which set in current board and unset in the other
     /// - second returned points which unset in current board and set in the other
-    pub fn diff(&self, other: &[B::Color]) -> (Vec<Point>, Vec<Point>) {
+    fn diff(&self, other: &[B::Color]) -> (Vec<Point>, Vec<Point>) {
         let mut removed = vec![];
         let mut added = vec![];
 
@@ -652,7 +594,7 @@ where
         (removed, added)
     }
 
-    pub fn make_snapshot(&self) -> Vec<B::Color> {
+    fn make_snapshot(&self) -> Vec<B::Color> {
         self.cells.clone()
     }
 
@@ -1157,7 +1099,7 @@ mod propagation {
         /// If the line gets partially solved, put the crossed lines into queue.
         ///
         /// Return the list of indexes which was updated during this solution.
-        pub fn update_line<S>(&self, index: usize, is_column: bool) -> Result<Vec<usize>, String>
+        fn update_line<S>(&self, index: usize, is_column: bool) -> Result<Vec<usize>, String>
         where
             S: LineSolver<BlockType = B>,
         {
@@ -1241,6 +1183,10 @@ mod propagation {
     }
 }
 
+fn priority_ord(p: f64) -> u32 {
+    (p * 1000.0) as u32
+}
+
 mod probing {
     use std::cell::{Ref, RefCell};
     use std::collections::BinaryHeap;
@@ -1248,11 +1194,7 @@ mod probing {
     use std::rc::Rc;
 
     use super::line::LineSolver;
-    use super::{propagation, Block, Board, Color, Point};
-
-    pub fn priority_ord(p: f64) -> u32 {
-        (p * 1000.0) as u32
-    }
+    use super::{priority_ord, propagation, Block, Board, Color, Point};
 
     pub type Impact<B> = HashMap<(Point, <B as Block>::Color), (usize, u32)>;
     type FloatPriorityQueue<K> = BinaryHeap<K>;
@@ -1484,9 +1426,9 @@ mod backtracking {
     use std::rc::Rc;
 
     use super::line::LineSolver;
-    use super::probing::{priority_ord, Impact, ProbeSolver};
+    use super::probing::{Impact, ProbeSolver};
     use super::rev::Reverse;
-    use super::{Block, Board, Color, Point};
+    use super::{priority_ord, Block, Board, Color, Point};
 
     type Solution<B> = Vec<<B as Block>::Color>;
 
@@ -1526,11 +1468,6 @@ mod backtracking {
         P: ProbeSolver<BlockType = B>,
         S: LineSolver<BlockType = B>,
     {
-        #[allow(dead_code)]
-        pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
-            Self::with_options(board, None)
-        }
-
         pub fn with_options(board: Rc<RefCell<Board<B>>>, max_solutions: Option<usize>) -> Self {
             let probe_solver = P::with_board(Rc::clone(&board));
             Solver::<B, P, S> {
@@ -1910,7 +1847,7 @@ mod backtracking {
     }
 }
 
-pub fn run<B, S, P>(
+fn run<B, S, P>(
     board: Rc<RefCell<Board<B>>>,
     max_solutions: Option<usize>,
 ) -> Result<Option<backtracking::Solver<B, P, S>>, String>
