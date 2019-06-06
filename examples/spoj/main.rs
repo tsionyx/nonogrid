@@ -516,25 +516,29 @@ where
         }
     }
 
-    /// How many cells in a line are known to be of particular color
-    pub fn line_solution_rate(&self, line: &[B::Color], size: usize) -> f64 {
-        let solved: f64 = line.iter().map(|cell| cell.solution_rate()).sum();
-        solved / size as f64
-    }
-
     /// How many cells in the row with given index are known to be of particular color
     pub fn row_solution_rate(&self, index: usize) -> f64 {
-        self.line_solution_rate(&self.get_row(index), self.width())
+        let solved: f64 = self
+            .get_row_slice(index)
+            .iter()
+            .map(|cell| cell.solution_rate())
+            .sum();
+        solved / self.width() as f64
     }
 
     /// How many cells in the column with given index are known to be of particular color
     pub fn column_solution_rate(&self, index: usize) -> f64 {
-        self.line_solution_rate(&self.get_column(index), self.height())
+        let column = self.cells.iter().skip(index).step_by(self.width());
+
+        let solved: f64 = column.map(|cell| cell.solution_rate()).sum();
+        solved / self.height() as f64
     }
 
     /// How many cells in the whole grid are known to be of particular color
     pub fn solution_rate(&self) -> f64 {
-        self.line_solution_rate(&self.cells, self.height() * self.width())
+        let solved: f64 = self.cells.iter().map(|cell| cell.solution_rate()).sum();
+        let size = self.height() * self.width();
+        solved / size as f64
     }
 
     pub fn unsolved_cells(&self) -> Vec<Point> {
