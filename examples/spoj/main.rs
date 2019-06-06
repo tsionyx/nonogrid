@@ -48,7 +48,6 @@ enum BinaryColor {
     Undefined,
     White,
     Black,
-    // especially for DynamicSolver
     BlackOrWhite,
 }
 
@@ -216,7 +215,6 @@ mod fx {
     use std::mem::size_of;
     use std::ops::BitXor;
 
-    /// Type alias for a `HashBuilder` using the `fx` hash algorithm.
     pub type FxHashBuilder = BuildHasherDefault<FxHasher>;
 
     pub struct FxHasher {
@@ -556,7 +554,6 @@ where
         }
     }
 
-    /// How many cells in the row with given index are known to be of particular color
     fn row_solution_rate(&self, index: usize) -> f64 {
         let solved: f64 = self
             .get_row_slice(index)
@@ -566,7 +563,6 @@ where
         solved / self.width() as f64
     }
 
-    /// How many cells in the column with given index are known to be of particular color
     fn column_solution_rate(&self, index: usize) -> f64 {
         let column = self.cells.iter().skip(index).step_by(self.width());
 
@@ -594,10 +590,6 @@ where
         self.cells[self.linear_index(y, x)]
     }
 
-    /// For the given cell yield
-    /// the four possible neighbour cells.
-    /// When the given cell is on a border,
-    /// that number can reduce to three or two.
     fn neighbours(&self, point: &Point) -> Vec<Point> {
         let Point { x, y } = *point;
         let mut res = Vec::with_capacity(4);
@@ -616,9 +608,6 @@ where
         res
     }
 
-    /// For the given cell yield
-    /// the neighbour cells
-    /// that are not completely solved yet.
     fn unsolved_neighbours(&self, point: &Point) -> Vec<Point> {
         self.neighbours(&point)
             .into_iter()
@@ -676,33 +665,6 @@ impl<B> Board<B>
 where
     B: Block,
 {
-    /// Difference between two boards as coordinates of changed cells.
-    /// Standard diff semantic as result:
-    /// - first returned points which set in current board and unset in the other
-    /// - second returned points which unset in current board and set in the other
-    fn diff(&self, other: &[B::Color]) -> (Vec<Point>, Vec<Point>) {
-        let mut removed = vec![];
-        let mut added = vec![];
-
-        let other = other.chunks(self.width());
-        for (y, (row, other_row)) in self.iter_rows().zip(other).enumerate() {
-            for (x, (cell, other_cell)) in row.iter().zip(other_row).enumerate() {
-                if cell != other_cell {
-                    let p = Point::new(x, y);
-
-                    if !cell.is_updated_with(other_cell).unwrap_or(false) {
-                        removed.push(p);
-                    }
-
-                    if !other_cell.is_updated_with(cell).unwrap_or(false) {
-                        added.push(p);
-                    }
-                }
-            }
-        }
-        (removed, added)
-    }
-
     fn make_snapshot(&self) -> Vec<B::Color> {
         self.cells.clone()
     }
@@ -766,12 +728,6 @@ mod line {
     where
         Self: Sized,
     {
-        // it can be implemented very simple with generics specialization
-        // https://github.com/aturon/rfcs/blob/impl-specialization/text/0000-impl-specialization.md
-        // https://github.com/rust-lang/rfcs/issues/1053
-        fn set_additional_blank(line: Rc<Vec<Self>>) -> (Rc<Vec<Self>>, bool) {
-            (line, false)
-        }
         fn both_colors() -> Option<Self>;
 
         fn can_be_blank(&self) -> bool;
@@ -783,7 +739,6 @@ mod line {
     pub struct DynamicSolver<B: Block, S = <B as Block>::Color> {
         desc: Rc<Description<B>>,
         line: Rc<Vec<S>>,
-        additional_space: bool,
         block_sums: Vec<usize>,
         job_size: usize,
         solution_matrix: Vec<Option<bool>>,
@@ -798,8 +753,6 @@ mod line {
         type BlockType = B;
 
         fn new(desc: Rc<Description<B>>, line: Rc<Vec<B::Color>>) -> Self {
-            let (line, additional_space) = B::Color::set_additional_blank(line);
-
             let block_sums = Self::calc_block_sum(&*desc);
 
             let job_size = desc.vec.len() + 1;
@@ -810,7 +763,6 @@ mod line {
             DynamicSolver::<B> {
                 desc: desc,
                 line: line,
-                additional_space: additional_space,
                 block_sums: block_sums,
                 job_size: job_size,
                 solution_matrix: solution_matrix,
@@ -821,10 +773,6 @@ mod line {
         fn solve(&mut self) -> Result<(), String> {
             if self.try_solve() {
                 let mut solved = &mut self.solved_line;
-                if self.additional_space {
-                    let new_size = solved.len() - 1;
-                    solved.truncate(new_size);
-                }
 
                 let both = B::Color::both_colors();
                 if let Some(both) = both {
@@ -871,7 +819,6 @@ mod line {
 
         fn get_sol(&mut self, position: isize, block: usize) -> bool {
             if position < 0 {
-                // finished placing the last block, exactly at the beginning of the line.
                 return block == 0;
             }
 
@@ -903,22 +850,18 @@ mod line {
         }
 
         fn fill_matrix(&mut self, position: usize, block: usize) -> bool {
-            // too many blocks left to fit this line segment
             if position < self.block_sums[block] {
                 return false;
             }
 
-            // do not short-circuit
             self.fill_matrix_blank(position, block) | self.fill_matrix_color(position, block)
         }
 
         fn fill_matrix_blank(&mut self, position: usize, block: usize) -> bool {
             if self.color_at(position).can_be_blank() {
-                // current cell is either blank or unknown
                 let has_blank = self.get_sol(position as isize - 1, block);
                 if has_blank {
                     let blank = B::Color::blank();
-                    // set cell blank and continue
                     self.update_solved(position, blank);
                     return true;
                 }
@@ -928,7 +871,6 @@ mod line {
         }
 
         fn fill_matrix_color(&mut self, position: usize, block: usize) -> bool {
-            // block == 0 means we finished filling all the blocks (can still fill whitespace)
             if block == 0 {
                 return false;
             }
@@ -941,11 +883,9 @@ mod line {
 
             let block_start = position as isize - block_size as isize + 1;
 
-            // (position-block_size, position]
             if self.can_place_color(block_start, position, should_have_trailing_space) {
                 let has_color = self.get_sol(block_start - 1, block - 1);
                 if has_color {
-                    // set cell blank, place the current block and continue
                     self.set_color_block(
                         block_start,
                         position,
@@ -976,7 +916,6 @@ mod line {
                 end += 1;
             }
 
-            // the color can be placed in every cell
             self.line[start as usize..end]
                 .iter()
                 .all(|cell| cell.can_be())
@@ -996,7 +935,6 @@ mod line {
                 end += 1
             }
 
-            // set colored cells
             for i in start as usize..end {
                 self.update_solved(i, color);
             }
@@ -1127,7 +1065,6 @@ mod propagation {
                     break;
                 }
             }
-            // mark the job as visited
             self.visited.insert(top_job);
             Some(top_job)
         }
@@ -1163,12 +1100,6 @@ mod propagation {
                     let board = self.board.borrow();
                     let rows: Vec<_> = (0..board.height()).rev().collect();
                     let cols: Vec<_> = (0..board.width()).rev().collect();
-
-                    // `is_solved_full` is expensive, so minimize calls to it.
-                    // Do not call if only a handful of lines has to be solved
-                    if board.is_solved_full() {
-                        //return 0, ()
-                    }
                     LongJobQueue::with_rows_and_columns(rows, cols)
                 };
                 self.run_jobs::<S, _>(queue)
@@ -1204,10 +1135,6 @@ mod propagation {
             Ok(solved_cells)
         }
 
-        /// Solve a line with the solver S and update the board.
-        /// If the line gets partially solved, put the crossed lines into queue.
-        ///
-        /// Return the list of indexes which was updated during this solution.
         fn update_line<S>(&self, index: usize, is_column: bool) -> Result<Vec<usize>, String>
         where
             S: LineSolver<BlockType = B>,
@@ -1549,11 +1476,7 @@ mod backtracking {
     {
         board: Rc<RefCell<Board<B>>>,
         probe_solver: P,
-
-        // search options
         max_solutions: Option<usize>,
-
-        // dynamic variables
         pub solutions: Vec<Solution<B>>,
         explored_paths: HashSet<Vec<(Point, B::Color)>>,
 
@@ -1626,9 +1549,7 @@ mod backtracking {
 
         fn already_found(&self) -> bool {
             for (_i, solution) in self.solutions.iter().enumerate() {
-                let (removed, added) = self.board().diff(solution);
-
-                if removed.is_empty() && added.is_empty() {
+                if &self.board().cells == solution {
                     return true;
                 }
             }
@@ -1637,7 +1558,6 @@ mod backtracking {
         }
 
         fn add_solution(&mut self) -> Result<(), String> {
-            // force to check the board
             self.probe_solver.run_unsolved::<S>()?;
 
             if !self.already_found() {
@@ -1648,7 +1568,6 @@ mod backtracking {
             Ok(())
         }
 
-        /// The most promising (point+color) pair should go first
         fn choose_directions(&self, impact: &Impact<B>) -> Vec<(Point, B::Color)> {
             let mut point_wise = HashMap::new();
 
@@ -1674,7 +1593,6 @@ mod backtracking {
                 .flat_map(|&(point, _rate)| {
                     let mut point_colors: Vec<_> =
                         point_wise[point].iter().map(|(k, v)| (*k, *v)).collect();
-                    // the most impacting color goes first
                     point_colors
                         .sort_by_key(|&(_color, (new_points, _priority))| Reverse(new_points));
                     let point_order: Vec<_> = point_colors
@@ -1703,8 +1621,6 @@ mod backtracking {
 
             let log = |f: f64| (1.0 + f).ln() + 1.0;
 
-            // Max is the most trivial, but also most ineffective strategy.
-            // For details, see https://ieeexplore.ieee.org/document/6476646
             match Self::choose_strategy() {
                 ChoosePixel::Sum => sum as f64,
                 ChoosePixel::Min => *min as f64,
@@ -1726,8 +1642,6 @@ mod backtracking {
             }
         }
 
-        /// Recursively search for solutions.
-        /// Return False if the given path is a dead end (no solutions can be found)
         fn search(
             &mut self,
             directions: &[(Point, B::Color)],
@@ -1744,7 +1658,6 @@ mod backtracking {
             let save = self.board().make_snapshot();
             let result = self.search_mutable(directions, path);
 
-            // do not restore the solved cells on a root path - they are really solved!
             if !path.is_empty() {
                 self.board.borrow_mut().restore(save);
                 self.set_explored(path);
@@ -1758,15 +1671,9 @@ mod backtracking {
             directions: &[(Point, B::Color)],
             path: &[(Point, B::Color)],
         ) -> Result<bool, String> {
-            // this variable shows whether the board changed after the last probing
-            // when the probing occurs it should immediately set to 'false'
-            // to prevent succeeded useless probing on the same board
             let mut board_changed = true;
-            //let mut search_counter = 0_u32;
-
             let mut directions = directions.to_vec();
 
-            // push and pop from the end, so the most prioritized items are on the left
             directions.reverse();
 
             while let Some(direction) = directions.pop() {
@@ -1796,7 +1703,6 @@ mod backtracking {
                     board_changed = false;
 
                     if impact.is_err() {
-                        // the whole `path` branch of a search tree is a dead end
                         return Ok(false);
                     }
 
@@ -1850,10 +1756,6 @@ mod backtracking {
                 }
 
                 if !success || self.board().is_solved_full() {
-                    // immediately try the other colors as well
-                    // if all of them goes to the dead end,
-                    // then the parent path is a dead end
-
                     let states_to_try: Vec<_> = cell_colors
                         .iter()
                         .filter_map(|&other_color| {
@@ -1875,18 +1777,12 @@ mod backtracking {
             Ok(true)
         }
 
-        /// Trying to search for solutions in the given direction.
-        /// At first it set the given state and get a list of the
-        /// further jobs for finding the contradictions.
-        /// Later that jobs will be used as candidates for a deeper search.
         fn try_direction(&mut self, path: &[(Point, B::Color)]) -> Result<bool, String> {
             let direction = *path.last().expect("Path should be non-empty");
 
-            // add every cell to the jobs queue
             let mut probe_jobs = self.probe_solver.unsolved_cells();
             let new_jobs = self.set_guess(direction);
             match new_jobs {
-                // update with more prioritized cells
                 Ok(new_jobs) => {
                     probe_jobs.extend(new_jobs);
                 }
@@ -1939,10 +1835,6 @@ mod backtracking {
             Ok(probes)
         }
 
-        /// Whether we reached the defined limits:
-        /// 1) number of solutions found
-        /// 2) the maximum allowed run time
-        /// 3) the maximum depth
         fn limits_reached(&self) -> bool {
             if let Some(max_solutions) = self.max_solutions {
                 let solutions_number = self.solutions.len();
@@ -2000,7 +1892,6 @@ fn read_description() -> Description<BinaryBlock> {
     Description::new(row.into_iter().map(|x| BinaryBlock(x)).collect())
 }
 
-/// Read and parse lines from stdin to create a nonogram board
 fn read() -> Vec<(Vec<Description<BinaryBlock>>, Vec<Description<BinaryBlock>>)> {
     let mut _n;
     loop {
@@ -2046,7 +1937,6 @@ fn main() {
     for (rows, columns) in read() {
         let board = Board::with_descriptions(rows, columns);
         let board = Rc::new(RefCell::new(board));
-        //println!("{:#?}\n{:#?}", board.borrow().desc_rows, board.borrow().desc_cols);
         let backtracking =
             run::<_, DynamicSolver<_>, FullProbe1<_>>(Rc::clone(&board), Some(1)).unwrap();
 
