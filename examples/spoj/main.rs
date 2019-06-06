@@ -524,6 +524,13 @@ where
             .collect()
     }
 
+    fn unsolved_neighbours_count(&self, point: &Point) -> usize {
+        self.neighbours(&point)
+            .into_iter()
+            .filter(move |n| !self.cell(n).is_solved())
+            .count()
+    }
+
     fn init_cache(&mut self) {
         let width = self.width();
         let height = self.height();
@@ -1251,7 +1258,7 @@ mod probing {
 
             let mut queue = FloatPriorityQueue::new();
             queue.extend(unsolved.into_iter().map(|point| {
-                let no_unsolved = board.unsolved_neighbours(&point).len() as f64;
+                let no_unsolved = board.unsolved_neighbours_count(&point) as f64;
                 let row_rate = board.row_solution_rate(point.y());
                 let column_rate = board.column_solution_rate(point.x());
                 let priority = row_rate + column_rate - no_unsolved + 4.0;
