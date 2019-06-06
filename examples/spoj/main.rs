@@ -741,7 +741,7 @@ mod line {
         fn both_colors() -> Option<Self>;
 
         fn can_be_blank(&self) -> bool;
-        fn can_be(&self, color: Self) -> bool;
+        fn can_be(&self) -> bool;
         fn add_color(&self, color: Self) -> Self;
         fn solved_copy(&self) -> Self;
     }
@@ -900,7 +900,6 @@ mod line {
             }
             let current_block = self.block_at(block - 1);
             let mut block_size = current_block.size();
-            let current_color = current_block.color();
             let should_have_trailing_space = self.trail_with_space(block);
             if should_have_trailing_space {
                 block_size += 1;
@@ -909,19 +908,14 @@ mod line {
             let block_start = position as isize - block_size as isize + 1;
 
             // (position-block_size, position]
-            if self.can_place_color(
-                block_start,
-                position,
-                current_color,
-                should_have_trailing_space,
-            ) {
+            if self.can_place_color(block_start, position, should_have_trailing_space) {
                 let has_color = self.get_sol(block_start - 1, block - 1);
                 if has_color {
                     // set cell blank, place the current block and continue
                     self.set_color_block(
                         block_start,
                         position,
-                        current_color,
+                        current_block.color(),
                         should_have_trailing_space,
                     );
                     return true;
@@ -932,25 +926,10 @@ mod line {
         }
 
         fn trail_with_space(&self, block: usize) -> bool {
-            if block < self.desc.vec.len() {
-                let current_color = self.block_at(block - 1).color();
-                let next_color = self.block_at(block).color();
-
-                if next_color == current_color {
-                    return true;
-                }
-            }
-
-            false
+            block < self.desc.vec.len()
         }
 
-        fn can_place_color(
-            &self,
-            start: isize,
-            mut end: usize,
-            color: B::Color,
-            trailing_space: bool,
-        ) -> bool {
+        fn can_place_color(&self, start: isize, mut end: usize, trailing_space: bool) -> bool {
             if start < 0 {
                 return false;
             }
@@ -966,7 +945,7 @@ mod line {
             // the color can be placed in every cell
             self.line[start as usize..end]
                 .iter()
-                .all(|cell| cell.can_be(color))
+                .all(|cell| cell.can_be())
         }
 
         fn set_color_block(
@@ -1000,7 +979,7 @@ impl line::DynamicColor for BinaryColor {
         self != &BinaryColor::Black
     }
 
-    fn can_be(&self, _always_black: Self) -> bool {
+    fn can_be(&self) -> bool {
         self != &Self::blank()
     }
 
