@@ -185,3 +185,21 @@ fn nonograms_org_not_found() {
     let msg = NonogramsOrg::read_remote("444444").err().unwrap();
     assert_eq!(msg, "Not found cypher in HTML content");
 }
+
+#[test]
+#[cfg(feature = "web")]
+/// http://www.nonograms.org/nonograms/i/6
+fn nonograms_org_solve() {
+    let p = NonogramsOrg::read_remote("6").unwrap();
+    assert_eq!(p.infer_scheme(), PuzzleScheme::BlackAndWhite);
+
+    let board = p.parse::<BinaryBlock>();
+    let board = MutRc::new(board);
+
+    let solver = propagation::Solver::new(MutRc::clone(&board));
+    solver.run::<line::DynamicSolver<_>>().unwrap();
+
+    let board = board.read();
+    assert!(board.is_solved_full());
+    assert_eq!(board.solution_rate(), 1.0);
+}
