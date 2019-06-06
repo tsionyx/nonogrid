@@ -11,14 +11,14 @@ use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue as PQ;
 
 pub type Impact<B> = HashMap<(Point, <B as Block>::Color), (usize, f64)>;
-type FloatPriorityQueue<K> = PQ<K, OrderedFloat<f64>, DefaultHashBuilder>;
+type OrderedPoints = PQ<Point, OrderedFloat<f64>, DefaultHashBuilder>;
 
 pub trait ProbeSolver {
     type BlockType: Block;
 
     fn with_board(board: MutRc<Board<Self::BlockType>>) -> Self;
 
-    fn unsolved_cells(&self) -> FloatPriorityQueue<Point>;
+    fn unsolved_cells(&self) -> OrderedPoints;
     fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, OrderedFloat<f64>)>, String>
     where
         S: LineSolver<BlockType = Self::BlockType>;
@@ -30,10 +30,7 @@ pub trait ProbeSolver {
         self.run::<S>(&mut self.unsolved_cells())
     }
 
-    fn run<S>(
-        &self,
-        probes: &mut FloatPriorityQueue<Point>,
-    ) -> Result<Impact<Self::BlockType>, String>
+    fn run<S>(&self, probes: &mut OrderedPoints) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = Self::BlockType>;
 }
@@ -59,11 +56,11 @@ where
         Self { board }
     }
 
-    fn unsolved_cells(&self) -> FloatPriorityQueue<Point> {
+    fn unsolved_cells(&self) -> OrderedPoints {
         let board = self.board();
         let unsolved = board.unsolved_cells();
 
-        let mut queue = FloatPriorityQueue::with_default_hasher();
+        let mut queue = OrderedPoints::with_default_hasher();
         queue.extend(unsolved.map(|point| {
             let no_unsolved = board.unsolved_neighbours(&point).count() as f64;
             let row_rate = board.row_solution_rate(point.y());
@@ -80,13 +77,15 @@ where
         S: LineSolver<BlockType = B>,
     {
         let fixed_points = self.run_propagation::<S>(point)?;
-        let mut new_jobs = vec![];
-
-        for new_point in fixed_points {
-            for neighbour in self.board().unsolved_neighbours(&new_point) {
-                new_jobs.push((neighbour, OrderedFloat(PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED)));
-            }
-        }
+        let board = self.board();
+        let mut new_jobs: Vec<_> = fixed_points
+            .into_iter()
+            .flat_map(|new_point| {
+                board
+                    .unsolved_neighbours(&new_point)
+                    .map(|neighbour| (neighbour, OrderedFloat(PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED)))
+            })
+            .collect();
 
         for neighbour in self.board().unsolved_neighbours(&point) {
             new_jobs.push((
@@ -99,10 +98,7 @@ where
         Ok(new_jobs)
     }
 
-    fn run<S>(
-        &self,
-        probes: &mut FloatPriorityQueue<Point>,
-    ) -> Result<Impact<Self::BlockType>, String>
+    fn run<S>(&self, probes: &mut OrderedPoints) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -167,9 +163,7 @@ where
                     )?;
                 }
                 let new_probes = self.propagate_point::<S>(&contradiction)?;
-                for (point, priority) in new_probes {
-                    probes.push(point, priority);
-                }
+                probes.extend(new_probes);
             } else {
                 break impact;
             }

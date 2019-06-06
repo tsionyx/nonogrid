@@ -636,9 +636,7 @@ where
         match new_jobs {
             // update with more prioritized cells
             Ok(new_jobs) => {
-                for (new_job, priority) in new_jobs {
-                    probe_jobs.push(new_job, priority);
-                }
+                probe_jobs.extend(new_jobs);
             }
             Err(err) => {
                 warn!("Guess {:?} failed: {}", direction, err);
@@ -694,18 +692,15 @@ where
 
         //let save = self.board().make_snapshot();
 
-        let mut probes = vec![];
         Board::set_color_with_callback(MutRc::clone(&self.board), &point, &color);
         let new_probes = self.probe_solver.propagate_point::<S>(&point)?;
-        for (new_point, priority) in new_probes {
-            probes.push((new_point, priority));
-        }
+
         if self.board().is_solved_full() {
             self.add_solution()?;
             return Ok(vec![]);
         }
 
-        Ok(probes)
+        Ok(new_probes)
     }
 
     /// Whether we reached the defined limits:
