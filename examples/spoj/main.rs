@@ -2,48 +2,16 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
-use std::fmt::Debug;
 use std::hash::Hash;
 use std::io;
-use std::marker::Sized;
 use std::ops::Sub;
 use std::rc::Rc;
 use std::slice::Chunks;
 
 use iter::StepByIter;
-use line::LineSolver;
-use probing::ProbeSolver;
-
-pub trait Cell
-where
-    Self:
-        Debug + Eq + Hash + Default + Copy + Send + Sync + Ord + Sub<Output = Result<Self, String>>,
-{
-    fn blank() -> Self;
-    fn is_solved(&self) -> bool;
-    fn solution_rate(&self) -> f64;
-    fn variants(&self) -> Vec<Self>
-    where
-        Self: Sized;
-}
-
-pub trait Block
-where
-    Self: Debug + Eq + Hash + Default + Copy + Send + Sync,
-{
-    type Color: Cell;
-
-    fn from_size(size: usize) -> Self;
-    fn partial_sums(desc: &[Self]) -> Vec<usize>
-    where
-        Self: Sized;
-
-    fn size(&self) -> usize;
-    fn color(&self) -> Self::Color;
-}
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
-enum BW {
+pub enum BW {
     Undefined,
     White,
     Black,
@@ -56,7 +24,7 @@ impl Default for BW {
     }
 }
 
-impl Cell for BW {
+impl BW {
     fn blank() -> Self {
         BW::White
     }
@@ -79,6 +47,35 @@ impl Cell for BW {
         } else {
             vec![BW::White, BW::Black]
         }
+    }
+
+    fn both_colors() -> Option<Self> {
+        Some(BW::BlackOrWhite)
+    }
+
+    fn can_be_blank(&self) -> bool {
+        self != &BW::Black
+    }
+
+    fn can_be(&self) -> bool {
+        self != &Self::blank()
+    }
+
+    fn add_color(&self, color: Self) -> Self {
+        match *self {
+            BW::Undefined => color,
+            value => {
+                if value == color {
+                    value
+                } else {
+                    BW::BlackOrWhite
+                }
+            }
+        }
+    }
+
+    fn solved_copy(&self) -> Self {
+        *self
     }
 }
 
@@ -114,13 +111,7 @@ impl Sub for BW {
 #[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 struct BB(usize);
 
-impl Block for BB {
-    type Color = BW;
-
-    fn from_size(size: usize) -> Self {
-        BB(size)
-    }
-
+impl BB {
     fn partial_sums(desc: &[Self]) -> Vec<usize> {
         desc.iter()
             .scan(None, |prev, block| {
@@ -139,27 +130,21 @@ impl Block for BB {
         self.0
     }
 
-    fn color(&self) -> Self::Color {
+    fn color(&self) -> BW {
         BW::Black
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub struct Clues<T: Block>
-where
-    T: Block,
-{
-    vec: Vec<T>,
+pub struct Clues {
+    vec: Vec<BB>,
 }
 
-impl<T> Clues<T>
-where
-    T: Block,
-{
-    fn new(mut vec: Vec<T>) -> Self {
-        let zero = T::default();
+impl Clues {
+    fn new(mut vec: Vec<BB>) -> Self {
+        let zero = BB::default();
         vec.retain(|x| *x != zero);
-        Clues::<T> { vec: vec }
+        Clues { vec: vec }
     }
 }
 
@@ -325,14 +310,11 @@ pub struct Point {
     y: usize,
 }
 
-type CacheKey<B> = (usize, Rc<Vec<<B as Block>::Color>>);
-type CacheValue<B> = Result<Rc<Vec<<B as Block>::Color>>, String>;
-type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
+type CacheKey = (usize, Rc<Vec<BW>>);
+type CacheValue = Result<Rc<Vec<BW>>, String>;
+type LineSolverCache = GrowableCache<CacheKey, CacheValue>;
 
-fn new_cache<B>(capacity: usize) -> LineSolverCache<B>
-where
-    B: Block,
-{
+fn new_cache(capacity: usize) -> LineSolverCache {
     GrowableCache::with_capacity(capacity)
 }
 
@@ -350,15 +332,12 @@ impl Point {
     }
 }
 
-pub struct Board<B>
-where
-    B: Block,
-{
-    cells: Vec<B::Color>,
-    desc_rows: Vec<Rc<Clues<B>>>,
-    desc_cols: Vec<Rc<Clues<B>>>,
-    cache_rows: Option<LineSolverCache<B>>,
-    cache_cols: Option<LineSolverCache<B>>,
+pub struct Board {
+    cells: Vec<BW>,
+    desc_rows: Vec<Rc<Clues>>,
+    desc_cols: Vec<Rc<Clues>>,
+    cache_rows: Option<LineSolverCache>,
+    cache_cols: Option<LineSolverCache>,
     rows_cache_indexes: Vec<usize>,
     cols_cache_indexes: Vec<usize>,
 }
@@ -409,16 +388,12 @@ mod iter {
     impl<I: Iterator> StepByIter for I {}
 }
 
-impl<B> Board<B>
-where
-    B: Block,
-    B::Color: Copy,
-{
-    fn with_descriptions(rows: Vec<Clues<B>>, columns: Vec<Clues<B>>) -> Self {
+impl Board {
+    fn with_descriptions(rows: Vec<Clues>, columns: Vec<Clues>) -> Self {
         let height = rows.len();
         let width = columns.len();
 
-        let init = B::Color::default();
+        let init = BW::default();
         let cells = vec![init; width * height];
 
         let uniq_rows = dedup(&rows.iter().map(|desc| desc.vec.clone()).collect::<Vec<_>>());
@@ -450,7 +425,7 @@ where
 
         let desc_rows = rows.into_iter().map(Rc::new).collect();
         let desc_cols = columns.into_iter().map(Rc::new).collect();
-        Board::<B> {
+        Board {
             cells: cells,
             desc_rows: desc_rows,
             desc_cols: desc_cols,
@@ -461,11 +436,11 @@ where
         }
     }
 
-    fn iter_rows(&self) -> Chunks<B::Color> {
+    fn iter_rows(&self) -> Chunks<BW> {
         self.cells.chunks(self.width())
     }
 
-    fn descriptions(&self, rows: bool) -> &[Rc<Clues<B>>] {
+    fn descriptions(&self, rows: bool) -> &[Rc<Clues>] {
         if rows {
             &self.desc_rows
         } else {
@@ -482,18 +457,18 @@ where
     }
 
     fn is_solved_full(&self) -> bool {
-        self.cells.iter().all(Cell::is_solved)
+        self.cells.iter().all(BW::is_solved)
     }
 
-    fn get_row_slice(&self, index: usize) -> &[B::Color] {
+    fn get_row_slice(&self, index: usize) -> &[BW] {
         self.iter_rows().nth(index).expect("Invalid row index")
     }
 
-    fn get_row(&self, index: usize) -> Vec<B::Color> {
+    fn get_row(&self, index: usize) -> Vec<BW> {
         self.get_row_slice(index).to_vec()
     }
 
-    fn get_column(&self, index: usize) -> Vec<B::Color> {
+    fn get_column(&self, index: usize) -> Vec<BW> {
         self.cells
             .iter()
             .skip(index)
@@ -507,14 +482,14 @@ where
         row_index * width + column_index
     }
 
-    fn set_row(&mut self, index: usize, new: &[B::Color]) {
+    fn set_row(&mut self, index: usize, new: &[BW]) {
         let row_start = self.linear_index(index, 0);
         for (linear_index, &new_cell) in (row_start..).zip(new) {
             self.cells[linear_index] = new_cell;
         }
     }
 
-    fn set_column(&mut self, index: usize, new: &[B::Color]) {
+    fn set_column(&mut self, index: usize, new: &[BW]) {
         let width = self.width();
 
         for (i, &new_cell) in new.iter().enumerate() {
@@ -554,7 +529,7 @@ where
             .collect()
     }
 
-    fn cell(&self, point: &Point) -> B::Color {
+    fn cell(&self, point: &Point) -> BW {
         let Point { x, y } = *point;
         self.cells[self.linear_index(y, x)]
     }
@@ -595,11 +570,11 @@ where
         let width = self.width();
         let height = self.height();
 
-        self.cache_rows = Some(new_cache::<B>(2_000 * height));
-        self.cache_cols = Some(new_cache::<B>(2_000 * width));
+        self.cache_rows = Some(new_cache(2_000 * height));
+        self.cache_cols = Some(new_cache(2_000 * width));
     }
 
-    fn cached_solution(&mut self, is_column: bool, key: &CacheKey<B>) -> Option<CacheValue<B>> {
+    fn cached_solution(&mut self, is_column: bool, key: &CacheKey) -> Option<CacheValue> {
         let cache = if is_column {
             self.cache_cols.as_mut()
         } else {
@@ -609,7 +584,7 @@ where
         cache.and_then(|cache| cache.cache_get(key).cloned())
     }
 
-    fn set_cached_solution(&mut self, is_column: bool, key: CacheKey<B>, solved: CacheValue<B>) {
+    fn set_cached_solution(&mut self, is_column: bool, key: CacheKey, solved: CacheValue) {
         let cache = if is_column {
             self.cache_cols.as_mut()
         } else {
@@ -630,31 +605,24 @@ where
     }
 }
 
-impl<B> Board<B>
-where
-    B: Block,
-{
-    fn make_snapshot(&self) -> Vec<B::Color> {
+impl Board {
+    fn make_snapshot(&self) -> Vec<BW> {
         self.cells.clone()
     }
 
-    fn restore(&mut self, cells: Vec<B::Color>) {
+    fn restore(&mut self, cells: Vec<BW>) {
         self.cells = cells;
     }
 }
 
-impl<B> Board<B>
-where
-    B: Block,
-    B::Color: Copy,
-{
-    fn set_color(&mut self, point: &Point, color: &B::Color) {
+impl Board {
+    fn set_color(&mut self, point: &Point, color: &BW) {
         let Point { x, y } = *point;
         let index = self.linear_index(y, x);
         self.cells[index] = *color;
     }
 
-    fn unset_color(&mut self, point: &Point, color: &B::Color) -> Result<(), String> {
+    fn unset_color(&mut self, point: &Point, color: &BW) -> Result<(), String> {
         let old_value = self.cell(point);
         let Point { x, y } = *point;
         let index = self.linear_index(y, x);
@@ -667,66 +635,33 @@ where
 mod line {
     use std::rc::Rc;
 
-    use super::{replace, Block, Cell, Clues};
+    use super::{replace, Clues, BB, BW};
 
-    pub trait LineSolver {
-        type BlockType: Block;
-
-        fn new(
-            desc: Rc<Clues<Self::BlockType>>,
-            line: Rc<Vec<<Self::BlockType as Block>::Color>>,
-        ) -> Self;
-        fn solve(&mut self) -> Result<(), String>;
-        fn get_solution(self) -> Vec<<Self::BlockType as Block>::Color>;
-    }
-
-    pub fn solve<L, B>(desc: Rc<Clues<B>>, line: Rc<Vec<B::Color>>) -> Result<Vec<B::Color>, String>
-    where
-        L: LineSolver<BlockType = B>,
-        B: Block,
-    {
-        let mut solver = L::new(desc, line);
+    pub fn solve(desc: Rc<Clues>, line: Rc<Vec<BW>>) -> Result<Vec<BW>, String> {
+        let mut solver = DynamicSolver::new(desc, line);
         solver.solve()?;
         Ok(solver.get_solution())
     }
 
-    pub trait DynamicColor: Cell
-    where
-        Self: Sized,
-    {
-        fn both_colors() -> Option<Self>;
-
-        fn can_be_blank(&self) -> bool;
-        fn can_be(&self) -> bool;
-        fn add_color(&self, color: Self) -> Self;
-        fn solved_copy(&self) -> Self;
-    }
-
-    pub struct DynamicSolver<B: Block, S = <B as Block>::Color> {
-        desc: Rc<Clues<B>>,
-        line: Rc<Vec<S>>,
+    struct DynamicSolver {
+        desc: Rc<Clues>,
+        line: Rc<Vec<BW>>,
         block_sums: Vec<usize>,
         job_size: usize,
         solution_matrix: Vec<Option<bool>>,
-        solved_line: Vec<S>,
+        solved_line: Vec<BW>,
     }
 
-    impl<B> LineSolver for DynamicSolver<B>
-    where
-        B: Block,
-        B::Color: DynamicColor,
-    {
-        type BlockType = B;
-
-        fn new(desc: Rc<Clues<B>>, line: Rc<Vec<B::Color>>) -> Self {
+    impl DynamicSolver {
+        fn new(desc: Rc<Clues>, line: Rc<Vec<BW>>) -> Self {
             let block_sums = Self::calc_block_sum(&*desc);
 
             let job_size = desc.vec.len() + 1;
             let solution_matrix = vec![None; job_size * line.len()];
 
-            let solved_line = line.iter().map(DynamicColor::solved_copy).collect();
+            let solved_line = line.iter().map(BW::solved_copy).collect();
 
-            DynamicSolver::<B> {
+            DynamicSolver {
                 desc: desc,
                 line: line,
                 block_sums: block_sums,
@@ -740,9 +675,9 @@ mod line {
             if self.try_solve() {
                 let mut solved = &mut self.solved_line;
 
-                let both = B::Color::both_colors();
+                let both = BW::both_colors();
                 if let Some(both) = both {
-                    let init = B::Color::default();
+                    let init = BW::default();
                     replace(&mut solved, &both, init);
                 }
                 Ok(())
@@ -751,18 +686,12 @@ mod line {
             }
         }
 
-        fn get_solution(self) -> Vec<B::Color> {
+        fn get_solution(self) -> Vec<BW> {
             self.solved_line
         }
-    }
 
-    impl<B> DynamicSolver<B>
-    where
-        B: Block,
-        B::Color: DynamicColor,
-    {
-        fn calc_block_sum(desc: &Clues<B>) -> Vec<usize> {
-            let mut min_indexes: Vec<_> = B::partial_sums(&desc.vec)
+        fn calc_block_sum(desc: &Clues) -> Vec<usize> {
+            let mut min_indexes: Vec<_> = BB::partial_sums(&desc.vec)
                 .iter()
                 .map(|size| size - 1)
                 .collect();
@@ -802,15 +731,15 @@ mod line {
             self.solution_matrix[position * self.job_size + block] = Some(can_be_solved)
         }
 
-        fn color_at(&self, position: usize) -> B::Color {
+        fn color_at(&self, position: usize) -> BW {
             self.line[position]
         }
 
-        fn block_at(&self, block_position: usize) -> B {
+        fn block_at(&self, block_position: usize) -> BB {
             self.desc.vec[block_position]
         }
 
-        fn update_solved(&mut self, position: usize, color: B::Color) {
+        fn update_solved(&mut self, position: usize, color: BW) {
             let current = self.solved_line[position];
             self.solved_line[position] = current.add_color(color);
         }
@@ -827,7 +756,7 @@ mod line {
             if self.color_at(position).can_be_blank() {
                 let has_blank = self.get_sol(position as isize - 1, block);
                 if has_blank {
-                    let blank = B::Color::blank();
+                    let blank = BW::blank();
                     self.update_solved(position, blank);
                     return true;
                 }
@@ -891,11 +820,11 @@ mod line {
             &mut self,
             start: isize,
             mut end: usize,
-            color: B::Color,
+            color: BW,
             trailing_space: bool,
         ) {
             if trailing_space {
-                let blank = B::Color::blank();
+                let blank = BW::blank();
                 self.update_solved(end, blank);
             } else {
                 end += 1
@@ -908,51 +837,16 @@ mod line {
     }
 }
 
-impl line::DynamicColor for BW {
-    fn both_colors() -> Option<Self> {
-        Some(BW::BlackOrWhite)
-    }
-
-    fn can_be_blank(&self) -> bool {
-        self != &BW::Black
-    }
-
-    fn can_be(&self) -> bool {
-        self != &Self::blank()
-    }
-
-    fn add_color(&self, color: Self) -> Self {
-        match *self {
-            BW::Undefined => color,
-            value => {
-                if value == color {
-                    value
-                } else {
-                    BW::BlackOrWhite
-                }
-            }
-        }
-    }
-
-    fn solved_copy(&self) -> Self {
-        *self
-    }
-}
-
 mod propagation {
     use std::cell::RefCell;
     use std::collections::HashSet;
     use std::rc::Rc;
 
     use super::line;
-    use super::line::LineSolver;
-    use super::{Block, Board, Clues, Point};
+    use super::{Board, Clues, Point, BW};
 
-    pub struct Solver<B>
-    where
-        B: Block,
-    {
-        board: Rc<RefCell<Board<B>>>,
+    pub struct Solver {
+        board: Rc<RefCell<Board>>,
         point: Option<Point>,
     }
 
@@ -1036,31 +930,25 @@ mod propagation {
         }
     }
 
-    impl<B> Solver<B>
-    where
-        B: Block,
-    {
-        pub fn new(board: Rc<RefCell<Board<B>>>) -> Self {
-            Solver::<B> {
+    impl Solver {
+        pub fn new(board: Rc<RefCell<Board>>) -> Self {
+            Solver {
                 board: board,
                 point: None,
             }
         }
 
-        pub fn with_point(board: Rc<RefCell<Board<B>>>, point: Point) -> Self {
-            Solver::<B> {
+        pub fn with_point(board: Rc<RefCell<Board>>, point: Point) -> Self {
+            Solver {
                 board: board,
                 point: Some(point),
             }
         }
 
-        pub fn run<S>(&self) -> Result<Vec<Point>, String>
-        where
-            S: LineSolver<BlockType = B>,
-        {
+        pub fn run(&self) -> Result<Vec<Point>, String> {
             if let Some(point) = self.point {
                 let queue = SmallJobQueue::with_point(point);
-                self.run_jobs::<S, _>(queue)
+                self.run_jobs(queue)
             } else {
                 let queue = {
                     let board = self.board.borrow();
@@ -1068,19 +956,18 @@ mod propagation {
                     let cols: Vec<_> = (0..board.width()).rev().collect();
                     LongJobQueue::with_rows_and_columns(rows, cols)
                 };
-                self.run_jobs::<S, _>(queue)
+                self.run_jobs(queue)
             }
         }
 
-        fn run_jobs<S, Q>(&self, mut queue: Q) -> Result<Vec<Point>, String>
+        fn run_jobs<Q>(&self, mut queue: Q) -> Result<Vec<Point>, String>
         where
-            S: LineSolver<BlockType = B>,
             Q: JobQueue,
         {
             let mut solved_cells = vec![];
 
             while let Some((is_column, index)) = queue.pop() {
-                let new_jobs = self.update_line::<S>(index, is_column)?;
+                let new_jobs = self.update_line(index, is_column)?;
 
                 let new_states = new_jobs.iter().map(|another_index| {
                     let (x, y) = if is_column {
@@ -1101,10 +988,7 @@ mod propagation {
             Ok(solved_cells)
         }
 
-        fn update_line<S>(&self, index: usize, is_column: bool) -> Result<Vec<usize>, String>
-        where
-            S: LineSolver<BlockType = B>,
-        {
+        fn update_line(&self, index: usize, is_column: bool) -> Result<Vec<usize>, String> {
             let (line_desc, line) = {
                 let board = self.board.borrow();
                 if is_column {
@@ -1121,7 +1005,7 @@ mod propagation {
             };
 
             let line = Rc::new(line);
-            let solution = self.solve::<S>(index, is_column, line_desc, Rc::clone(&line))?;
+            let solution = self.solve(index, is_column, line_desc, Rc::clone(&line))?;
             let indexes = self.update_solved(index, is_column, &line, &solution);
 
             Ok(indexes)
@@ -1131,8 +1015,8 @@ mod propagation {
             &self,
             index: usize,
             is_column: bool,
-            old: &[B::Color],
-            new: &[B::Color],
+            old: &[BW],
+            new: &[BW],
         ) -> Vec<usize> {
             if old == new {
                 return vec![];
@@ -1151,16 +1035,13 @@ mod propagation {
                 .collect()
         }
 
-        fn solve<S>(
+        fn solve(
             &self,
             index: usize,
             is_column: bool,
-            line_desc: Rc<Clues<B>>,
-            line: Rc<Vec<B::Color>>,
-        ) -> Result<Rc<Vec<B::Color>>, String>
-        where
-            S: LineSolver<BlockType = B>,
-        {
+            line_desc: Rc<Clues>,
+            line: Rc<Vec<BW>>,
+        ) -> Result<Rc<Vec<BW>>, String> {
             let cache_index = if is_column {
                 self.board.borrow().column_cache_index(index)
             } else {
@@ -1174,7 +1055,7 @@ mod propagation {
                 return cached;
             }
 
-            let value = line::solve::<S, _>(line_desc, line);
+            let value = line::solve(line_desc, line);
 
             let rc_value = value.map(Rc::new);
             self.board
@@ -1195,59 +1076,25 @@ mod probing {
     use std::collections::HashMap;
     use std::rc::Rc;
 
-    use super::line::LineSolver;
-    use super::{priority_ord, propagation, Block, Board, Cell, Point};
+    use super::{priority_ord, propagation, Board, Point, BW};
 
-    pub type Impact<B> = HashMap<(Point, <B as Block>::Color), (usize, u32)>;
+    pub type Impact = HashMap<(Point, BW), (usize, u32)>;
     type FloatPriorityQueue<K> = BinaryHeap<K>;
 
-    pub trait ProbeSolver {
-        type BlockType: Block;
-
-        fn with_board(board: Rc<RefCell<Board<Self::BlockType>>>) -> Self;
-
-        fn unsolved_cells(&self) -> FloatPriorityQueue<(u32, Point)>;
-        fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(u32, Point)>, String>
-        where
-            S: LineSolver<BlockType = Self::BlockType>;
-
-        fn run_unsolved<S>(&self) -> Result<Impact<Self::BlockType>, String>
-        where
-            S: LineSolver<BlockType = Self::BlockType>,
-        {
-            self.run::<S>(&mut self.unsolved_cells())
-        }
-
-        fn run<S>(
-            &self,
-            probes: &mut FloatPriorityQueue<(u32, Point)>,
-        ) -> Result<Impact<Self::BlockType>, String>
-        where
-            S: LineSolver<BlockType = Self::BlockType>;
-    }
-
-    pub struct FullProbe1<B>
-    where
-        B: Block,
-    {
-        board: Rc<RefCell<Board<B>>>,
+    pub struct FullProbe1 {
+        board: Rc<RefCell<Board>>,
     }
 
     const PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED: f64 = 10.0;
     const PRIORITY_NEIGHBOURS_OF_CONTRADICTION: f64 = 20.0;
 
-    impl<B> ProbeSolver for FullProbe1<B>
-    where
-        B: Block,
-    {
-        type BlockType = B;
-
-        fn with_board(board: Rc<RefCell<Board<B>>>) -> Self {
+    impl FullProbe1 {
+        pub fn with_board(board: Rc<RefCell<Board>>) -> Self {
             board.borrow_mut().init_cache();
-            FullProbe1::<B> { board: board }
+            FullProbe1 { board: board }
         }
 
-        fn unsolved_cells(&self) -> FloatPriorityQueue<(u32, Point)> {
+        pub fn unsolved_cells(&self) -> FloatPriorityQueue<(u32, Point)> {
             let board = self.board();
             let unsolved = board.unsolved_cells();
 
@@ -1263,11 +1110,8 @@ mod probing {
             queue
         }
 
-        fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(u32, Point)>, String>
-        where
-            S: LineSolver<BlockType = B>,
-        {
-            let fixed_points = self.run_propagation::<S>(point)?;
+        pub fn propagate_point(&self, point: &Point) -> Result<Vec<(u32, Point)>, String> {
+            let fixed_points = self.run_propagation(point)?;
             let mut new_jobs = vec![];
 
             for new_point in fixed_points {
@@ -1286,13 +1130,11 @@ mod probing {
             Ok(new_jobs)
         }
 
-        fn run<S>(
-            &self,
-            probes: &mut FloatPriorityQueue<(u32, Point)>,
-        ) -> Result<Impact<Self::BlockType>, String>
-        where
-            S: LineSolver<BlockType = B>,
-        {
+        pub fn run_unsolved(&self) -> Result<Impact, String> {
+            self.run(&mut self.unsolved_cells())
+        }
+
+        pub fn run(&self, probes: &mut FloatPriorityQueue<(u32, Point)>) -> Result<Impact, String> {
             let mut impact;
             loop {
                 impact = HashMap::new();
@@ -1304,7 +1146,7 @@ mod probing {
                 let mut false_probes = None;
 
                 while let Some((priority, point)) = probes.pop() {
-                    let probe_results = self.probe::<S>(point);
+                    let probe_results = self.probe(point);
 
                     let (contradictions, non_contradictions): (Vec<_>, Vec<_>) = probe_results
                         .into_iter()
@@ -1333,7 +1175,7 @@ mod probing {
                             .borrow_mut()
                             .unset_color(&contradiction, &color)?;
                     }
-                    let new_probes = self.propagate_point::<S>(&contradiction)?;
+                    let new_probes = self.propagate_point(&contradiction)?;
                     for (priority, point) in new_probes {
                         probes.push((priority, point));
                     }
@@ -1346,30 +1188,21 @@ mod probing {
         }
     }
 
-    impl<B> FullProbe1<B>
-    where
-        B: Block,
-    {
-        fn board(&self) -> Ref<Board<B>> {
+    impl FullProbe1 {
+        fn board(&self) -> Ref<Board> {
             self.board.borrow()
         }
 
-        fn run_propagation<S>(&self, point: &Point) -> Result<Vec<Point>, String>
-        where
-            S: LineSolver<BlockType = B>,
-        {
+        fn run_propagation(&self, point: &Point) -> Result<Vec<Point>, String> {
             let point_solver = propagation::Solver::with_point(Rc::clone(&self.board), *point);
-            point_solver.run::<S>()
+            point_solver.run()
         }
 
         fn is_solved(&self) -> bool {
             self.board().is_solved_full()
         }
 
-        fn probe<S>(&self, point: Point) -> HashMap<B::Color, Option<usize>>
-        where
-            S: LineSolver<BlockType = B>,
-        {
+        fn probe(&self, point: Point) -> HashMap<BW, Option<usize>> {
             let mut changes = HashMap::new();
 
             let vars = self.board().cell(&point).variants();
@@ -1378,7 +1211,7 @@ mod probing {
                 let save = self.board().make_snapshot();
                 self.board.borrow_mut().set_color(&point, &assumption);
 
-                let solved = self.run_propagation::<S>(&point);
+                let solved = self.run_propagation(&point);
                 self.board.borrow_mut().restore(save);
 
                 changes.insert(assumption, solved.ok().map(|new_cells| new_cells.len()));
@@ -1424,29 +1257,20 @@ mod rev {
 mod backtracking {
     use std::cell::{Ref, RefCell};
     use std::collections::{HashMap, HashSet};
-    use std::marker::PhantomData;
     use std::rc::Rc;
 
-    use super::line::LineSolver;
-    use super::probing::{Impact, ProbeSolver};
+    use super::probing::{FullProbe1, Impact};
     use super::rev::Reverse;
-    use super::{priority_ord, Block, Board, Cell, Point};
+    use super::{priority_ord, Board, Point, BW};
 
-    type Solution<B> = Vec<<B as Block>::Color>;
+    type Solution = Vec<BW>;
 
-    pub struct Solver<B, P, S>
-    where
-        B: Block,
-        P: ProbeSolver<BlockType = B>,
-        S: LineSolver<BlockType = B>,
-    {
-        board: Rc<RefCell<Board<B>>>,
-        probe_solver: P,
+    pub struct Solver {
+        board: Rc<RefCell<Board>>,
+        probe_solver: FullProbe1,
         max_solutions: Option<usize>,
-        pub solutions: Vec<Solution<B>>,
-        explored_paths: HashSet<Vec<(Point, B::Color)>>,
-
-        _phantom: PhantomData<S>,
+        pub solutions: Vec<Solution>,
+        explored_paths: HashSet<Vec<(Point, BW)>>,
     }
 
     #[allow(dead_code)]
@@ -1460,21 +1284,15 @@ mod backtracking {
         MinLogd,
     }
 
-    impl<B, P, S> Solver<B, P, S>
-    where
-        B: Block,
-        P: ProbeSolver<BlockType = B>,
-        S: LineSolver<BlockType = B>,
-    {
-        pub fn with_options(board: Rc<RefCell<Board<B>>>, max_solutions: Option<usize>) -> Self {
-            let probe_solver = P::with_board(Rc::clone(&board));
-            Solver::<B, P, S> {
+    impl Solver {
+        pub fn with_options(board: Rc<RefCell<Board>>, max_solutions: Option<usize>) -> Self {
+            let probe_solver = FullProbe1::with_board(Rc::clone(&board));
+            Solver {
                 board: board,
                 probe_solver: probe_solver,
                 max_solutions: max_solutions,
                 solutions: vec![],
                 explored_paths: HashSet::new(),
-                _phantom: PhantomData,
             }
         }
 
@@ -1483,7 +1301,7 @@ mod backtracking {
                 return Ok(());
             }
 
-            let impact = self.probe_solver.run_unsolved::<S>()?;
+            let impact = self.probe_solver.run_unsolved()?;
             if self.is_solved() {
                 return Ok(());
             }
@@ -1493,7 +1311,7 @@ mod backtracking {
             Ok(())
         }
 
-        fn board(&self) -> Ref<Board<B>> {
+        fn board(&self) -> Ref<Board> {
             self.board.borrow()
         }
 
@@ -1501,13 +1319,13 @@ mod backtracking {
             self.board().is_solved_full()
         }
 
-        fn set_explored(&mut self, path: &[(Point, B::Color)]) {
+        fn set_explored(&mut self, path: &[(Point, BW)]) {
             let mut path = path.to_vec();
             path.sort();
             self.explored_paths.insert(path);
         }
 
-        fn is_explored(&self, path: &[(Point, B::Color)]) -> bool {
+        fn is_explored(&self, path: &[(Point, BW)]) -> bool {
             let mut path = path.to_vec();
             path.sort();
             self.explored_paths.contains(&path)
@@ -1524,7 +1342,7 @@ mod backtracking {
         }
 
         fn add_solution(&mut self) -> Result<(), String> {
-            self.probe_solver.run_unsolved::<S>()?;
+            self.probe_solver.run_unsolved()?;
 
             if !self.already_found() {
                 let cells = self.board().make_snapshot();
@@ -1534,7 +1352,7 @@ mod backtracking {
             Ok(())
         }
 
-        fn choose_directions(&self, impact: &Impact<B>) -> Vec<(Point, B::Color)> {
+        fn choose_directions(&self, impact: &Impact) -> Vec<(Point, BW)> {
             let mut point_wise = HashMap::new();
 
             for (&(point, color), &(new_points, priority)) in impact.iter() {
@@ -1610,8 +1428,8 @@ mod backtracking {
 
         fn search(
             &mut self,
-            directions: &[(Point, B::Color)],
-            path: &[(Point, B::Color)],
+            directions: &[(Point, BW)],
+            path: &[(Point, BW)],
         ) -> Result<bool, String> {
             if self.is_explored(path) {
                 return Ok(true);
@@ -1634,8 +1452,8 @@ mod backtracking {
 
         fn search_mutable(
             &mut self,
-            directions: &[(Point, B::Color)],
-            path: &[(Point, B::Color)],
+            directions: &[(Point, BW)],
+            path: &[(Point, BW)],
         ) -> Result<bool, String> {
             let mut board_changed = true;
             let mut directions = directions.to_vec();
@@ -1652,7 +1470,7 @@ mod backtracking {
                 }
 
                 let (point, color) = direction;
-                let cell_colors: HashSet<B::Color> =
+                let cell_colors: HashSet<BW> =
                     self.board().cell(&point).variants().into_iter().collect();
 
                 if !cell_colors.contains(&color) {
@@ -1665,7 +1483,7 @@ mod backtracking {
                         continue;
                     }
 
-                    let impact = self.probe_solver.run_unsolved::<S>();
+                    let impact = self.probe_solver.run_unsolved();
                     board_changed = false;
 
                     if impact.is_err() {
@@ -1709,7 +1527,7 @@ mod backtracking {
                         continue;
                     }
 
-                    let err = self.probe_solver.run_unsolved::<S>();
+                    let err = self.probe_solver.run_unsolved();
                     board_changed = false;
                     if err.is_err() {
                         return Ok(false);
@@ -1743,7 +1561,7 @@ mod backtracking {
             Ok(true)
         }
 
-        fn try_direction(&mut self, path: &[(Point, B::Color)]) -> Result<bool, String> {
+        fn try_direction(&mut self, path: &[(Point, BW)]) -> Result<bool, String> {
             let direction = *path.last().expect("Path should be non-empty");
 
             let mut probe_jobs = self.probe_solver.unsolved_cells();
@@ -1761,7 +1579,7 @@ mod backtracking {
                 return Ok(true);
             }
 
-            let impact = self.probe_solver.run::<S>(&mut probe_jobs);
+            let impact = self.probe_solver.run(&mut probe_jobs);
 
             match impact {
                 Ok(impact) => {
@@ -1780,7 +1598,7 @@ mod backtracking {
             }
         }
 
-        fn set_guess(&mut self, guess: (Point, B::Color)) -> Result<Vec<(u32, Point)>, String> {
+        fn set_guess(&mut self, guess: (Point, BW)) -> Result<Vec<(u32, Point)>, String> {
             let (point, color) = guess;
 
             if !self.board().cell(&point).variants().contains(&color) {
@@ -1789,7 +1607,7 @@ mod backtracking {
 
             let mut probes = vec![];
             self.board.borrow_mut().set_color(&point, &color);
-            let new_probes = self.probe_solver.propagate_point::<S>(&point)?;
+            let new_probes = self.probe_solver.propagate_point(&point)?;
             for (priority, new_point) in new_probes {
                 probes.push((priority, new_point));
             }
@@ -1814,21 +1632,15 @@ mod backtracking {
     }
 }
 
-fn run<B, S, P>(
-    board: Rc<RefCell<Board<B>>>,
+fn run(
+    board: Rc<RefCell<Board>>,
     max_solutions: Option<usize>,
-) -> Result<Option<backtracking::Solver<B, P, S>>, String>
-where
-    B: Block,
-    S: LineSolver<BlockType = B>,
-    P: ProbeSolver<BlockType = B>,
-{
+) -> Result<Option<backtracking::Solver>, String> {
     let solver = propagation::Solver::new(Rc::clone(&board));
-    solver.run::<S>()?;
+    solver.run()?;
 
     if !board.borrow().is_solved_full() {
-        let mut solver =
-            backtracking::Solver::<_, P, S>::with_options(Rc::clone(&board), max_solutions);
+        let mut solver = backtracking::Solver::with_options(board, max_solutions);
         solver.run()?;
         return Ok(Some(solver));
     }
@@ -1849,7 +1661,7 @@ fn read_next_line() -> Vec<usize> {
         .collect()
 }
 
-fn read_description() -> Clues<BB> {
+fn read_description() -> Clues {
     let mut row = read_next_line();
     let last = row.pop().unwrap();
     if last != 0 {
@@ -1858,7 +1670,7 @@ fn read_description() -> Clues<BB> {
     Clues::new(row.into_iter().map(|x| BB(x)).collect())
 }
 
-fn read() -> Vec<(Vec<Clues<BB>>, Vec<Clues<BB>>)> {
+fn read() -> Vec<(Vec<Clues>, Vec<Clues>)> {
     let mut _n;
     loop {
         let first_line = read_next_line();
@@ -1881,11 +1693,7 @@ fn read() -> Vec<(Vec<Clues<BB>>, Vec<Clues<BB>>)> {
         .collect()
 }
 
-impl<B> fmt::Display for Board<B>
-where
-    B: Block,
-    B::Color: fmt::Display,
-{
+impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for row in self.iter_rows() {
             for cell in row.iter() {
@@ -1898,13 +1706,10 @@ where
 }
 
 fn main() {
-    use line::DynamicSolver;
-    use probing::FullProbe1;
     for (rows, columns) in read() {
         let board = Board::with_descriptions(rows, columns);
         let board = Rc::new(RefCell::new(board));
-        let backtracking =
-            run::<_, DynamicSolver<_>, FullProbe1<_>>(Rc::clone(&board), Some(1)).unwrap();
+        let backtracking = run(Rc::clone(&board), Some(1)).unwrap();
 
         if board.borrow().is_solved_full() {
             print!("{}", *board.borrow());
