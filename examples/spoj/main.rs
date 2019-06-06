@@ -86,7 +86,7 @@ impl fmt::Display for BW {
         let symbol = match *self {
             White => '.',
             Black => '#',
-            Undefined | BlackOrWhite => '?',
+            Undefined | BlackOrWhite => '#',
         };
         write!(f, "{}", symbol)
     }
@@ -1389,7 +1389,7 @@ mod backtracking {
         }
 
         fn choose_strategy() -> ChoosePixel {
-            ChoosePixel::Sqrt
+            ChoosePixel::Min
         }
 
         fn rate_by_impact(impact: &[&(usize, u32)]) -> f64 {
