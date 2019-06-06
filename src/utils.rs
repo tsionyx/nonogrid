@@ -1,4 +1,3 @@
-use std::cmp::Reverse;
 use std::fmt::Display;
 use std::hash::Hash;
 
@@ -16,9 +15,12 @@ where
 }
 
 pub fn pad_with<T: Clone>(v: &mut Vec<T>, el: T, max_size: usize, right: bool) {
-    let v_len = v.len();
-    if max_size > v_len {
-        let plus = vec![el; max_size - v_len];
+    if let Some(additional) = max_size.checked_sub(v.len()) {
+        if additional == 0 {
+            return;
+        }
+
+        let plus = std::iter::repeat(el).take(additional);
 
         if right {
             v.extend(plus);
@@ -50,43 +52,14 @@ pub fn replace<T>(vec: &mut Vec<T>, what: &T, with_what: T)
 where
     T: PartialEq + Clone,
 {
-    if what == &with_what {
+    if *what == with_what {
         return;
     }
 
-    if !vec.contains(what) {
-        return;
-    }
-
-    let replaced_indexes: Vec<_> = vec
-        .iter()
-        .enumerate()
-        .filter_map(|(index, val)| if val == what { Some(index) } else { None })
-        .collect();
-
-    vec.extend(vec![with_what; replaced_indexes.len()]);
-    for index in replaced_indexes {
-        vec.swap_remove(index);
-    }
-}
-
-pub fn remove<T>(vec: &mut Vec<T>, what: &T)
-where
-    T: PartialEq,
-{
-    if !vec.contains(what) {
-        return;
-    }
-
-    let mut removed_indexes: Vec<_> = vec
-        .iter()
-        .enumerate()
-        .filter_map(|(index, val)| if val == what { Some(index) } else { None })
-        .collect();
-
-    removed_indexes.sort_by_key(|&n| Reverse(n));
-    for index in removed_indexes {
-        vec.remove(index);
+    for x in vec {
+        if *x == *what {
+            *x = with_what.clone();
+        }
     }
 }
 
@@ -102,14 +75,6 @@ pub fn two_powers(mut num: u32) -> Vec<u32> {
 
 pub fn from_two_powers(numbers: &[u32]) -> u32 {
     numbers.iter().fold(0, |acc, &x| acc | x)
-}
-
-pub fn is_power_of_2(x: u32) -> bool {
-    if x == 0 {
-        return false;
-    }
-
-    x & (x - 1) == 0
 }
 
 pub fn dedup<T>(vec: &[T]) -> Vec<T>
@@ -136,17 +101,14 @@ pub mod iter {
         {
             let mut return_err = on_empty_error;
 
-            loop {
-                if let Some(x) = self.next() {
-                    let res = f(x).into_result();
-                    match res {
-                        Ok(res) => break Try::from_ok(res),
-                        Err(err) => return_err = err,
-                    }
-                } else {
-                    break Try::from_error(return_err);
+            for x in self {
+                match f(x).into_result() {
+                    Ok(res) => return Try::from_ok(res),
+                    Err(e) => return_err = e,
                 }
             }
+
+            Try::from_error(return_err)
         }
 
         #[cfg(not(feature = "try_trait"))]
@@ -159,16 +121,14 @@ pub mod iter {
         {
             let mut return_err = on_empty_error;
 
-            loop {
-                if let Some(x) = self.next() {
-                    match f(x) {
-                        Ok(res) => break Ok(res),
-                        Err(err) => return_err = err,
-                    }
-                } else {
-                    break Err(return_err);
+            for x in self {
+                match f(x) {
+                    Ok(res) => return Ok(res),
+                    Err(e) => return_err = e,
                 }
             }
+
+            Err(return_err)
         }
 
         /// Generalization of `find_map` for `Result` type.
@@ -287,7 +247,7 @@ pub mod rc {
 
 #[cfg(test)]
 mod tests {
-    use super::{pad, pad_with, product, remove, replace, transpose};
+    use super::{pad, pad_with, product, replace, transpose};
 
     #[test]
     fn pad_vector_left() {
@@ -393,14 +353,6 @@ mod tests {
         replace(&mut v, &5, 4);
 
         assert_eq!(v, vec![1, 2, 3, 2]);
-    }
-
-    #[test]
-    fn remove_with_replace() {
-        let mut v = vec![1, 2, 3, 2];
-        remove(&mut v, &2);
-
-        assert_eq!(v, vec![1, 3]);
     }
 
     #[test]

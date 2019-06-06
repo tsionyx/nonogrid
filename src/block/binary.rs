@@ -3,16 +3,15 @@ use crate::block::base::{
     Block, Color,
 };
 
-use std::cmp::Ordering;
 use std::fmt;
 use std::ops::{Add, Sub};
 
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 pub enum BinaryColor {
     Undefined,
     White,
     Black,
-    // especially for DynamicSolver
+    // special value for DynamicSolver
     BlackOrWhite,
 }
 
@@ -28,7 +27,7 @@ impl Color for BinaryColor {
     }
 
     fn is_solved(&self) -> bool {
-        self == &BinaryColor::Black || self == &BinaryColor::White
+        *self == BinaryColor::Black || *self == BinaryColor::White
     }
 
     fn solution_rate(&self, _all_colors: &[ColorId]) -> f64 {
@@ -85,23 +84,6 @@ impl fmt::Display for BinaryColor {
             Undefined | BlackOrWhite => '?',
         };
         write!(f, "{}", symbol)
-    }
-}
-
-impl BinaryColor {
-    fn order(self) -> u8 {
-        match self {
-            BinaryColor::Undefined => 0,
-            BinaryColor::White => 1,
-            BinaryColor::Black => 2,
-            _ => 3,
-        }
-    }
-}
-
-impl Ord for BinaryColor {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.order().cmp(&other.order())
     }
 }
 

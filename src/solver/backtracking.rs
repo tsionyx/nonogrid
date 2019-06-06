@@ -195,8 +195,7 @@ where
 }
 
 fn indent_space(size: usize) -> String {
-    //String::from_utf8(vec![b' '; size]).unwrap()
-    (0..size).map(|_| " ").collect()
+    " ".repeat(size)
 }
 
 impl<K, V> fmt::Display for SearchTree<K, V>

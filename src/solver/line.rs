@@ -4,15 +4,14 @@ use crate::block::{
 };
 use crate::utils::{self, rc::ReadRc};
 
+pub type LineColor<T> = <<T as LineSolver>::BlockType as Block>::Color;
+
 pub trait LineSolver {
     type BlockType: Block;
 
-    fn new(
-        desc: ReadRc<Description<Self::BlockType>>,
-        line: ReadRc<Vec<<Self::BlockType as Block>::Color>>,
-    ) -> Self;
+    fn new(desc: ReadRc<Description<Self::BlockType>>, line: ReadRc<Vec<LineColor<Self>>>) -> Self;
     fn solve(&mut self) -> Result<(), String>;
-    fn get_solution(self) -> Vec<<Self::BlockType as Block>::Color>;
+    fn get_solution(self) -> Vec<LineColor<Self>>;
 }
 
 pub fn solve<L, B>(
