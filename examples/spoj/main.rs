@@ -29,11 +29,11 @@ impl BW {
         BW::White
     }
 
-    fn is_solved(&self) -> bool {
-        *self == BW::Black || *self == BW::White
+    fn is_solved(self) -> bool {
+        self == BW::Black || self == BW::White
     }
 
-    fn solution_rate(&self) -> f64 {
+    fn solution_rate(self) -> f64 {
         if self.is_solved() {
             1.0
         } else {
@@ -41,9 +41,9 @@ impl BW {
         }
     }
 
-    fn variants(&self) -> Vec<Self> {
+    fn variants(self) -> Vec<Self> {
         if self.is_solved() {
-            vec![*self]
+            vec![self]
         } else {
             vec![BW::White, BW::Black]
         }
@@ -53,16 +53,16 @@ impl BW {
         Some(BW::BlackOrWhite)
     }
 
-    fn can_be_blank(&self) -> bool {
-        self != &BW::Black
+    fn can_be_blank(self) -> bool {
+        self != BW::Black
     }
 
-    fn can_be(&self) -> bool {
-        self != &Self::blank()
+    fn can_be(self) -> bool {
+        self != Self::blank()
     }
 
-    fn add_color(&self, color: Self) -> Self {
-        match *self {
+    fn add_color(self, color: Self) -> Self {
+        match self {
             BW::Undefined => color,
             value => {
                 if value == color {
@@ -72,10 +72,6 @@ impl BW {
                 }
             }
         }
-    }
-
-    fn solved_copy(&self) -> Self {
-        *self
     }
 }
 
@@ -126,11 +122,11 @@ impl BB {
             .collect()
     }
 
-    fn size(&self) -> usize {
+    fn size(self) -> usize {
         self.0
     }
 
-    fn color(&self) -> BW {
+    fn color(self) -> BW {
         BW::Black
     }
 }
@@ -148,11 +144,11 @@ impl Clues {
     }
 }
 
-fn replace<T>(vec: &mut Vec<T>, what: &T, with_what: T)
+fn replace<T>(vec: &mut Vec<T>, what: &T, with_what: &T)
 where
     T: PartialEq + Clone,
 {
-    if what == &with_what {
+    if what == with_what {
         return;
     }
 
@@ -352,7 +348,7 @@ mod iter {
     }
 
     impl<I> StepBy<I> {
-        fn new(iter: I, step: usize) -> StepBy<I> {
+        fn new(iter: I, step: usize) -> Self {
             StepBy {
                 iter: iter,
                 step: step - 1,
@@ -459,7 +455,7 @@ impl Board {
     }
 
     fn is_solved_full(&self) -> bool {
-        self.cells.iter().all(BW::is_solved)
+        self.cells.iter().all(|cell| cell.is_solved())
     }
 
     fn get_row_slice(&self, index: usize) -> &[BW] {
@@ -618,17 +614,17 @@ impl Board {
 }
 
 impl Board {
-    fn set_color(&mut self, point: &Point, color: &BW) {
+    fn set_color(&mut self, point: &Point, color: BW) {
         let Point { x, y } = *point;
         let index = self.linear_index(y, x);
-        self.cells[index] = *color;
+        self.cells[index] = color;
     }
 
-    fn unset_color(&mut self, point: &Point, color: &BW) -> Result<(), String> {
+    fn unset_color(&mut self, point: &Point, color: BW) -> Result<(), String> {
         let old_value = self.cell(point);
         let Point { x, y } = *point;
         let index = self.linear_index(y, x);
-        self.cells[index] = (old_value - *color)?;
+        self.cells[index] = (old_value - color)?;
 
         Ok(())
     }
@@ -661,7 +657,7 @@ mod line {
             let job_size = desc.vec.len() + 1;
             let solution_matrix = vec![None; job_size * line.len()];
 
-            let solved_line = line.iter().map(BW::solved_copy).collect();
+            let solved_line = line.iter().cloned().collect();
 
             DynamicSolver {
                 desc: desc,
@@ -680,7 +676,7 @@ mod line {
                 let both = BW::both_colors();
                 if let Some(both) = both {
                     let init = BW::default();
-                    replace(&mut solved, &both, init);
+                    replace(&mut solved, &both, &init);
                 }
                 Ok(())
             } else {
@@ -1033,7 +1029,7 @@ mod propagation {
             old.iter()
                 .zip(new)
                 .enumerate()
-                .filter_map(|(i, (pre, post))| if pre != post { Some(i) } else { None })
+                .filter_map(|(i, (pre, post))| if pre == post { None } else { Some(i) })
                 .collect()
         }
 
@@ -1173,9 +1169,7 @@ mod probing {
 
                 if let Some((contradiction, colors)) = false_probes {
                     for color in colors {
-                        self.board
-                            .borrow_mut()
-                            .unset_color(&contradiction, &color)?;
+                        self.board.borrow_mut().unset_color(&contradiction, color)?;
                     }
                     let new_probes = self.propagate_point(&contradiction)?;
                     for (priority, point) in new_probes {
@@ -1211,7 +1205,7 @@ mod probing {
 
             for assumption in vars {
                 let save = self.board().make_snapshot();
-                self.board.borrow_mut().set_color(&point, &assumption);
+                self.board.borrow_mut().set_color(&point, assumption);
 
                 let solved = self.run_propagation(&point);
                 self.board.borrow_mut().restore(save);
@@ -1232,7 +1226,7 @@ mod rev {
     pub struct Reverse<T>(pub T);
 
     impl<T: PartialOrd> PartialOrd for Reverse<T> {
-        fn partial_cmp(&self, other: &Reverse<T>) -> Option<Ordering> {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
             other.0.partial_cmp(&self.0)
         }
 
@@ -1251,7 +1245,7 @@ mod rev {
     }
 
     impl<T: Ord> Ord for Reverse<T> {
-        fn cmp(&self, other: &Reverse<T>) -> Ordering {
+        fn cmp(&self, other: &Self) -> Ordering {
             other.0.cmp(&self.0)
         }
     }
@@ -1369,7 +1363,7 @@ mod backtracking {
             let mut points_rate: Vec<_> = point_wise
                 .iter()
                 .map(|(point, color_to_impact)| {
-                    let values: Vec<_> = color_to_impact.values().into_iter().collect();
+                    let values: Vec<_> = color_to_impact.values().collect();
                     (point, priority_ord(Self::rate_by_impact(&values)))
                 })
                 .collect();
@@ -1520,7 +1514,7 @@ mod backtracking {
                 let success = state_result.unwrap();
 
                 if !success {
-                    let err = self.board.borrow_mut().unset_color(&point, &color).err();
+                    let err = self.board.borrow_mut().unset_color(&point, color).err();
                     board_changed = true;
                     if err.is_some() {
                         return Ok(false);
@@ -1609,7 +1603,7 @@ mod backtracking {
             }
 
             let mut probes = vec![];
-            self.board.borrow_mut().set_color(&point, &color);
+            self.board.borrow_mut().set_color(&point, color);
             let new_probes = self.probe_solver.propagate_point(&point)?;
             for (priority, new_point) in new_probes {
                 probes.push((priority, new_point));
@@ -1670,20 +1664,20 @@ fn read_description() -> Clues {
     if last != 0 {
         row.push(last);
     }
-    Clues::new(row.into_iter().map(|x| BB(x)).collect())
+    Clues::new(row.into_iter().map(BB).collect())
 }
 
 fn read() -> Vec<(Vec<Clues>, Vec<Clues>)> {
-    let mut _n;
+    let n;
     loop {
         let first_line = read_next_line();
         if !first_line.is_empty() {
-            _n = first_line[0];
+            n = first_line[0];
             break;
         }
     }
 
-    (0.._n)
+    (0..n)
         .map(|_i| {
             let dimensions = read_next_line();
             let (height, width) = (dimensions[0], dimensions[1]);
@@ -1702,7 +1696,7 @@ impl fmt::Display for Board {
             for cell in row.iter() {
                 write!(f, "{}", cell)?
             }
-            write!(f, "\n")?
+            writeln!(f, "")?
         }
         Ok(())
     }
