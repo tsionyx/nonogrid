@@ -136,7 +136,7 @@ where
 pub mod color {
     use std::collections::{HashMap, HashSet};
 
-    #[derive(Debug, PartialEq, Clone)] //, Eq, Hash, Copy, Clone, PartialOrd)]
+    #[derive(Debug, PartialEq, Clone)]
     pub enum ColorValue {
         // "red", "blue", "pink"
         CommonName(String),
@@ -340,7 +340,7 @@ pub mod color {
             self.vec.insert(color.name.clone(), color);
         }
 
-        pub fn color_with_name_value_symbol_and_id(
+        fn color_with_name_value_symbol_and_id(
             &mut self,
             name: &str,
             value: ColorValue,

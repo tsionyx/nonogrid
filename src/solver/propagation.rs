@@ -200,7 +200,7 @@ where
     /// If the line gets partially solved, put the crossed lines into queue.
     ///
     /// Return the list of indexes which was updated during this solution.
-    pub fn update_line<S>(&self, index: usize, is_column: bool) -> Result<Vec<usize>, String>
+    fn update_line<S>(&self, index: usize, is_column: bool) -> Result<Vec<usize>, String>
     where
         S: LineSolver<BlockType = B>,
     {

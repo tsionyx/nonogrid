@@ -75,10 +75,7 @@ impl Color for MultiColor {
         Err("Color sets cannot be compared".to_string())
     }
 
-    fn variants(&self) -> Vec<Self>
-    where
-        Self: Sized,
-    {
+    fn variants(&self) -> Vec<Self> {
         self.variants_as_ids().into_iter().map(Self).collect()
     }
 

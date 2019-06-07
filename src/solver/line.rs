@@ -4,7 +4,7 @@ use crate::block::{
 };
 use crate::utils::{self, rc::ReadRc};
 
-pub type LineColor<T> = <<T as LineSolver>::BlockType as Block>::Color;
+type LineColor<T> = <<T as LineSolver>::BlockType as Block>::Color;
 
 pub trait LineSolver {
     type BlockType: Block;

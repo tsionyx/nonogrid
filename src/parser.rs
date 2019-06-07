@@ -115,10 +115,7 @@ pub struct MyFormat {
 impl LocalReader for MyFormat {}
 
 impl BoardParser for MyFormat {
-    fn with_content(content: String) -> Result<Self, String>
-    where
-        Self: Sized,
-    {
+    fn with_content(content: String) -> Result<Self, String> {
         let nono =
             toml::from_str(&content).map_err(|toml_de_error| format!("{:?}", toml_de_error))?;
 
@@ -209,7 +206,7 @@ impl MyFormat {
         )
     }
 
-    pub(self) fn parse_clues<B>(descriptions: &str, palette: &ColorPalette) -> Vec<Description<B>>
+    fn parse_clues<B>(descriptions: &str, palette: &ColorPalette) -> Vec<Description<B>>
     where
         B: Block,
     {
@@ -285,10 +282,7 @@ impl NetworkReader for WebPbn {
 }
 
 impl BoardParser for WebPbn {
-    fn with_content(content: String) -> Result<Self, String>
-    where
-        Self: Sized,
-    {
+    fn with_content(content: String) -> Result<Self, String> {
         let package = sxd_document::parser::parse(&content)
             .map_err(|sxd_parser_error| format!("{:?}", sxd_parser_error))?;
 
@@ -379,7 +373,7 @@ impl WebPbn {
             .collect()
     }
 
-    pub(self) fn parse_clues<B>(&self, type_: &str) -> Vec<Description<B>>
+    fn parse_clues<B>(&self, type_: &str) -> Vec<Description<B>>
     where
         B: Block,
     {

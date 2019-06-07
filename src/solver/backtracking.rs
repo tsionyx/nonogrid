@@ -131,7 +131,7 @@ where
 impl<K, V> SearchTree<K, V>
 where
     K: fmt::Debug,
-    V: Clone + fmt::Display,
+    V: fmt::Display,
 {
     fn format(&self, f: &mut fmt::Formatter, spaces: usize, indent_size: usize) -> fmt::Result {
         if self.children.is_empty() {
@@ -142,7 +142,7 @@ where
     }
 
     fn format_value(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(value) = self.value.clone() {
+        if let Some(ref value) = self.value {
             write!(f, "{:.6}", value)
         } else {
             write!(f, "None")
@@ -201,7 +201,7 @@ fn indent_space(size: usize) -> String {
 impl<K, V> fmt::Display for SearchTree<K, V>
 where
     K: fmt::Debug,
-    V: Clone + fmt::Display,
+    V: fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.format(f, 0, 2)

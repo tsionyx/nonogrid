@@ -16,11 +16,11 @@ pub struct Point {
     y: usize,
 }
 
-pub type CacheKey<B> = (usize, ReadRc<Vec<<B as Block>::Color>>);
-pub type CacheValue<B> = Result<ReadRc<Vec<<B as Block>::Color>>, String>;
-pub type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
+type CacheKey<B> = (usize, ReadRc<Vec<<B as Block>::Color>>);
+type CacheValue<B> = Result<ReadRc<Vec<<B as Block>::Color>>, String>;
+type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
 
-pub fn new_cache<B>(capacity: usize) -> LineSolverCache<B>
+fn new_cache<B>(capacity: usize) -> LineSolverCache<B>
 where
     B: Block,
 {
@@ -66,7 +66,6 @@ where
 impl<B> Board<B>
 where
     B: Block,
-    B::Color: Copy,
 {
     #[allow(dead_code)]
     pub fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Self {
@@ -238,11 +237,7 @@ where
     }
 
     /// How many cells in a line are known to be of particular color
-    pub fn line_solution_rate<'a>(
-        &self,
-        line: impl Iterator<Item = &'a B::Color>,
-        size: usize,
-    ) -> f64
+    fn line_solution_rate<'a>(&self, line: impl Iterator<Item = &'a B::Color>, size: usize) -> f64
     where
         B::Color: 'a,
     {
@@ -424,7 +419,6 @@ where
 impl<B> Board<B>
 where
     B: Block,
-    B::Color: Copy,
 {
     fn set_color(&mut self, point: &Point, color: &B::Color) {
         let old_value = self.cell(point);

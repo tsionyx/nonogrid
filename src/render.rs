@@ -92,9 +92,6 @@ where
     fn board(&self) -> ReadRef<Board<B>> {
         self.board.read()
     }
-    //fn header_height(&self) -> usize {
-    //    Self::descriptions_width(&self.board().desc_cols)
-    //}
 
     fn side_width(&self) -> usize {
         Self::descriptions_width(&self.board().descriptions(true))
