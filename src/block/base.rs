@@ -206,10 +206,10 @@ pub mod color {
             match self {
                 ColorValue::RgbTriplet(r, g, b) => (*r, *g, *b),
                 ColorValue::HexValue3(hex3) => {
-                    let (r, gb) = (hex3 / 256, hex3 % 256);
-                    let (g, b) = (gb / 16, gb % 16);
+                    let (r, gb) = (hex3 >> 8, hex3 % (1 << 8));
+                    let (g, b) = (gb >> 4, gb % (1 << 4));
 
-                    ((r * 17) as u8, (g * 17) as u8, (b * 17) as u8)
+                    (r as u8 * 17, (g * 17) as u8, (b * 17) as u8)
                 }
                 ColorValue::HexValue6(hex6) => {
                     let (r, gb) = (hex6 / (1 << 16), hex6 % (1 << 16));

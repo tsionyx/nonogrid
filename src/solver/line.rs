@@ -87,7 +87,7 @@ where
         if self.try_solve() {
             let mut solved = &mut self.solved_line;
             if self.additional_space {
-                solved.truncate(solved.len() - 1);
+                assert_eq!(solved.pop(), Some(B::Color::blank()));
             }
 
             let both = B::Color::both_colors();

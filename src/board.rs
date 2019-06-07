@@ -93,17 +93,17 @@ where
                 .collect::<Vec<_>>(),
         );
 
-        if uniq_rows.len() < rows.len() {
+        if uniq_rows.len() < height {
             warn!(
                 "Reducing number of rows clues: {} --> {}",
-                rows.len(),
+                height,
                 uniq_rows.len()
             );
         }
-        if uniq_cols.len() < columns.len() {
+        if uniq_cols.len() < width {
             warn!(
                 "Reducing number of columns clues: {} --> {}",
-                columns.len(),
+                width,
                 uniq_cols.len()
             );
         }

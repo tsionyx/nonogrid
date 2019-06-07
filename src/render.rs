@@ -130,38 +130,36 @@ where
         ))
         .unwrap()
     }
+}
 
-    fn from_desc(color_desc: &ColorDesc) -> ColoredString {
-        let symbol = color_desc.symbol();
-        let color_res: Result<colored::Color, _> = color_desc.name().parse();
-        if let Ok(color) = color_res {
-            //symbol.color(color)
-            " ".on_color(color)
-        } else {
-            ColoredString::from(symbol.as_str())
-        }
+fn to_color_string(color_desc: &ColorDesc) -> ColoredString {
+    let symbol = color_desc.symbol();
+    let color_res: Result<colored::Color, _> = color_desc.name().parse();
+    if let Ok(color) = color_res {
+        //symbol.color(color)
+        " ".on_color(color)
+    } else {
+        ColoredString::from(symbol.as_str())
     }
+}
 
-    fn cell_symbol(&self, cell: &B::Color) -> ColoredString
-    where
-        B::Color: Display,
-    {
+impl<B> ShellRenderer<B>
+where
+    B: Block + Display,
+    B::Color: Display,
+{
+    fn cell_symbol(&self, cell: &B::Color) -> ColoredString {
         let id = cell.as_color_id();
 
-        if let Some(color_id) = id {
-            let color_desc = self.board().desc_by_id(color_id);
-            if let Some(color_desc) = &color_desc {
-                return Self::from_desc(color_desc);
-            }
-        }
-
-        ColoredString::from(cell.to_string().as_str())
+        id.and_then(|color_id| {
+            self.board()
+                .desc_by_id(color_id)
+                .map(|color_desc| to_color_string(&color_desc))
+        })
+        .unwrap_or_else(|| <_>::from(cell.to_string().as_str()))
     }
 
-    fn grid_lines(&self) -> Vec<Vec<ColoredString>>
-    where
-        B::Color: Display,
-    {
+    fn grid_lines(&self) -> Vec<Vec<ColoredString>> {
         let mut color_cache = HashMap::new();
         self.board()
             .iter_rows()
