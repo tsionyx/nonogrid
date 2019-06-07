@@ -171,6 +171,7 @@ where
     set.into_iter().collect()
 }
 
+/// The copy of `hashbrown::fx`
 mod fx {
     use std::default::Default;
     use std::hash::{BuildHasherDefault, Hasher};
@@ -342,6 +343,7 @@ pub struct Board {
     cols_cache_indexes: Vec<usize>,
 }
 
+/// The copy of `std::iter::StepBy`
 mod iter {
     pub struct StepBy<I> {
         iter: I,
@@ -377,7 +379,7 @@ mod iter {
     }
 
     pub trait StepByIter: Iterator {
-        fn step_by(self, step: usize) -> StepBy<Self>
+        fn stepby(self, step: usize) -> StepBy<Self>
         where
             Self: Sized,
         {
@@ -472,7 +474,7 @@ impl Board {
         self.cells
             .iter()
             .skip(index)
-            .step_by(self.width())
+            .stepby(self.width())
             .cloned()
             .collect()
     }
@@ -508,7 +510,7 @@ impl Board {
     }
 
     fn column_solution_rate(&self, index: usize) -> f64 {
-        let column = self.cells.iter().skip(index).step_by(self.width());
+        let column = self.cells.iter().skip(index).stepby(self.width());
 
         let solved: f64 = column.map(|cell| cell.solution_rate()).sum();
         solved / self.height() as f64
@@ -1222,6 +1224,7 @@ mod probing {
     }
 }
 
+/// The copy of `std::cmp::Reverse`
 mod rev {
     use std::cmp::Ordering;
 
