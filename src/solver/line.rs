@@ -93,7 +93,7 @@ where
             let both = B::Color::both_colors();
             if let Some(both) = both {
                 let init = B::Color::default();
-                utils::replace(&mut solved, &both, init);
+                utils::replace(&mut solved, &both, &init);
             }
             Ok(())
         } else {

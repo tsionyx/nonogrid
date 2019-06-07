@@ -25,12 +25,7 @@ where
 
     if !board.read().is_solved_full() {
         warn!("Trying to solve with backtracking");
-        let mut solver = Solver::<_, P, S>::with_options(
-            MutRc::clone(&board),
-            max_solutions,
-            timeout,
-            max_depth,
-        );
+        let mut solver = Solver::<_, P, S>::with_options(board, max_solutions, timeout, max_depth);
         solver.run()?;
         return Ok(Some(solver));
     }

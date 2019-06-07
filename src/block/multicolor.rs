@@ -171,7 +171,7 @@ impl Block for ColoredBlock {
 
     fn partial_sums(desc: &[Self]) -> Vec<usize> {
         desc.iter()
-            .scan(None, |prev: &mut Option<ColoredBlock>, block| {
+            .scan(None, |prev: &mut Option<Self>, block| {
                 let current = if let Some(ref prev) = prev {
                     let sum = prev.size() + block.size();
                     if prev.color() == block.color() {

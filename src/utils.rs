@@ -48,11 +48,11 @@ pub fn transpose<T: Clone>(input: &[Vec<T>]) -> Result<Vec<Vec<T>>, String> {
         .collect())
 }
 
-pub fn replace<T>(vec: &mut Vec<T>, what: &T, with_what: T)
+pub fn replace<T>(vec: &mut Vec<T>, what: &T, with_what: &T)
 where
     T: PartialEq + Clone,
 {
-    if *what == with_what {
+    if what == with_what {
         return;
     }
 
@@ -342,7 +342,7 @@ mod tests {
     #[test]
     fn replace_ints() {
         let mut v = vec![1, 2, 3, 2];
-        replace(&mut v, &2, 5);
+        replace(&mut v, &2, &5);
 
         assert_eq!(v, vec![1, 5, 3, 5]);
     }
@@ -350,7 +350,7 @@ mod tests {
     #[test]
     fn no_replacement() {
         let mut v = vec![1, 2, 3, 2];
-        replace(&mut v, &5, 4);
+        replace(&mut v, &5, &4);
 
         assert_eq!(v, vec![1, 2, 3, 2]);
     }
