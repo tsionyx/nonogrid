@@ -13,6 +13,7 @@ use crate::utils::{
 };
 
 use std::fs;
+use std::io;
 
 use hashbrown::HashMap;
 use sxd_xpath::{
@@ -27,8 +28,11 @@ extern crate sxd_document;
 extern crate sxd_xpath;
 extern crate toml;
 
+#[derive(Debug)]
+pub struct ParseError(pub String);
+
 pub trait BoardParser {
-    fn with_content(content: String) -> Result<Self, String>
+    fn with_content(content: String) -> Result<Self, ParseError>
     where
         Self: Sized;
 
@@ -39,21 +43,34 @@ pub trait BoardParser {
     fn infer_scheme(&self) -> PuzzleScheme;
 }
 
+impl From<io::Error> for ParseError {
+    fn from(err: io::Error) -> Self {
+        Self(format!("{:?}", err))
+    }
+}
+
 pub trait LocalReader: BoardParser {
-    fn read_local(file_name: &str) -> Result<Self, String>
+    fn read_local(file_name: &str) -> Result<Self, ParseError>
     where
         Self: Sized,
     {
         let content = Self::file_content(file_name)?;
         Self::with_content(content)
     }
-    fn file_content(file_name: &str) -> Result<String, String> {
-        fs::read_to_string(file_name).map_err(|err| format!("{:?}", err))
+    fn file_content(file_name: &str) -> io::Result<String> {
+        fs::read_to_string(file_name)
+    }
+}
+
+#[cfg(feature = "web")]
+impl From<reqwest::Error> for ParseError {
+    fn from(err: io::Error) -> String {
+        Self(format!("{:?}", err))
     }
 }
 
 pub trait NetworkReader: BoardParser {
-    fn read_remote(file_name: &str) -> Result<Self, String>
+    fn read_remote(file_name: &str) -> Result<Self, ParseError>
     where
         Self: Sized,
     {
@@ -63,19 +80,19 @@ pub trait NetworkReader: BoardParser {
     }
 
     #[cfg(feature = "web")]
-    fn http_content(url: String) -> Result<String, String> {
+    fn http_content(url: String) -> Result<String, reqwest::Error> {
         info!("Requesting {} ...", &url);
-        let mut response = reqwest::get(url.as_str()).map_err(|err| format!("{:?}", err))?;
-        response.text().map_err(|err| format!("{:?}", err))
+        let mut response = reqwest::get(url.as_str())?;
+        response.text()
     }
 
     #[cfg(not(feature = "web"))]
-    fn http_content(url: String) -> Result<String, String> {
+    fn http_content(url: String) -> Result<String, ParseError> {
         info!("Requesting {} ...", &url);
-        Err(format!(
+        Err(ParseError(format!(
             "Cannot request url {}: no support for web client (hint: add --features=web)",
             url
-        ))
+        )))
     }
 }
 
@@ -114,10 +131,15 @@ pub struct MyFormat {
 
 impl LocalReader for MyFormat {}
 
+impl From<toml::de::Error> for ParseError {
+    fn from(err: toml::de::Error) -> Self {
+        Self(format!("{:?}", err))
+    }
+}
+
 impl BoardParser for MyFormat {
-    fn with_content(content: String) -> Result<Self, String> {
-        let nono =
-            toml::from_str(&content).map_err(|toml_de_error| format!("{:?}", toml_de_error))?;
+    fn with_content(content: String) -> Result<Self, ParseError> {
+        let nono = toml::from_str(&content)?;
 
         Ok(Self {
             structure: nono,
@@ -273,7 +295,7 @@ pub struct WebPbn {
 impl LocalReader for WebPbn {}
 
 impl NetworkReader for WebPbn {
-    fn read_remote(file_name: &str) -> Result<Self, String> {
+    fn read_remote(file_name: &str) -> Result<Self, ParseError> {
         let url = format!("{}/XMLpuz.cgi?id={}", Self::BASE_URL, file_name);
 
         let content = Self::http_content(url)?;
@@ -281,10 +303,15 @@ impl NetworkReader for WebPbn {
     }
 }
 
+impl From<sxd_document::parser::Error> for ParseError {
+    fn from(err: sxd_document::parser::Error) -> Self {
+        Self(format!("{:?}", err))
+    }
+}
+
 impl BoardParser for WebPbn {
-    fn with_content(content: String) -> Result<Self, String> {
-        let package = sxd_document::parser::parse(&content)
-            .map_err(|sxd_parser_error| format!("{:?}", sxd_parser_error))?;
+    fn with_content(content: String) -> Result<Self, ParseError> {
+        let package = sxd_document::parser::parse(&content)?;
 
         Ok(Self {
             package,
@@ -600,8 +627,14 @@ impl NonogramsOrg {
 
 impl LocalReader for NonogramsOrg {}
 
+impl Default for ParseError {
+    fn default() -> Self {
+        Self("Unknown parser error".to_string())
+    }
+}
+
 impl NetworkReader for NonogramsOrg {
-    fn read_remote(file_name: &str) -> Result<Self, String> {
+    fn read_remote(file_name: &str) -> Result<Self, ParseError> {
         product(&Self::URLS, &Self::PATHS)
             .iter()
             .first_ok(|(base_url, (_scheme, path))| {
@@ -613,9 +646,9 @@ impl NetworkReader for NonogramsOrg {
 }
 
 impl BoardParser for NonogramsOrg {
-    fn with_content(content: String) -> Result<Self, String> {
+    fn with_content(content: String) -> Result<Self, ParseError> {
         let json = Self::extract_encoded_json(&content)
-            .ok_or_else(|| "Not found cypher in HTML content".to_string())?;
+            .ok_or_else(|| ParseError("Not found cypher in HTML content".to_string()))?;
 
         Ok(Self {
             encoded: Self::parse_json(&json),

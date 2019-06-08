@@ -8,7 +8,7 @@ pub(crate) mod utils;
 
 use block::{binary::BinaryBlock, multicolor::ColoredBlock, Block};
 use board::Board;
-use parser::{BoardParser, LocalReader, NetworkReader, PuzzleScheme};
+use parser::{BoardParser, LocalReader, NetworkReader, ParseError, PuzzleScheme};
 use render::{Renderer, ShellRenderer};
 use solver::{
     line::{DynamicColor, DynamicSolver},
@@ -73,7 +73,7 @@ fn main() {
     }
 }
 
-fn run<P>(board_parser: Result<P, String>, search_options: SearchOptions)
+fn run<P>(board_parser: Result<P, ParseError>, search_options: SearchOptions)
 where
     P: BoardParser,
 {
