@@ -119,13 +119,13 @@ where
             while let Some((point, priority)) = probes.pop() {
                 probe_counter += 1;
                 //if iteration_probes.contains(&point) {
-                //    warn!("The probe {:?} with priority {} has been already tried before last contradiction", &point, priority.0);
+                //    warn!("The probe {:?} with priority {} has been already tried before last contradiction", point, priority.0);
                 //    continue;
                 //}
 
                 info!(
                     "Trying probe #{} {:?} with priority {}",
-                    probe_counter, &point, priority.0
+                    probe_counter, point, priority.0
                 );
                 let probe_results = self.probe::<S>(point);
 
@@ -211,11 +211,11 @@ where
         let mut changes = HashMap::new();
 
         if self.board().cell(&point).is_solved() {
-            info!("Probing expired! {:?}", &point);
+            info!("Probing expired! {:?}", point);
         }
 
         let vars = self.board().cell(&point).variants();
-        debug!("Probing {:?} for variants: {:?}", point, &vars);
+        debug!("Probing {:?} for variants: {:?}", point, vars);
 
         for assumption in vars {
             let save = self.board().make_snapshot();
@@ -231,7 +231,7 @@ where
                 }
                 changes.insert(assumption, Some(new_cells.len()));
             } else {
-                info!("Contradiction found! {:?}: {:?}", &point, &assumption);
+                info!("Contradiction found! {:?}: {:?}", point, assumption);
                 changes.insert(assumption, None);
             }
         }

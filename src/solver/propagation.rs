@@ -120,7 +120,7 @@ where
         S: LineSolver<BlockType = B>,
     {
         if let Some(point) = self.point {
-            debug!("Solving {:?}", &point);
+            debug!("Solving {:?}", point);
             let queue = SmallJobQueue::with_point(point);
             self.run_jobs::<S, _>(queue)
         } else {
@@ -152,13 +152,13 @@ where
         while let Some((is_column, index)) = queue.pop() {
             let new_jobs = self.update_line::<S>(index, is_column)?;
 
-            let new_states = new_jobs.iter().map(|another_index| {
+            let new_states = new_jobs.iter().map(|&another_index| {
                 let (x, y) = if is_column {
-                    (&index, another_index)
+                    (index, another_index)
                 } else {
-                    (another_index, &index)
+                    (another_index, index)
                 };
-                Point::new(*x, *y)
+                Point::new(x, y)
             });
 
             solved_cells.extend(new_states);
@@ -287,7 +287,7 @@ where
                 if pre != post {
                     debug!(
                         "Diff on index={}: original={:?}, updated={:?}",
-                        i, pre, &post
+                        i, pre, post
                     );
                     Some(i)
                 } else {

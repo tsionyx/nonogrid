@@ -85,7 +85,7 @@ where
 
     fn solve(&mut self) -> Result<(), String> {
         if self.try_solve() {
-            let mut solved = &mut self.solved_line;
+            let solved = &mut self.solved_line;
             if self.additional_space {
                 assert_eq!(solved.pop(), Some(B::Color::blank()));
             }
@@ -93,7 +93,7 @@ where
             let both = B::Color::both_colors();
             if let Some(both) = both {
                 let init = B::Color::default();
-                utils::replace(&mut solved, &both, &init);
+                utils::replace(solved, &both, &init);
             }
             Ok(())
         } else {

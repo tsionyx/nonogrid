@@ -100,7 +100,7 @@ impl Sub for BinaryColor {
 
     fn sub(self, rhs: Self) -> Self::Output {
         if self.is_solved() {
-            return Err(format!("Cannot unset already set cell {:?}", &self));
+            return Err(format!("Cannot unset already set cell {:?}", self));
         }
 
         Ok(match rhs {

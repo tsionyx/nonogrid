@@ -109,25 +109,25 @@ impl Sub for MultiColor {
         if self.is_solved() {
             return Err(format!(
                 "Cannot unset {:?} from already set cell {:?}",
-                &rhs, &self
+                rhs, self
             ));
         }
 
         let colors = self.variants_as_ids();
         let bad_state = rhs.variants_as_ids();
-        debug!("Previous state: {:?}", &colors);
-        debug!("Bad state: {:?}", &bad_state);
+        debug!("Previous state: {:?}", colors);
+        debug!("Bad state: {:?}", bad_state);
 
         let new_value: HashSet<_> = colors.difference(&bad_state).cloned().collect();
 
         if !new_value.is_empty() && new_value.is_subset(&colors) {
             let new_state: Vec<_> = new_value.into_iter().collect();
-            debug!("New state: {:?}", &new_state);
+            debug!("New state: {:?}", new_state);
             Ok(Self(from_two_powers(&new_state)))
         } else {
             Err(format!(
                 "Cannot unset the colors {:?} from {:?}",
-                &bad_state, &colors
+                bad_state, colors
             ))
         }
     }

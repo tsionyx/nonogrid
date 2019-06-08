@@ -511,7 +511,7 @@ where
             full_path.push(direction);
 
             if self.is_explored(&full_path) {
-                info!("The path {:?} already explored", &full_path);
+                info!("The path {:?} already explored", full_path);
                 continue;
             }
 
@@ -520,7 +520,7 @@ where
 
             info!(
                 "Trying direction ({}/{}): {:?} (depth={}, rate={:.4}, previous={:?})",
-                search_counter, total_number_of_directions, &direction, depth, rate, path
+                search_counter, total_number_of_directions, direction, depth, rate, path
             );
             self.add_search_score(path, rate);
 
