@@ -265,7 +265,7 @@ impl Paletted for MyFormat {
             if let Some(defs) = &colors.defs {
                 let mut colors: Vec<_> =
                     defs.iter().map(|def| Self::parse_color_def(def)).collect();
-                colors.sort_by_key(|(name, ..)| name.clone());
+                colors.sort_unstable_by_key(|(name, ..)| name.clone());
                 return colors;
             }
         }
@@ -334,7 +334,7 @@ impl BoardParser for WebPbn {
     fn infer_scheme(&self) -> PuzzleScheme {
         let colors = self.get_colors();
         let mut names: Vec<_> = colors.iter().map(|(name, ..)| name).collect();
-        names.sort();
+        names.sort_unstable();
         if names.is_empty() || names == ["black", "white"] {
             return PuzzleScheme::BlackAndWhite;
         }
@@ -442,7 +442,7 @@ impl WebPbn {
                     }
                 })
                 .collect();
-            colors.sort_by_key(|(name, ..)| name.clone());
+            colors.sort_unstable_by_key(|(name, ..)| name.clone());
             colors
         } else {
             vec![]
