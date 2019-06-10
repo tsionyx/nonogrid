@@ -63,7 +63,7 @@ pub trait LocalReader: BoardParser {
 
 #[cfg(feature = "web")]
 impl From<reqwest::Error> for ParseError {
-    fn from(err: io::Error) -> String {
+    fn from(err: reqwest::Error) -> Self {
         Self(format!("{:?}", err))
     }
 }

@@ -183,7 +183,7 @@ fn nonograms_org_not_found_on_org_but_found_on_ru() {
 #[cfg(feature = "web")]
 fn nonograms_org_not_found() {
     let msg = NonogramsOrg::read_remote("444444").err().unwrap();
-    assert_eq!(msg, "Not found cypher in HTML content");
+    assert_eq!(msg.0, "Not found cypher in HTML content");
 }
 
 #[test]
