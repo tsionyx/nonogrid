@@ -6,11 +6,29 @@ use crate::utils::rc::{MutRc, ReadRef};
 //use std::time::Instant;
 
 use hashbrown::hash_map::DefaultHashBuilder;
-use hashbrown::HashMap;
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue as PQ;
 
-pub type Impact<B> = HashMap<(Point, <B as Block>::Color), (usize, f64)>;
+#[derive(Debug)]
+pub struct ProbeImpact<C: Color> {
+    point: Point,
+    color: C,
+    cells_solved: usize,
+    probe_priority: f64,
+}
+
+impl<C: Color> ProbeImpact<C> {
+    pub fn as_tuple(&self) -> (Point, C, usize, f64) {
+        (
+            self.point,
+            self.color,
+            self.cells_solved,
+            self.probe_priority,
+        )
+    }
+}
+
+pub type Impact<B> = Vec<ProbeImpact<<B as Block>::Color>>;
 type OrderedPoints = PQ<Point, OrderedFloat<f64>, DefaultHashBuilder>;
 
 pub trait ProbeSolver {
@@ -108,7 +126,7 @@ where
         //let mut iteration_probes = HashSet::new();
 
         let impact = loop {
-            let mut impact = HashMap::new();
+            let mut impact = Vec::new();
 
             if self.is_solved() {
                 break impact;
@@ -146,7 +164,12 @@ where
 
                 for (color, updated) in non_contradictions {
                     if let Some(updated_cells) = updated {
-                        let _ = impact.insert((point, color), (updated_cells, priority.0));
+                        impact.push(ProbeImpact {
+                            point,
+                            color,
+                            probe_priority: priority.0,
+                            cells_solved: updated_cells,
+                        });
                     }
                 }
                 //iteration_probes.insert(point);
@@ -205,12 +228,10 @@ where
 
     /// Try every color for given cell
     /// and return the number of solved cells (Some) or contradiction (None)
-    fn probe<S>(&self, point: Point) -> HashMap<B::Color, Option<usize>>
+    fn probe<S>(&self, point: Point) -> Vec<(B::Color, Option<usize>)>
     where
         S: LineSolver<BlockType = B>,
     {
-        let mut changes = HashMap::new();
-
         if self.board().cell(&point).is_solved() {
             info!("Probing expired! {:?}", point);
         }
@@ -218,26 +239,28 @@ where
         let vars = self.board().cell(&point).variants();
         debug!("Probing {:?} for variants: {:?}", point, vars);
 
-        for assumption in vars {
-            let save = self.board().make_snapshot();
-            Board::set_color_with_callback(MutRc::clone(&self.board), &point, &assumption);
+        vars.into_iter()
+            .map(|assumption| {
+                let save = self.board().make_snapshot();
+                Board::set_color_with_callback(MutRc::clone(&self.board), &point, &assumption);
 
-            let solved = self.run_propagation::<S>(&point);
-            Board::restore_with_callback(MutRc::clone(&self.board), save);
+                let solved = self.run_propagation::<S>(&point);
+                Board::restore_with_callback(MutRc::clone(&self.board), save);
 
-            if let Ok(new_cells) = solved {
-                if !new_cells.is_empty() {
-                    info!("Probing {:?}: {:?}", point, assumption);
-                    debug!("New info: {:?}", new_cells);
-                }
-                changes.insert(assumption, Some(new_cells.len()));
-            } else {
-                info!("Contradiction found! {:?}: {:?}", point, assumption);
-                changes.insert(assumption, None);
-            }
-        }
-
-        debug!("Found impact: {:?}", changes);
-        changes
+                let impact_size = solved
+                    .map(|new_cells| {
+                        if !new_cells.is_empty() {
+                            info!("Probing {:?}: {:?}", point, assumption);
+                            debug!("New info: {:?}", new_cells);
+                        }
+                        Some(new_cells.len())
+                    })
+                    .unwrap_or_else(|_err| {
+                        info!("Contradiction found! {:?}: {:?}", point, assumption);
+                        None
+                    });
+                (assumption, impact_size)
+            })
+            .collect()
     }
 }

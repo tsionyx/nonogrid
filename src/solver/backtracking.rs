@@ -254,7 +254,7 @@ where
 
         self.start_time = time::now();
 
-        let directions = self.choose_directions(&impact);
+        let directions = self.choose_directions(impact);
         warn!(
             "Starting depth-first search (initial rate is {:.4})",
             self.board().solution_rate()
@@ -332,15 +332,15 @@ where
     }
 
     /// The most promising (point+color) pair should go first
-    fn choose_directions(&self, impact: &Impact<B>) -> Vec<(Point, B::Color)> {
+    fn choose_directions(&self, impact: Impact<B>) -> Vec<(Point, B::Color)> {
         let mut point_wise = HashMap::new();
 
-        for ((point, color), (new_points, priority)) in impact.iter() {
-            if self.board().cell(point).is_solved() {
+        for (point, color, new_points, priority) in impact.into_iter().map(|x| x.as_tuple()) {
+            if self.board().cell(&point).is_solved() {
                 continue;
             }
-            let point_colors = point_wise.entry(*point).or_insert_with(HashMap::new);
-            let _ = point_colors.insert(color, (*new_points, *priority));
+            let point_colors = point_wise.entry(point).or_insert_with(HashMap::new);
+            let _ = point_colors.insert(color, (new_points, priority));
         }
 
         let mut points_rate: Vec<_> = point_wise
@@ -357,7 +357,7 @@ where
             .iter()
             .flat_map(|&(point, _rate)| {
                 let mut point_colors: Vec<_> =
-                    point_wise[point].iter().map(|(k, v)| (**k, *v)).collect();
+                    point_wise[point].iter().map(|(&k, &v)| (k, v)).collect();
                 // the most impacting color goes first
                 point_colors.sort_by_key(|(_color, (new_points, _priority))| Reverse(*new_points));
                 let point_order: Vec<_> = point_colors
@@ -665,7 +665,7 @@ where
                 //let cells_left = round((1 - rate) * board.width * board.height);
                 //LOG.info('Unsolved cells left: %d', cells_left)
 
-                let directions = self.choose_directions(&impact);
+                let directions = self.choose_directions(impact);
                 if directions.is_empty() {
                     Ok(true)
                 } else {
