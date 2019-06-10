@@ -279,7 +279,7 @@ pub mod color {
         pub fn with_white_and_black(white_name: &str, black_name: &str) -> Self {
             let mut this = Self::with_white(white_name);
             this.color_with_name_value_and_symbol(black_name, ColorValue::HexValue3(0x000), 'X');
-            this.set_default(black_name);
+            this.set_default(black_name).unwrap();
             this
         }
 
@@ -312,13 +312,16 @@ pub mod color {
             }
         }
 
-        pub fn set_default(&mut self, color_name: &str) -> bool {
+        pub fn set_default(&mut self, color_name: &str) -> Result<(), String> {
             if self.vec.contains_key(color_name) {
                 self.default_color = Some(color_name.to_string());
-                return true;
+                return Ok(());
             }
 
-            false
+            Err(format!(
+                "Cannot set default color {}: not in Palette",
+                color_name
+            ))
         }
 
         pub fn get_default(&self) -> Option<String> {
@@ -336,10 +339,6 @@ pub mod color {
                 .cloned()
         }
 
-        fn add(&mut self, color: ColorDesc) {
-            self.vec.insert(color.name.clone(), color);
-        }
-
         fn color_with_name_value_symbol_and_id(
             &mut self,
             name: &str,
@@ -353,9 +352,8 @@ pub mod color {
                 value,
                 symbol,
             };
-            if !self.vec.contains_key(name) {
-                self.add(new);
-            }
+
+            let _color = self.vec.entry(name.to_string()).or_insert(new);
         }
 
         pub fn color_with_name_value_and_symbol(

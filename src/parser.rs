@@ -466,7 +466,7 @@ impl WebPbn {
             let first_node = ns.iter().next();
             if let Some(Node::Element(e)) = first_node {
                 if let Some(default_color) = e.attribute("defaultcolor") {
-                    palette.set_default(default_color.value());
+                    palette.set_default(default_color.value()).unwrap();
                 }
             }
         }

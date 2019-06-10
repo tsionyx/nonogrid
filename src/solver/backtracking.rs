@@ -259,7 +259,10 @@ where
             "Starting depth-first search (initial rate is {:.4})",
             self.board().solution_rate()
         );
-        self.search(&directions, &[])?;
+        let success = self.search(&directions, &[])?;
+        if !success {
+            return Err("Backtracking failed".to_string());
+        }
 
         warn!(
             "Search completed (depth reached: {}, solutions found: {})",
@@ -317,9 +320,7 @@ where
     }
 
     fn add_solution(&mut self) -> Result<(), String> {
-        // force to check the board
-        self.probe_solver.run_unsolved::<S>()?;
-
+        // TODO: force to check the board
         info!("Found one of solutions");
         if self.already_found() {
             info!("Solution already exists.");
