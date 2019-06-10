@@ -45,6 +45,7 @@ where
     fn solved_copy(&self) -> Self;
 }
 
+#[derive(Debug)]
 pub struct DynamicSolver<B: Block, S = <B as Block>::Color> {
     desc: ReadRc<Description<B>>,
     line: ReadRc<Vec<S>>,

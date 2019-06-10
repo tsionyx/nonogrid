@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::block::base::{
     color::{ColorDesc, ColorId, ColorPalette},
     Block, Color, Description,
@@ -61,6 +63,21 @@ where
     on_set_line: Option<Box<Fn(bool, usize) + Send + Sync>>,
     on_restore: Option<Box<Fn() + Send + Sync>>,
     on_change_color: Option<Box<Fn(Point) + Send + Sync>>,
+}
+
+impl<B> fmt::Debug for Board<B>
+where
+    B: Block,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Board(height={}, width={}, colors={:?})",
+            self.height(),
+            self.width(),
+            self.all_colors
+        )
+    }
 }
 
 impl<B> Board<B>

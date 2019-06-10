@@ -19,6 +19,7 @@ where
     fn render(&self) -> String;
 }
 
+#[allow(missing_debug_implementations)]
 pub struct ShellRenderer<B>
 where
     B: Block,

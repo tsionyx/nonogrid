@@ -35,6 +35,7 @@ pub trait ProbeSolver {
         S: LineSolver<BlockType = Self::BlockType>;
 }
 
+#[allow(missing_debug_implementations)]
 pub struct FullProbe1<B>
 where
     B: Block,
@@ -145,7 +146,7 @@ where
 
                 for (color, updated) in non_contradictions {
                     if let Some(updated_cells) = updated {
-                        impact.insert((point, color), (updated_cells, priority.0));
+                        let _ = impact.insert((point, color), (updated_cells, priority.0));
                     }
                 }
                 //iteration_probes.insert(point);

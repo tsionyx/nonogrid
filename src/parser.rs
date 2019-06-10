@@ -16,17 +16,16 @@ use std::fs;
 use std::io;
 
 use hashbrown::HashMap;
+use sxd_document as xml;
 use sxd_xpath::{
     evaluate_xpath,
     nodeset::{Node, Nodeset},
     Value,
 };
+use toml;
 
 #[cfg(feature = "web")]
 extern crate reqwest;
-extern crate sxd_document;
-extern crate sxd_xpath;
-extern crate toml;
 
 #[derive(Debug)]
 pub struct ParseError(pub String);
@@ -124,6 +123,7 @@ struct NonoToml {
     colors: Option<Colors>,
 }
 
+#[derive(Debug)]
 pub struct MyFormat {
     structure: NonoToml,
     //board_str: String,
@@ -286,8 +286,9 @@ impl Paletted for MyFormat {
     }
 }
 
+#[derive(Debug)]
 pub struct WebPbn {
-    package: sxd_document::Package,
+    package: xml::Package,
     cached_colors: InteriorMutableRef<Option<Vec<(String, char, String)>>>,
     cached_palette: InteriorMutableRef<Option<ColorPalette>>,
 }
@@ -303,15 +304,15 @@ impl NetworkReader for WebPbn {
     }
 }
 
-impl From<sxd_document::parser::Error> for ParseError {
-    fn from(err: sxd_document::parser::Error) -> Self {
+impl From<xml::parser::Error> for ParseError {
+    fn from(err: xml::parser::Error) -> Self {
         Self(format!("{:?}", err))
     }
 }
 
 impl BoardParser for WebPbn {
     fn with_content(content: String) -> Result<Self, ParseError> {
-        let package = sxd_document::parser::parse(&content)?;
+        let package = xml::parser::parse(&content)?;
 
         Ok(Self {
             package,
@@ -499,6 +500,7 @@ impl Paletted for WebPbn {
 
 type EncodedInt = u16;
 
+#[derive(Debug)]
 pub struct NonogramsOrg {
     encoded: Vec<Vec<EncodedInt>>,
 }

@@ -8,6 +8,7 @@ use crate::utils::rc::{MutRc, ReadRc};
 use hashbrown::HashSet;
 use log::Level;
 
+#[allow(missing_debug_implementations)]
 pub struct Solver<B>
 where
     B: Block,
@@ -77,7 +78,7 @@ impl LongJobQueue {
 
 impl JobQueue for LongJobQueue {
     fn push(&mut self, job: Job) {
-        self.visited.remove(&job);
+        let _ = self.visited.remove(&job);
         self.vec.push(job)
     }
 
@@ -89,7 +90,7 @@ impl JobQueue for LongJobQueue {
             }
         };
         // mark the job as visited
-        self.visited.insert(top_job);
+        let _ = self.visited.insert(top_job);
 
         if log_enabled!(Level::Debug) {
             let (is_column, index) = top_job;

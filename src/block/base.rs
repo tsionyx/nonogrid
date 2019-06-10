@@ -73,7 +73,7 @@ where
 }
 
 /// Generate clues for the given line of color codes
-fn line_clues<B>(line: &[color::ColorId], blank_code: color::ColorId) -> Description<B>
+fn line_clues<B>(line: &[ColorId], blank_code: ColorId) -> Description<B>
 where
     B: Block,
 {
@@ -102,8 +102,8 @@ where
 
 /// Generate nonogram description (columns and rows) from a solution matrix.
 pub fn clues_from_solution<B>(
-    solution_matrix: &[Vec<color::ColorId>],
-    blank_code: color::ColorId,
+    solution_matrix: &[Vec<ColorId>],
+    blank_code: ColorId,
 ) -> (Vec<Description<B>>, Vec<Description<B>>)
 where
     B: Block,
@@ -243,7 +243,7 @@ pub mod color {
 
     pub type ColorId = u32;
 
-    #[derive(Clone)]
+    #[derive(Debug, Clone)]
     pub struct ColorDesc {
         id: ColorId,
         name: String,
@@ -266,7 +266,7 @@ pub mod color {
         }
     }
 
-    #[derive(Clone)]
+    #[derive(Debug, Clone)]
     pub struct ColorPalette {
         vec: HashMap<String, ColorDesc>,
         symbols: Vec<char>,

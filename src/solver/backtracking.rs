@@ -19,6 +19,7 @@ use ordered_float::OrderedFloat;
 
 type Solution<B> = Vec<<B as Block>::Color>;
 
+#[allow(missing_debug_implementations)]
 pub struct Solver<B, P, S>
 where
     B: Block,
@@ -198,7 +199,7 @@ fn indent_space(size: usize) -> String {
     " ".repeat(size)
 }
 
-impl<K, V> fmt::Display for SearchTree<K, V>
+impl<K, V> fmt::Debug for SearchTree<K, V>
 where
     K: fmt::Debug,
     V: fmt::Display,
@@ -292,7 +293,7 @@ where
     fn set_explored(&mut self, path: &[(Point, B::Color)]) {
         let mut path = path.to_vec();
         path.sort();
-        self.explored_paths.insert(path);
+        let _ = self.explored_paths.insert(path);
     }
 
     fn is_explored(&self, path: &[(Point, B::Color)]) -> bool {
@@ -339,7 +340,7 @@ where
                 continue;
             }
             let point_colors = point_wise.entry(*point).or_insert_with(HashMap::new);
-            point_colors.insert(color, (*new_points, *priority));
+            let _ = point_colors.insert(color, (*new_points, *priority));
         }
 
         let mut points_rate: Vec<_> = point_wise

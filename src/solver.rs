@@ -21,7 +21,8 @@ where
 {
     warn!("Solving with simple line propagation");
     let solver = propagation::Solver::new(MutRc::clone(&board));
-    solver.run::<S>()?;
+    let solved = solver.run::<S>()?;
+    warn!("Solved {} points", solved.len());
 
     if !board.read().is_solved_full() {
         warn!("Trying to solve with backtracking");

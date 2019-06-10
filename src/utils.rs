@@ -25,7 +25,7 @@ pub fn pad_with<T: Clone>(v: &mut Vec<T>, el: T, max_size: usize, right: bool) {
         if right {
             v.extend(plus);
         } else {
-            v.splice(..0, plus);
+            let _ = v.splice(..0, plus);
         }
     }
 }
@@ -180,6 +180,7 @@ pub mod rc {
     #[cfg(feature = "threaded")]
     use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
+    #[derive(Debug)]
     pub struct MutRc<T>(ReadRc<InteriorMutableRef<T>>);
 
     impl<T> MutRc<T> {
