@@ -1,7 +1,10 @@
 use crate::block::{Block, Color};
 use crate::board::{Board, Point};
 use crate::solver::{line::LineSolver, propagation};
-use crate::utils::rc::{MutRc, ReadRef};
+use crate::utils::{
+    iter::PartialEntry,
+    rc::{MutRc, ReadRef},
+};
 
 //use std::time::Instant;
 
@@ -79,12 +82,18 @@ where
         let board = self.board();
         let unsolved = board.unsolved_cells();
 
+        let mut row_rate_cache = Vec::with_none(board.height());
+        let mut column_rate_cache = Vec::with_none(board.width());
+
         let mut queue = OrderedPoints::with_default_hasher();
         queue.extend(unsolved.map(|point| {
-            let no_unsolved = board.unsolved_neighbours(&point).count() as f64;
-            let row_rate = board.row_solution_rate(point.y());
-            let column_rate = board.column_solution_rate(point.x());
-            let priority = row_rate + column_rate - no_unsolved + 4.0;
+            let no_solved = 4 - board.unsolved_neighbours(&point).count();
+            let row_rate = row_rate_cache
+                .unwrap_or_insert_with(point.y(), || board.row_solution_rate(point.y()));
+            let column_rate = column_rate_cache
+                .unwrap_or_insert_with(point.x(), || board.column_solution_rate(point.x()));
+
+            let priority = no_solved as f64 + row_rate + column_rate;
             (point, OrderedFloat(priority))
         }));
 

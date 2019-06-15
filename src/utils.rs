@@ -144,6 +144,40 @@ pub mod iter {
     }
 
     impl<I: Iterator> FindOk for I {}
+
+    pub trait PartialEntry {
+        type Output: Copy;
+
+        fn unwrap_or_insert_with<F>(&mut self, index: usize, default: F) -> Self::Output
+        where
+            F: FnOnce() -> Self::Output;
+
+        fn with_none(capacity: usize) -> Self;
+    }
+
+    impl<T> PartialEntry for Vec<Option<T>>
+    where
+        T: Copy,
+    {
+        type Output = T;
+
+        fn unwrap_or_insert_with<F: FnOnce() -> T>(&mut self, index: usize, default: F) -> T {
+            if let Some(elem) = self.get(index) {
+                if let Some(y) = elem {
+                    return *y;
+                }
+            }
+
+            let new = default();
+            self[index] = Some(new);
+            new
+        }
+
+        fn with_none(capacity: usize) -> Self {
+            vec![None; capacity]
+        }
+    }
+
 }
 
 pub fn product<T, U>(s1: &[T], s2: &[U]) -> Vec<(T, U)>
