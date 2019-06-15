@@ -307,13 +307,10 @@ where
 
     fn already_found(&self) -> bool {
         for (i, solution) in self.solutions.iter().enumerate() {
-            let (removed, added) = self.board().diff(solution);
-
-            if removed.is_empty() && added.is_empty() {
+            if !self.board().differs(solution) {
                 info!("The solution is the same as {}-th", i);
                 return true;
             }
-            info!("The current solution differs from {}-th saved one: (added in current: {:?}, removed in current: {:?})", i, removed, added);
         }
 
         false

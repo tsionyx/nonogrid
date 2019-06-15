@@ -56,25 +56,6 @@ impl Color for MultiColor {
         normalized_rate
     }
 
-    fn is_updated_with(&self, new: &Self) -> Result<bool, String> {
-        if self == new {
-            return Ok(false);
-        }
-
-        let self_colors = self.variants_as_ids();
-        let other_colors = new.variants_as_ids();
-
-        if self_colors.is_superset(&other_colors) {
-            return Ok(true);
-        }
-
-        if self_colors.is_subset(&other_colors) {
-            return Err("Cannot update with less specific color set".to_string());
-        }
-
-        Err("Color sets cannot be compared".to_string())
-    }
-
     fn variants(&self) -> Vec<Self> {
         self.variants_as_ids().into_iter().map(Self).collect()
     }

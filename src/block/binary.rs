@@ -38,21 +38,6 @@ impl Color for BinaryColor {
         }
     }
 
-    fn is_updated_with(&self, new: &Self) -> Result<bool, String> {
-        if self == new {
-            return Ok(false);
-        }
-
-        if self != &BinaryColor::Undefined {
-            return Err("Can only update undefined".to_string());
-        }
-        if !new.is_solved() {
-            return Err("Cannot update already solved".to_string());
-        }
-
-        Ok(true)
-    }
-
     fn variants(&self) -> Vec<Self> {
         if self.is_solved() {
             vec![*self]

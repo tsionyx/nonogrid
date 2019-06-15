@@ -397,31 +397,8 @@ impl<B> Board<B>
 where
     B: Block,
 {
-    /// Difference between two boards as coordinates of changed cells.
-    /// Standard diff semantic as result:
-    /// - first returned points which set in current board and unset in the other
-    /// - second returned points which unset in current board and set in the other
-    pub fn diff(&self, other: &[B::Color]) -> (Vec<Point>, Vec<Point>) {
-        let mut removed = vec![];
-        let mut added = vec![];
-
-        let other = other.chunks(self.width());
-        for (y, (row, other_row)) in self.iter_rows().zip(other).enumerate() {
-            for (x, (cell, other_cell)) in row.iter().zip(other_row).enumerate() {
-                if cell != other_cell {
-                    let p = Point::new(x, y);
-
-                    if !cell.is_updated_with(other_cell).unwrap_or(false) {
-                        removed.push(p);
-                    }
-
-                    if !other_cell.is_updated_with(cell).unwrap_or(false) {
-                        added.push(p);
-                    }
-                }
-            }
-        }
-        (removed, added)
+    pub fn differs(&self, other: &[B::Color]) -> bool {
+        self.cells.as_slice() != other
     }
 
     pub fn make_snapshot(&self) -> Vec<B::Color> {

@@ -24,7 +24,6 @@ where
         false
     }
     fn solution_rate(&self, all_colors: &[ColorId]) -> f64;
-    fn is_updated_with(&self, new: &Self) -> Result<bool, String>;
     fn variants(&self) -> Vec<Self>
     where
         Self: Sized;
