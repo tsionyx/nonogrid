@@ -1,12 +1,12 @@
-pub mod backtracking;
-pub mod line;
-pub mod probing;
-pub mod propagation;
-
 use crate::block::Block;
 use crate::board::Board;
 use crate::solver::{backtracking::Solver, probing::ProbeSolver};
 use crate::utils::rc::MutRc;
+
+pub mod backtracking;
+pub mod line;
+pub mod probing;
+pub mod propagation;
 
 pub fn run<B, S, P>(
     board: MutRc<Board<B>>,

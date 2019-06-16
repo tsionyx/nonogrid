@@ -1,13 +1,13 @@
+use std::fmt;
+use std::ops::{Add, Sub};
+
+use hashbrown::HashSet;
+
 use crate::block::base::{
     color::{ColorId, ColorPalette},
     Block, Color,
 };
 use crate::utils::{from_two_powers, two_powers};
-
-use std::fmt;
-use std::ops::{Add, Sub};
-
-use hashbrown::HashSet;
 
 #[derive(Debug, PartialEq, Eq, Hash, Default, Copy, Clone, PartialOrd, Ord)]
 pub struct MultiColor(pub ColorId);
@@ -184,8 +184,9 @@ impl fmt::Display for ColoredBlock {
 
 #[cfg(test)]
 mod tests {
-    use super::ColoredBlock;
     use crate::block::{Block, Description};
+
+    use super::ColoredBlock;
 
     #[test]
     fn partial_sums_empty() {

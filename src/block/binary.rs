@@ -1,10 +1,10 @@
+use std::fmt;
+use std::ops::{Add, Sub};
+
 use crate::block::base::{
     color::{ColorId, ColorPalette},
     Block, Color,
 };
-
-use std::fmt;
-use std::ops::{Add, Sub};
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 pub enum BinaryColor {
@@ -137,8 +137,9 @@ impl fmt::Display for BinaryBlock {
 
 #[cfg(test)]
 mod tests {
-    use super::BinaryBlock;
     use crate::block::{Block, Description};
+
+    use super::BinaryBlock;
 
     #[test]
     fn partial_sums_empty() {

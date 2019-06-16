@@ -1,12 +1,12 @@
+use hashbrown::HashSet;
+use log::Level;
+
 use crate::block::{Block, Description};
 use crate::board::{Board, Point};
 use crate::solver::line::{self, LineSolver};
 use crate::utils::rc::{MutRc, ReadRc};
 
 //use std::time::Instant;
-
-use hashbrown::HashSet;
-use log::Level;
 
 #[allow(missing_debug_implementations)]
 pub struct Solver<B>

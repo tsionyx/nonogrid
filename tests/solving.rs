@@ -1,12 +1,13 @@
+use log::warn;
+
+#[cfg(feature = "web")]
+use nonogrid::parser::{NetworkReader, NonogramsOrg, WebPbn};
 #[cfg(feature = "threaded")]
 use nonogrid::{
     block::base::Block,
     block::binary::BinaryColor,
     render::{Renderer, ShellRenderer},
 };
-
-#[cfg(feature = "web")]
-use nonogrid::parser::{NetworkReader, NonogramsOrg, WebPbn};
 use nonogrid::{
     block::binary::BinaryBlock,
     block::multicolor::ColoredBlock,
@@ -14,9 +15,6 @@ use nonogrid::{
     solver::{line, probing::*, propagation},
     utils::rc::MutRc,
 };
-
-#[macro_use]
-extern crate log;
 
 #[cfg(feature = "threaded")]
 fn example_set_line_callback<B, R>(renderer: &R, is_column: bool, index: usize)

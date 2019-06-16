@@ -1,10 +1,11 @@
-pub mod block;
-pub mod board;
-pub(crate) mod cache;
-pub mod parser;
-pub mod render;
-pub mod solver;
-pub(crate) mod utils;
+#[macro_use]
+extern crate log;
+
+use std::fmt::Display;
+use std::str::FromStr;
+
+use clap::{value_t, value_t_or_exit, App, ArgGroup, ArgMatches};
+use log::Level;
 
 use block::{binary::BinaryBlock, multicolor::ColoredBlock, Block};
 use board::Board;
@@ -16,18 +17,13 @@ use solver::{
 };
 use utils::rc::MutRc;
 
-use std::fmt::Display;
-use std::str::FromStr;
-
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate clap;
-
-use clap::{App, ArgGroup, ArgMatches};
-use log::Level;
+pub mod block;
+pub mod board;
+pub(crate) mod cache;
+pub mod parser;
+pub mod render;
+pub mod solver;
+pub(crate) mod utils;
 
 fn main() {
     env_logger::init();

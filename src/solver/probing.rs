@@ -1,3 +1,7 @@
+use hashbrown::hash_map::DefaultHashBuilder;
+use ordered_float::OrderedFloat;
+use priority_queue::PriorityQueue as PQ;
+
 use crate::block::{Block, Color};
 use crate::board::{Board, Point};
 use crate::solver::{line::LineSolver, propagation};
@@ -7,10 +11,6 @@ use crate::utils::{
 };
 
 //use std::time::Instant;
-
-use hashbrown::hash_map::DefaultHashBuilder;
-use ordered_float::OrderedFloat;
-use priority_queue::PriorityQueue as PQ;
 
 #[derive(Debug)]
 pub struct ProbeImpact<C: Color> {

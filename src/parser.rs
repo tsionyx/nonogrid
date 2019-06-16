@@ -1,3 +1,18 @@
+use std::fs;
+use std::io;
+
+use hashbrown::HashMap;
+#[cfg(feature = "web")]
+use reqwest;
+use serde_derive::Deserialize;
+use sxd_document as xml;
+use sxd_xpath::{
+    evaluate_xpath,
+    nodeset::{Node, Nodeset},
+    Value,
+};
+use toml;
+
 use crate::block::{
     base::{
         clues_from_solution,
@@ -11,21 +26,6 @@ use crate::utils::{
     product,
     rc::{mutate_ref, read_ref, InteriorMutableRef},
 };
-
-use std::fs;
-use std::io;
-
-use hashbrown::HashMap;
-use sxd_document as xml;
-use sxd_xpath::{
-    evaluate_xpath,
-    nodeset::{Node, Nodeset},
-    Value,
-};
-use toml;
-
-#[cfg(feature = "web")]
-extern crate reqwest;
 
 #[derive(Debug)]
 pub struct ParseError(pub String);
@@ -704,8 +704,9 @@ impl Paletted for NonogramsOrg {
 
 #[cfg(test)]
 mod tests {
-    use super::{BoardParser, MyFormat, Paletted, PuzzleScheme};
     use crate::block::{base::color::ColorPalette, binary::BinaryBlock, Description};
+
+    use super::{BoardParser, MyFormat, Paletted, PuzzleScheme};
 
     fn block(n: usize) -> BinaryBlock {
         BinaryBlock(n)

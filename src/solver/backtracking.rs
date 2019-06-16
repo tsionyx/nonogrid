@@ -1,3 +1,11 @@
+use std::cmp::Reverse;
+use std::fmt;
+use std::marker::PhantomData;
+use std::time::Instant;
+
+use hashbrown::{HashMap, HashSet};
+use ordered_float::OrderedFloat;
+
 use crate::block::{Block, Color};
 use crate::board::{Board, Point};
 use crate::solver::{
@@ -8,14 +16,6 @@ use crate::utils::{
     rc::{MutRc, ReadRef},
     time,
 };
-
-use std::cmp::Reverse;
-use std::fmt;
-use std::marker::PhantomData;
-use std::time::Instant;
-
-use hashbrown::{HashMap, HashSet};
-use ordered_float::OrderedFloat;
 
 type Solution<B> = Vec<<B as Block>::Color>;
 

@@ -1,9 +1,9 @@
-use crate::block::base::color::ColorId;
-
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::Sized;
 use std::ops::{Add, Sub};
+
+use crate::block::base::color::ColorId;
 
 pub trait Color
 where

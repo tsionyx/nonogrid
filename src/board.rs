@@ -1,5 +1,7 @@
 use std::fmt;
 
+use hashbrown::HashMap;
+
 use crate::block::base::{
     color::{ColorDesc, ColorId, ColorPalette},
     Block, Color, Description,
@@ -9,8 +11,6 @@ use crate::utils::{
     dedup,
     rc::{mutate_ref, InteriorMutableRef, MutRc, ReadRc},
 };
-
-use hashbrown::HashMap;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 pub struct Point {
@@ -514,11 +514,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::Board;
     use crate::block::{
         binary::{BinaryBlock, BinaryColor::Undefined},
         Description,
     };
+
+    use super::Board;
 
     #[test]
     fn u_letter() {

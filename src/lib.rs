@@ -7,6 +7,9 @@
 #![warn(unused_results)]
 #![warn(unused_qualifications, unused_import_braces)]
 
+#[macro_use]
+extern crate log;
+
 pub mod block;
 pub mod board;
 pub(crate) mod cache;
@@ -14,8 +17,3 @@ pub mod parser;
 pub mod render;
 pub mod solver;
 pub mod utils;
-
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate log;

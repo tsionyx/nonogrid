@@ -1,3 +1,8 @@
+use std::fmt::Display;
+
+use colored::{self, ColoredString, Colorize};
+use hashbrown::HashMap;
+
 use crate::block::{base::color::ColorDesc, Block, Color, Description};
 use crate::board::Board;
 use crate::utils::{
@@ -5,11 +10,6 @@ use crate::utils::{
     rc::{MutRc, ReadRc, ReadRef},
     transpose,
 };
-
-use std::fmt::Display;
-
-use colored::{self, ColoredString, Colorize};
-use hashbrown::HashMap;
 
 pub trait Renderer<B>
 where

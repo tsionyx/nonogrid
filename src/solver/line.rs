@@ -355,7 +355,6 @@ impl DynamicColor for MultiColor {
 
 #[cfg(test)]
 mod tests {
-    use super::{solve, DynamicSolver, LineSolver};
     use crate::block::{
         binary::{
             BinaryBlock,
@@ -364,6 +363,8 @@ mod tests {
         Description,
     };
     use crate::utils::rc::ReadRc;
+
+    use super::{solve, DynamicSolver, LineSolver};
 
     fn simple_description() -> ReadRc<Description<BinaryBlock>> {
         ReadRc::new(Description::new(vec![BinaryBlock(3)]))
@@ -475,7 +476,6 @@ mod tests {
 
 #[cfg(test)]
 mod tests_solve_color {
-    use super::{solve, DynamicSolver, LineSolver};
     use crate::block::{
         base::{
             color::{ColorId, ColorPalette},
@@ -484,6 +484,8 @@ mod tests_solve_color {
         multicolor::{ColoredBlock, MultiColor},
     };
     use crate::utils::rc::ReadRc;
+
+    use super::{solve, DynamicSolver, LineSolver};
 
     fn w() -> ColorId {
         ColorPalette::WHITE_ID

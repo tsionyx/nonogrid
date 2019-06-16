@@ -175,7 +175,6 @@ pub mod iter {
             vec![None; capacity]
         }
     }
-
 }
 
 pub fn product<T, U>(s1: &[T], s2: &[U]) -> Vec<(T, U)>
@@ -203,14 +202,13 @@ pub mod time {
 }
 
 pub mod rc {
+    #[cfg(feature = "threaded")]
+    use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
     #[cfg(not(feature = "threaded"))]
     use std::{
         cell::{Ref, RefCell, RefMut},
         rc::Rc,
     };
-
-    #[cfg(feature = "threaded")]
-    use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
     #[derive(Debug)]
     pub struct MutRc<T>(ReadRc<InteriorMutableRef<T>>);
