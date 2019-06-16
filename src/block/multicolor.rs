@@ -57,7 +57,7 @@ impl Color for MultiColor {
     }
 
     fn variants(&self) -> Vec<Self> {
-        self.variants_as_ids().into_iter().map(Self).collect()
+        two_powers(self.0).map(Self).collect()
     }
 
     fn as_color_id(&self) -> Option<ColorId> {
@@ -71,7 +71,7 @@ impl Color for MultiColor {
 
 impl MultiColor {
     fn variants_as_ids(self) -> HashSet<ColorId> {
-        two_powers(self.0).into_iter().collect()
+        two_powers(self.0).collect()
     }
 }
 

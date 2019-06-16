@@ -63,14 +63,12 @@ where
     }
 }
 
-pub fn two_powers(mut num: u32) -> Vec<u32> {
-    let mut res = vec![];
-    while num > 0 {
-        let rest = num & (num - 1);
-        res.push(num - rest);
-        num = rest
-    }
-    res
+pub fn two_powers(num: u32) -> impl Iterator<Item = u32> {
+    (0..num.count_ones()).scan(num, |num, _i| {
+        let prev = *num;
+        *num = prev & (prev - 1);
+        Some(prev - *num)
+    })
 }
 
 pub fn from_two_powers(numbers: &[u32]) -> u32 {
@@ -282,7 +280,7 @@ pub mod rc {
 
 #[cfg(test)]
 mod tests {
-    use super::{pad, pad_with, product, replace, transpose};
+    use super::{pad, pad_with, product, replace, transpose, two_powers};
 
     #[test]
     fn pad_vector_left() {
@@ -399,5 +397,37 @@ mod tests {
             product(&a, &b),
             vec![('a', 0), ('a', 1), ('a', 2), ('b', 0), ('b', 1), ('b', 2)]
         );
+    }
+
+    #[test]
+    fn two_powers_factorization() {
+        let numbers = [0, 1, 2, 5, 42, 1000, 23700723];
+        let results = [
+            vec![],
+            vec![1],
+            vec![2],
+            vec![1, 4],
+            vec![2, 8, 32],
+            vec![8, 32, 64, 128, 256, 512],
+            vec![
+                1,
+                2,
+                16,
+                32,
+                64,
+                128,
+                1 << 10,
+                1 << 13,
+                1 << 15,
+                1 << 16,
+                1 << 19,
+                1 << 21,
+                1 << 22,
+                1 << 24,
+            ],
+        ];
+        for (x, res) in numbers.into_iter().zip(&results) {
+            assert_eq!(&two_powers(*x).collect::<Vec<_>>(), res);
+        }
     }
 }
