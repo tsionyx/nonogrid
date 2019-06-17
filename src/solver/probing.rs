@@ -106,24 +106,22 @@ where
     {
         let fixed_points = self.run_propagation::<S>(point)?;
         let board = self.board();
-        let mut new_jobs: Vec<_> = fixed_points
+        info!("Solution rate: {}", self.board().solution_rate());
+
+        Ok(fixed_points
             .into_iter()
             .flat_map(|new_point| {
                 board
                     .unsolved_neighbours(&new_point)
                     .map(|neighbour| (neighbour, OrderedFloat(PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED)))
             })
-            .collect();
-
-        for neighbour in self.board().unsolved_neighbours(&point) {
-            new_jobs.push((
-                neighbour,
-                OrderedFloat(PRIORITY_NEIGHBOURS_OF_CONTRADICTION),
-            ));
-        }
-
-        info!("Solution rate: {}", self.board().solution_rate());
-        Ok(new_jobs)
+            .chain(self.board().unsolved_neighbours(&point).map(|neighbour| {
+                (
+                    neighbour,
+                    OrderedFloat(PRIORITY_NEIGHBOURS_OF_CONTRADICTION),
+                )
+            }))
+            .collect())
     }
 
     fn run<S>(&self, probes: &mut OrderedPoints) -> Result<Impact<Self::BlockType>, String>
@@ -134,73 +132,66 @@ where
         let mut contradictions_number = 0;
         //let mut iteration_probes = HashSet::new();
 
-        let impact = loop {
-            let mut impact = Vec::new();
+        let impact =
+            loop {
+                let mut impact = Vec::new();
 
-            if self.is_solved() {
-                break impact;
-            }
-
-            let mut false_probes = None;
-            let mut probe_counter = 0_u32;
-
-            while let Some((point, priority)) = probes.pop() {
-                probe_counter += 1;
-                //if iteration_probes.contains(&point) {
-                //    warn!("The probe {:?} with priority {} has been already tried before last contradiction", point, priority.0);
-                //    continue;
-                //}
-
-                info!(
-                    "Trying probe #{} {:?} with priority {}",
-                    probe_counter, point, priority.0
-                );
-                let probe_results = self.probe::<S>(point);
-
-                let (contradictions, non_contradictions): (Vec<_>, Vec<_>) = probe_results
-                    .into_iter()
-                    .partition(|(_color, size)| size.is_none());
-
-                if !contradictions.is_empty() {
-                    let bad_colors: Vec<_> = contradictions
-                        .iter()
-                        .map(|(color, _should_be_none)| *color)
-                        .collect();
-
-                    false_probes = Some((point, bad_colors));
-                    break;
+                if self.is_solved() {
+                    break impact;
                 }
 
-                for (color, updated) in non_contradictions {
-                    if let Some(updated_cells) = updated {
-                        impact.push(ProbeImpact {
+                let mut false_probes = None;
+                let mut probe_counter = 0_u32;
+
+                while let Some((point, OrderedFloat(priority))) = probes.pop() {
+                    probe_counter += 1;
+
+                    info!(
+                        "Trying probe #{} {:?} with priority {}",
+                        probe_counter, point, priority
+                    );
+                    let probe_results = self.probe::<S>(point);
+
+                    let (contradictions, non_contradictions): (Vec<_>, Vec<_>) = probe_results
+                        .into_iter()
+                        .partition(|(_color, size)| size.is_none());
+
+                    if !contradictions.is_empty() {
+                        let bad_colors: Vec<_> = contradictions
+                            .into_iter()
+                            .map(|(color, _should_be_none)| color)
+                            .collect();
+
+                        false_probes = Some((point, bad_colors));
+                        break;
+                    }
+
+                    impact.extend(non_contradictions.into_iter().map(|(color, updated)| {
+                        ProbeImpact {
                             point,
                             color,
-                            probe_priority: priority.0,
-                            cells_solved: updated_cells,
-                        });
+                            probe_priority: priority,
+                            cells_solved: updated.expect("Number of cells"),
+                        }
+                    }));
+                }
+
+                if let Some((contradiction, colors)) = false_probes {
+                    contradictions_number += 1;
+
+                    for color in colors {
+                        Board::unset_color_with_callback(
+                            MutRc::clone(&self.board),
+                            &contradiction,
+                            &color,
+                        )?;
                     }
+                    let new_probes = self.propagate_point::<S>(&contradiction)?;
+                    probes.extend(new_probes);
+                } else {
+                    break impact;
                 }
-                //iteration_probes.insert(point);
-            }
-
-            if let Some((contradiction, colors)) = false_probes {
-                contradictions_number += 1;
-                //iteration_probes.clear();
-
-                for color in colors {
-                    Board::unset_color_with_callback(
-                        MutRc::clone(&self.board),
-                        &contradiction,
-                        &color,
-                    )?;
-                }
-                let new_probes = self.propagate_point::<S>(&contradiction)?;
-                probes.extend(new_probes);
-            } else {
-                break impact;
-            }
-        };
+            };
 
         if contradictions_number > 0 {
             //let total_time = start.elapsed();
