@@ -1,8 +1,7 @@
 ## Experiments
-- remove solved lines
+- try the [SAT](https://jix.one/tags/sat/) [solver](https://jix.github.io/varisat/manual/master/index.html)
 - optimize solver cache: use bitset
-
-- reducing board:
+- reduce board by removing solved lines:
   - if there is a fully solved row (column), one can safely remove it (with 'comparing neighbours' check)
   - if the block position is fully revealed, one can replace that block with white (for the whole board).
   Consider applying 'comparing neighbours' procedure.
@@ -18,16 +17,18 @@
 
 
 ## Features
-- web-assembly and JS rendering(SVG/Canvas/WebGL)
+- [blotted puzzles](https://webpbn.com/19407)
 - other formats:
   - https://github.com/Izaron/Nonograms/raw/master/puzzles
 
 
 ## Optimizations
-- remove contradiction mode?
+- implement [these ideas](https://habr.com/ru/post/454586/#comment_20248388)
 - move dependencies into optional features (toml, xml, clap, colored)
 - load puzzles in other formats (syr for black, olsak for multi) to reduce network latency
 
 
 ## Refactoring
 - replace Color with ColorScheme, move Block inside ColorScheme
+- rewrite backtracking `search` with Result
+- remove probing and propagation structures: make it `impl Probe for Board`

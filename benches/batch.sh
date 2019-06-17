@@ -9,6 +9,9 @@ for i in "$@"; do
         echo "Examples: "
         echo "  Run all http://webpbn.com puzzles till id=35000"
         echo "    $ nohup bash batch.sh $MODE_WEBPBN {1..35000} 2>&1 > batch.log &"
+        echo "  (you can find maximum available puzzle ID with the command"
+        echo "    $ curl -s https://webpbn.com/find.cgi --data 'order=1&perpage=5&search=1' | grep -oP 'play.cgi\?id=\d+'"
+        echo
         echo "  Run all http://nonograms.org puzzles till id=24000"
         echo "  (you can find maximum available puzzle ID with http://www.nonograms.org/search/p/10000?sort=6)"
         echo "    $ nohup bash batch.sh $MODE_NONOGRAMS {1..24000} 2>&1 > batch.log &"
@@ -132,7 +135,9 @@ function long_solvers() {
     # You can use the total time results from this function
     # to quickly find information about the solution (depth, rate, etc):
     # just issue the following command by providing grep with the total time for given puzzle:
-    # $ cat batch.log | grep -F '3599.93' -B4 -A2 -m1
+    # $ cat batch.log | grep -m1 -F '3599.93' -B4 -A3
+    #
+    # Also, you can use ripgrep instead: `rg -o 'Total: (.+)' -r'$1'`.
 
     local log_file=$1
     local threshold=$2
