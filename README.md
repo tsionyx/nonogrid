@@ -81,3 +81,31 @@ cargo run --features=web -- --webpbn-online=5933
 By default, the solver and all the algorithms are single-threaded. To use the structures
 in multi-threaded environment, provide the `threaded` feature. In essense, this feature
 replaces every occurence of `Rc/RefCell` with `Arc/RwLock`.
+
+
+### Probing tweaking
+
+When the 'logical' solving gets stuck, the 'probing' phase starting which tries every variant
+for every unsolved cells. It does this by calculating the priority for each cell:
+
+```
+P = N + R + C,
+
+where 0<=N<=4 - number of neighbours which are solved cells or puzzle edges.
+For example, the cell which has all 4 heighboring cells solved, has N = 4.
+The upper left cell of the puzzle without any neighbours solved, has N = 2,
+since it has 2 edges of the puzzle.
+
+0<=R<=1 - row solution rate, the ratio of solved cells in the row to total number of cells (width)
+0<=C<=1 - column solution rate, the ratio of solved cells in the column to total number of cells (height)
+```
+
+By default every cell with `P>=0` checked, but you can customize the threshold by specifying
+the `LOW_PRIORITY` environment variable.
+
+For example, running
+```
+LOW_PRIORITY=1 nonogrid -p puzzles/6574.xml
+```
+
+can be solved 3 times faster than standard way, by skipping the probing of cells with `P < 1`.

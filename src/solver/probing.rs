@@ -1,3 +1,5 @@
+use std::env;
+
 use hashbrown::hash_map::DefaultHashBuilder;
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue as PQ;
@@ -62,10 +64,18 @@ where
     B: Block,
 {
     board: MutRc<Board<B>>,
+    low_threshold: f64,
 }
 
 const PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED: f64 = 10.0;
 const PRIORITY_NEIGHBOURS_OF_CONTRADICTION: f64 = 20.0;
+
+fn low_priority_threshold() -> f64 {
+    env::var("LOW_PRIORITY")
+        .ok()
+        .and_then(|val| val.parse().ok())
+        .unwrap_or(0.0)
+}
 
 impl<B> ProbeSolver for FullProbe1<B>
 where
@@ -75,7 +85,10 @@ where
 
     fn with_board(board: MutRc<Board<B>>) -> Self {
         board.write().init_cache();
-        Self { board }
+        Self {
+            board,
+            low_threshold: low_priority_threshold(),
+        }
     }
 
     fn unsolved_cells(&self) -> OrderedPoints {
@@ -150,7 +163,16 @@ where
                         "Trying probe #{} {:?} with priority {}",
                         probe_counter, point, priority
                     );
-                    let probe_results = self.probe::<S>(point);
+                    let probe_results = if priority < self.low_threshold {
+                        self.board()
+                            .cell(&point)
+                            .variants()
+                            .into_iter()
+                            .map(|color| (color, Some(0)))
+                            .collect()
+                    } else {
+                        self.probe::<S>(point)
+                    };
 
                     let (contradictions, non_contradictions): (Vec<_>, Vec<_>) = probe_results
                         .into_iter()
