@@ -2,6 +2,7 @@
 
 MODE_WEBPBN="webpbn"
 MODE_NONOGRAMS="nonograms.org"
+MODE_STAT="stat"
 
 for i in "$@"; do
     if [[ ${i} == "--help" ]] || [[ ${i} == "-h" ]]; then
@@ -15,6 +16,9 @@ for i in "$@"; do
         echo "  Run all http://nonograms.org puzzles till id=24000"
         echo "  (you can find maximum available puzzle ID with http://www.nonograms.org/search/p/10000?sort=6)"
         echo "    $ nohup bash batch.sh $MODE_NONOGRAMS {1..24000} 2>&1 > batch.log &"
+        echo
+        echo "  Run statistic on collected log file"
+        echo "    $ bash batch.sh stat batch.log 0.1 --details"
         exit
     fi
 done
@@ -140,12 +144,29 @@ function long_solvers() {
     # Also, you can use ripgrep instead: `rg -o 'Total: (.+)' -r'$1'`.
 
     local log_file=$1
-    local threshold=$2
+    local threshold=${2:-10}
+
+    local details=
+    for i in "$@"; do
+        if [[ ${i} == "--details" ]]; then
+           local details=1
+        fi
+    done
+
     while read t; do
-        local id=$(cat ${log_file} | grep -m1 -F ${t} -A3 | grep -oP '#\K(\d+)' | awk '{print $1-1}')
+        if [[ ${details} ]]; then
+            exec 5>&1
+        else
+            exec 5>/dev/null
+        fi
+
+        # https://stackoverflow.com/a/12451419
+        local id=$(cat ${log_file} | grep -m1 -F "Total: ${t}" -B4 -A3 | tee >(cat - >&5) | grep -oP '#\K(\d+)' | awk '{print $1-1}')
         echo "$id: $t"
-        #cat ${log_file} | grep -m1 -F ${t} -B4 -A3
-        #echo -e '-----------------\n'
+
+        if [[ ${details} ]]; then
+            echo -e '-----------------\n'
+        fi
     done < <(cat ${log_file} | grep -oP 'Total: \K(.+)' | awk '$1 > t' t=${threshold})
 }
 
@@ -161,6 +182,10 @@ case ${mode} in
     ${MODE_NONOGRAMS})
     shift
     run_nonograms $@
+    ;;
+    ${MODE_STAT})
+    shift
+    long_solvers $@
     ;;
     *)    # unknown option
     echo "error: Unkknown mode $mode" >&2
