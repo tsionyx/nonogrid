@@ -517,10 +517,12 @@ where
             let rate = self.board().solution_rate();
             let guess_save = self.board().make_snapshot();
 
-            info!(
-                "Trying direction ({}/{}): {:?} (depth={}, rate={:.4}, previous={:?})",
-                search_counter, total_number_of_directions, direction, depth, rate, path
+            warn!(
+                "Trying direction ({}/{}): {:?} (depth={}, rate={:.4})",
+                search_counter, total_number_of_directions, direction, depth, rate
             );
+            info!("Previous path: {:?}", path);
+
             self.add_search_score(path, rate);
 
             let state_result = self.try_direction(&full_path);

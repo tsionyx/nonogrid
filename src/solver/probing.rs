@@ -209,7 +209,7 @@ where
             //    total_time.as_secs(),
             //    total_time.subsec_micros()
             //);
-            warn!("Contradictions found: {}", contradictions_number);
+            info!("Contradictions found: {}", contradictions_number);
         }
         Ok(impact)
     }
