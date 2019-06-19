@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+#[cfg(feature = "colored")]
 use colored::{self, ColoredString, Colorize};
 use hashbrown::HashMap;
 
@@ -10,6 +11,9 @@ use crate::utils::{
     rc::{MutRc, ReadRc, ReadRef},
     transpose,
 };
+
+#[cfg(not(feature = "colored"))]
+type ColoredString = String;
 
 pub trait Renderer<B>
 where
@@ -133,15 +137,21 @@ where
     }
 }
 
+#[cfg(feature = "colored")]
 fn to_color_string(color_desc: &ColorDesc) -> ColoredString {
-    let symbol = color_desc.symbol();
     let color_res: Result<colored::Color, _> = color_desc.name().parse();
     if let Ok(color) = color_res {
         //symbol.color(color)
         " ".on_color(color)
     } else {
+        let symbol = color_desc.symbol();
         ColoredString::from(symbol.as_str())
     }
+}
+
+#[cfg(not(feature = "colored"))]
+fn to_color_string(color_desc: &ColorDesc) -> ColoredString {
+    color_desc.symbol()
 }
 
 impl<B> ShellRenderer<B>

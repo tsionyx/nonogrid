@@ -1,36 +1,41 @@
 [package]
 name = "nonogrid"
 description = "Efficient nonogram solver"
+repository = "https://github.com/tsionyx/nonogrid"
 version = "0.4.1"
 authors = ["Ivan Ladelshchikov <tsionyx@gmail.com>"]
 license = "MIT"
 edition = "2018"
+
 
 [profile.release]
 lto = true
 # uncomment to use with profilers
 #debug = true
 
+
 [dependencies]
+hashbrown = "0.1"
+lru = "0.1"
+priority-queue = "0.6"
+ordered-float = "1.0"
+log = "0.4"
+
 toml = "0.4"
 serde_derive = "1.0"
 serde = "1.0"
-log = "0.4"
-env_logger = "0.6"
-priority-queue = "0.6"
-ordered-float = "1.0"
-clap = "2.32"
 sxd-document = "0.3"
 sxd-xpath = "0.4"
+
+clap = {version="2.32", optional=true}
+colored = {version="1.7", optional=true}
+env_logger = {version="0.6", optional=true}
 reqwest = {version="0.9", optional=true}
-hashbrown = "0.1"
-colored = "1.7"
-lru = "0.1"
+
 
 [features]
-default = ["std_time"]
 std_time = []
-
+default = ["clap", "std_time", "colored", "env_logger"]
 web = ["reqwest"]
 # slower, but allows to use with concurrency
 threaded = []

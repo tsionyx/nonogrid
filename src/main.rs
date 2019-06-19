@@ -26,6 +26,7 @@ pub mod solver;
 pub(crate) mod utils;
 
 fn main() {
+    #[cfg(feature = "env_logger")]
     env_logger::init();
 
     let matches = App::new("Nonogrid")

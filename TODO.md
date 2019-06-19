@@ -24,7 +24,7 @@
 
 ## Optimizations
 - implement [these ideas](https://habr.com/ru/post/454586/#comment_20248388)
-- move dependencies into optional features (toml, xml, clap, colored)
+- move dependencies into optional features (toml, xml)
 - load puzzles in other formats (syr for black, olsak for multi) to reduce network latency
 
 
