@@ -60,25 +60,10 @@ done
 
 ##### nonogrid
 
-Default XML-format is too verbose and can affect the performance for very easy puzzle,
-so it is better to use my TOML format for it.
-
-The easiest format to convert into my format is (for black-and-white puzzles)
-is Syromolotov's format. This simple script can do the trick:
-
-```
-#!/bin/sh -e
-
-printf '[clues]\nrows="""'
-cat $1 | sed 's/#/"""\ncolumns="""/' | sed \$d
-```
-
-So we run it like this:
-
 ```
 for i in $(ls puzzles/*.syr); do
     echo $i;
-    time target/release/nonogrid -b <(sh benches/syr2toml.sh $i) --timeout=1800 --max-solutions=2
+    time target/release/nonogrid $i --timeout=1800 --max-solutions=2
 done
 ```
 
@@ -104,7 +89,7 @@ done
 ulimit -Sv $2
 for i in {1..300}; do
   #echo $i
-  target/release/nonogrid -p puzzles/$1.xml --timeout=3600 --max-solutions=2 >/dev/null
+  target/release/nonogrid puzzles/$1.xml --timeout=3600 --max-solutions=2 >/dev/null
 done
 ```
 

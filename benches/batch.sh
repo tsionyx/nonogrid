@@ -38,7 +38,7 @@ function run_single_webpbn() {
 
     if cat ${path} | head -1 | grep -q '<?xml'; then
         echo "Solving WEBPBN's puzzle #$i (http://webpbn.com/$i) ..."
-        /usr/bin/time -f 'Total: %U' target/release/nonogrid --webpbn ${path} --timeout=3600 --max-solutions=2 2>&1 1>solutions/${puzzle_id}
+        /usr/bin/time -f 'Total: %U' target/release/nonogrid ${path} --timeout=3600 --max-solutions=2 2>&1 1>solutions/${puzzle_id}
     else
         echo "No valid file for puzzle #$i" >&2
         local lines=$(cat ${path} | wc -l)
@@ -93,7 +93,7 @@ function run_single_nonogram() {
         rm -f ${path}
     else
         echo "Solving NORG puzzle #$i ${url}..."
-        /usr/bin/time -f 'Total: %U' target/release/nonogrid --nonograms-org ${path} --timeout=3600 --max-solutions=2 2>&1 1>solutions-norg/${puzzle_id}
+        /usr/bin/time -f 'Total: %U' target/release/nonogrid ${path} --timeout=3600 --max-solutions=2 2>&1 1>solutions-norg/${puzzle_id}
     fi
 }
 

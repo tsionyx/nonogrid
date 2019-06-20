@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::fs;
 use std::io;
 
@@ -699,6 +700,75 @@ impl Paletted for NonogramsOrg {
         });
 
         palette
+    }
+}
+
+#[derive(Debug)]
+enum ParserKind {
+    Toml,
+    WebPbn,
+    NonogramsOrg,
+}
+
+#[derive(Debug)]
+pub struct DetectedParser {
+    parser_kind: ParserKind,
+    inner: Box<dyn Any>,
+}
+
+impl DetectedParser {
+    fn cast<T>(&self) -> &T
+    where
+        T: BoardParser + 'static,
+    {
+        let expect_msg = &format!("Parser should be created with {:?}", self.parser_kind);
+        self.inner.downcast_ref::<T>().expect(expect_msg)
+    }
+}
+
+impl BoardParser for DetectedParser {
+    fn with_content(content: String) -> Result<Self, ParseError> {
+        let trim_content = content.trim();
+        Ok(if trim_content.starts_with("<?xml") {
+            Self {
+                parser_kind: ParserKind::WebPbn,
+                inner: Box::new(WebPbn::with_content(content)?),
+            }
+        } else if trim_content.starts_with("<!DOCTYPE HTML") || trim_content.starts_with("<html") {
+            Self {
+                parser_kind: ParserKind::NonogramsOrg,
+                inner: Box::new(NonogramsOrg::with_content(content)?),
+            }
+        } else {
+            let lines: Vec<_> = trim_content.lines().map(|line| line.trim()).collect();
+            if lines.contains(&"[clues]") {
+                Self {
+                    parser_kind: ParserKind::Toml,
+                    inner: Box::new(MyFormat::with_content(content)?),
+                }
+            } else {
+                unimplemented!("This puzzle format is not supported")
+            }
+        })
+    }
+
+    fn parse<B>(&self) -> Board<B>
+    where
+        B: Block,
+    {
+        match self.parser_kind {
+            ParserKind::Toml => self.cast::<MyFormat>().parse::<B>(),
+            ParserKind::WebPbn => self.cast::<WebPbn>().parse::<B>(),
+            ParserKind::NonogramsOrg => self.cast::<NonogramsOrg>().parse::<B>(),
+        }
+    }
+
+    fn infer_scheme(&self) -> PuzzleScheme {
+        match self.parser_kind {
+            ParserKind::Toml => self.cast::<MyFormat>().infer_scheme(),
+            ParserKind::WebPbn => self.cast::<WebPbn>().infer_scheme(),
+            ParserKind::NonogramsOrg => self.cast::<NonogramsOrg>().infer_scheme(),
+        }
     }
 }
 

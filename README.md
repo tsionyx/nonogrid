@@ -14,20 +14,23 @@ nonogrid -w 5933
 ```
 # solve puzzle http://webpbn.com/2992
 wget 'http://webpbn.com/XMLpuz.cgi?id=2992' -O 2992.xml
-nonogrid -p 2992.xml
+nonogrid 2992.xml
+
+# with pipe
+wget 'http://webpbn.com/XMLpuz.cgi?id=2992' -O- | nonogrid
 ```
 
-### Solve my own TOML-based format
+### Solve local puzzles (any supported format: TOML-based, webpbn XML, nonograms.org HTML page)
 
 ```
-nonogrid -b examples/hello.toml
+nonogrid examples/hello.toml
 ```
 
 
 ## Development mode
 
 ```
-RUST_BACKTRACE=1 RUST_LOG=nonogrid=info cargo run -- --my examples/hello.toml
+RUST_BACKTRACE=1 RUST_LOG=nonogrid=info cargo run -- examples/hello.toml
 ```
 
 
@@ -48,7 +51,7 @@ By default you can provide the `--timeout` option to stop backtracking after rea
 You can disable this feature and the timeout will simply be ignored.
 
 ```
-cargo run --no-default-features --features=clap -- -p puzzles/2040.xml
+cargo run --no-default-features --features=clap -- puzzles/2040.xml
 ```
 
 ### Colored nonograms
@@ -57,7 +60,7 @@ By default the feature `colored` is enabled to allow to print colored nonograms 
 You can disable this feature:
 
 ```
-cargo run --no-default-features --features="clap env_logger" -- -p puzzles/2192.xml
+cargo run --no-default-features --features="clap env_logger" -- puzzles/2192.xml
 ```
 
 ### Logging
@@ -73,7 +76,7 @@ but it requires too many dependencies and increases compile time, so it's option
 Enable it as simple as:
 
 ```
-cargo run --features=web -- --webpbn-online=5933
+cargo run --features=web -- --webpbn 5933
 ```
 
 ### Threading
@@ -105,7 +108,7 @@ the `LOW_PRIORITY` environment variable.
 
 For example, running
 ```
-LOW_PRIORITY=1 nonogrid -p puzzles/6574.xml
+LOW_PRIORITY=1 nonogrid puzzles/6574.xml
 ```
 
 can be solved 3 times faster than standard way, by skipping the probing of cells with `P < 1`.
