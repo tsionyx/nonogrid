@@ -1,7 +1,9 @@
 use std::fmt::Display;
 use std::hash::Hash;
+use std::iter::once;
+use std::ops::Range;
 
-use hashbrown::HashSet;
+use hashbrown::{HashMap, HashSet};
 
 pub fn pad<T>(s: &T, max_size: usize, right: bool) -> String
 where
@@ -187,6 +189,73 @@ where
         .collect()
 }
 
+fn idx_to_ranges<T>(indexes: Vec<T>) -> Option<Vec<Range<T>>>
+where
+    T: Ord + Clone,
+{
+    if indexes.len() < 2 {
+        return None;
+    }
+
+    let mut indexes = indexes.clone();
+    indexes.sort_unstable();
+    let shifted: Vec<_> = indexes[1..].to_vec();
+
+    Some(
+        indexes
+            .into_iter()
+            .zip(shifted)
+            .map(|(x, y)| Range { start: x, end: y })
+            .collect(),
+    )
+}
+
+pub fn split_sections<'a, 'b>(
+    text: &'a str,
+    section_names: &'b [&'b str],
+    include_header: bool,
+) -> Result<HashMap<&'b str, Vec<&'a str>>, String> {
+    let lines: Vec<_> = text.lines().map(|line| line.trim()).collect();
+
+    let section_indexes: Result<HashMap<_, _>, String> = section_names
+        .iter()
+        .map(|&section| {
+            Ok((
+                section,
+                lines
+                    .iter()
+                    .position(|&r| r == section)
+                    .ok_or_else(|| format!("{:?} section not found", section))?,
+            ))
+        })
+        .chain(once(Ok(("", 0))))
+        .collect();
+
+    let section_indexes = section_indexes?;
+
+    let eof = lines.len();
+    let indexes_with_eof = section_indexes.values().cloned().chain(once(eof));
+
+    let mut ranges: HashMap<_, _> = idx_to_ranges(indexes_with_eof.collect())
+        .ok_or_else(|| "Should be enough indexes".to_string())?
+        .into_iter()
+        .map(|range| (range.start, range))
+        .collect();
+
+    let res = section_indexes
+        .iter()
+        .map(|(&section, start)| {
+            let mut range = ranges.remove(start).expect("Start of section not found");
+            if !include_header {
+                range.start += 1;
+            }
+            (section, lines[range].to_vec())
+        })
+        .collect();
+
+    Ok(res)
+}
+
 pub mod time {
     use std::time::Instant;
 
@@ -278,7 +347,7 @@ pub mod rc {
 
 #[cfg(test)]
 mod tests {
-    use super::{pad, pad_with, product, replace, transpose, two_powers};
+    use super::*;
 
     #[test]
     fn pad_vector_left() {
@@ -427,5 +496,33 @@ mod tests {
         for (x, res) in numbers.into_iter().zip(&results) {
             assert_eq!(&two_powers(*x).collect::<Vec<_>>(), res);
         }
+    }
+
+    #[test]
+    fn to_ranges_empty() {
+        let vec: Vec<u8> = vec![];
+
+        assert_eq!(idx_to_ranges(vec), None);
+    }
+
+    #[test]
+    fn to_ranges_single() {
+        let vec = vec![5];
+        assert_eq!(idx_to_ranges(vec), None);
+    }
+
+    #[test]
+    fn to_ranges_unsorted() {
+        let vec = vec![9, 5];
+        assert_eq!(idx_to_ranges(vec), Some(vec![5..9]));
+    }
+
+    #[test]
+    fn to_ranges_multiple() {
+        let vec = vec![5, 9, 42, 111, 84, 7, 0];
+        assert_eq!(
+            idx_to_ranges(vec),
+            Some(vec![0..5, 5..7, 7..9, 9..42, 42..84, 84..111])
+        );
     }
 }
