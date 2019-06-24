@@ -26,23 +26,24 @@ done
 
 function run_single_webpbn() {
     local puzzle_id=$1
+    local fmt=olsak
 
-    local path=puzzles/${puzzle_id}.xml
+    local path=puzzles/${puzzle_id}.${fmt}
     if [[ ! -f ${path} ]]; then
         echo "File not found locally. Download into $path"
-        wget --timeout=10 -qO- "http://webpbn.com/XMLpuz.cgi?id=$i" > ${path}
+        wget --timeout=10 -qO- "https://webpbn.com/export.cgi" --post-data "id=$i&fmt=$fmt&go=1" > ${path}
         if [[ $? -ne 0 ]]; then
             echo "Failed to download puzzle #$i: timeout" >&2
         fi
     fi
 
-    if cat ${path} | head -1 | grep -q '<?xml'; then
+    if cat ${path} | grep -q ': rows'; then
         echo "Solving WEBPBN's puzzle #$i (http://webpbn.com/$i) ..."
         /usr/bin/time -f 'Total: %U' target/release/nonogrid ${path} --timeout=3600 --max-solutions=2 2>&1 1>solutions/${puzzle_id}
     else
         echo "No valid file for puzzle #$i" >&2
         local lines=$(cat ${path} | wc -l)
-        if [[ ${lines} < 2 ]]; then
+        if [[ ${lines} -lt 2 ]]; then
             echo "Removing empty file $path"
             rm -f ${path}
         fi

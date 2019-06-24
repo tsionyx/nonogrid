@@ -27,6 +27,7 @@ use crate::utils::{
     iter::FindOk,
     product,
     rc::{mutate_ref, read_ref, InteriorMutableRef},
+    split_sections,
 };
 
 #[derive(Debug)]
@@ -705,6 +706,7 @@ enum ParserKind {
     Toml,
     WebPbn,
     NonogramsOrg,
+    Olsak,
 }
 
 pub struct DetectedParser {
@@ -742,6 +744,11 @@ impl BoardParser for DetectedParser {
                     parser_kind: ParserKind::Toml,
                     inner: Box::new(MyFormat::with_content(content)?),
                 }
+            } else if lines.contains(&": rows") {
+                Self {
+                    parser_kind: ParserKind::Olsak,
+                    inner: Box::new(OlsakParser::with_content(content)?),
+                }
             } else {
                 unimplemented!("This puzzle format is not supported")
             }
@@ -756,6 +763,7 @@ impl BoardParser for DetectedParser {
             ParserKind::Toml => self.cast::<MyFormat>().parse::<B>(),
             ParserKind::WebPbn => self.cast::<WebPbn>().parse::<B>(),
             ParserKind::NonogramsOrg => self.cast::<NonogramsOrg>().parse::<B>(),
+            ParserKind::Olsak => self.cast::<OlsakParser>().parse::<B>(),
         }
     }
 
@@ -764,6 +772,7 @@ impl BoardParser for DetectedParser {
             ParserKind::Toml => self.cast::<MyFormat>().infer_scheme(),
             ParserKind::WebPbn => self.cast::<WebPbn>().infer_scheme(),
             ParserKind::NonogramsOrg => self.cast::<NonogramsOrg>().infer_scheme(),
+            ParserKind::Olsak => self.cast::<OlsakParser>().infer_scheme(),
         }
     }
 }
@@ -777,9 +786,204 @@ impl fmt::Debug for DetectedParser {
             ParserKind::Toml => write!(f, "{:?}", self.cast::<MyFormat>()),
             ParserKind::WebPbn => write!(f, "{:?}", self.cast::<WebPbn>()),
             ParserKind::NonogramsOrg => write!(f, "{:?}", self.cast::<NonogramsOrg>()),
+            ParserKind::Olsak => write!(f, "{:?}", self.cast::<OlsakParser>()),
         }?;
         writeln!(f, ",",)?;
         writeln!(f, "}}")
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct OlsakColor {
+    pub block_name: String,
+    pub symbol: char,
+    pub rgb: String,
+    pub name: String,
+}
+
+impl OlsakColor {
+    ///```
+    /// use nonogrid::parser::OlsakColor;
+    ///
+    /// let s = "0:   #FFFFFF   white";
+    /// let color = OlsakColor::parse(s);
+    /// assert_eq!(color, OlsakColor{block_name: "0".to_string(),
+    ///     symbol: ' ', rgb: "#FFFFFF".to_string(), name: "white".to_string()});
+    ///
+    /// let s = "n:%  #00B000   green";
+    /// let color = OlsakColor::parse(s);
+    /// assert_eq!(color, OlsakColor{block_name: "n".to_string(),
+    ///     symbol: '%', rgb: "#00B000".to_string(), name: "green".to_string()});
+    /// ```
+    pub fn parse(color_def: &str) -> Self {
+        let parts: Vec<_> = color_def.split_whitespace().collect();
+        let block_name_and_symbol: Vec<_> = parts[0].split(':').collect();
+
+        let block_name = block_name_and_symbol[0];
+        let symbol = block_name_and_symbol[1].to_string().pop().unwrap_or(' ');
+
+        Self {
+            block_name: block_name.to_string(),
+            symbol,
+            rgb: parts[1].to_string(),
+            name: parts[2].to_string(),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct OlsakParser {
+    rows: Vec<Vec<String>>,
+    columns: Vec<Vec<String>>,
+    colors: HashMap<String, OlsakColor>,
+}
+
+impl From<&str> for ParseError {
+    fn from(err: &str) -> Self {
+        Self(err.to_string())
+    }
+}
+
+impl From<String> for ParseError {
+    fn from(err: String) -> Self {
+        Self(err)
+    }
+}
+
+impl BoardParser for OlsakParser {
+    fn with_content(content: String) -> Result<Self, ParseError>
+    where
+        Self: Sized,
+    {
+        let names = [": rows", ": columns", "#d"];
+        let mut sections = split_sections(&content, &names, false)?;
+        let mut splitted: HashMap<_, _> = sections
+            .iter()
+            .map(|(&name, lines)| {
+                (
+                    name,
+                    lines
+                        .iter()
+                        .map(|&line| {
+                            line.split_whitespace()
+                                .map(|block| block.to_string())
+                                .collect()
+                        })
+                        .collect(),
+                )
+            })
+            .collect();
+
+        let colors = sections.remove(names[2]).unwrap_or_default();
+
+        Ok(Self {
+            rows: splitted.remove(names[0]).expect("Rows section not found"),
+            columns: splitted
+                .remove(names[1])
+                .expect("Columns section not found"),
+            colors: colors
+                .into_iter()
+                .map(|line| {
+                    let color = OlsakColor::parse(line);
+                    (color.block_name.clone(), color)
+                })
+                .collect(),
+        })
+    }
+
+    fn parse<B>(&self) -> Board<B>
+    where
+        B: Block,
+    {
+        let palette = self.get_palette();
+        Board::with_descriptions_and_palette(
+            self.parse_clues(&self.rows, &palette),
+            self.parse_clues(&self.columns, &palette),
+            Some(palette),
+        )
+    }
+
+    fn infer_scheme(&self) -> PuzzleScheme {
+        if !self.colors.is_empty() {
+            let mut names: Vec<_> = self.colors.values().map(|x| &x.name).collect();
+            names.sort_unstable();
+
+            if names != ["black", "white"] {
+                return PuzzleScheme::MultiColor;
+            }
+        }
+
+        PuzzleScheme::BlackAndWhite
+    }
+}
+
+impl OlsakParser {
+    fn parse_block<B>(&self, block: &str, palette: &ColorPalette) -> B
+    where
+        B: Block,
+    {
+        let mut as_chars = block.chars();
+        let value_color_pos = as_chars.position(|c| !c.is_digit(10));
+        let (value, block_color) = if let Some(pos) = value_color_pos {
+            let (value, color) = block.split_at(pos);
+            (value, Some(color.to_string()))
+        } else {
+            (block, None)
+        };
+
+        let color_name = block_color
+            .and_then(|block_color| self.colors.get(&block_color))
+            .map(|color| &color.name);
+
+        let color_id = color_name.and_then(|name| palette.id_by_name(&name));
+        B::from_str_and_color(value, color_id)
+    }
+
+    fn parse_line<B>(&self, descriptions: &[String], palette: &ColorPalette) -> Description<B>
+    where
+        B: Block,
+    {
+        Description::new(
+            descriptions
+                .iter()
+                .map(|block| self.parse_block(block, palette))
+                .collect(),
+        )
+    }
+
+    fn parse_clues<B>(
+        &self,
+        descriptions: &[Vec<String>],
+        palette: &ColorPalette,
+    ) -> Vec<Description<B>>
+    where
+        B: Block,
+    {
+        descriptions
+            .iter()
+            .map(|line| self.parse_line(line, palette))
+            .collect()
+    }
+}
+
+impl Paletted for OlsakParser {
+    fn get_colors(&self) -> Vec<(String, char, String)> {
+        self.colors
+            .values()
+            .map(|x| (x.name.clone(), x.symbol, x.rgb.clone()))
+            .collect()
+    }
+
+    fn get_palette(&self) -> ColorPalette {
+        let mut palette = ColorPalette::with_white_and_black("white", "black");
+
+        let colors = self.get_colors();
+        colors.iter().for_each(|(name, symbol, value)| {
+            let val = ColorValue::parse(value);
+            palette.color_with_name_value_and_symbol(name, val, *symbol);
+        });
+
+        palette
     }
 }
 
