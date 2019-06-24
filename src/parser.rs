@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::fmt;
 use std::fs;
 use std::io;
 
@@ -31,7 +32,7 @@ use crate::utils::{
 #[derive(Debug)]
 pub struct ParseError(pub String);
 
-pub trait BoardParser {
+pub trait BoardParser: fmt::Debug {
     fn with_content(content: String) -> Result<Self, ParseError>
     where
         Self: Sized;
@@ -188,11 +189,7 @@ impl MyFormat {
             (block, palette.get_default())
         };
 
-        let color_id = if let Some(name) = &block_color {
-            palette.id_by_name(name)
-        } else {
-            None
-        };
+        let color_id = block_color.and_then(|name| palette.id_by_name(&name));
         B::from_str_and_color(value, color_id)
     }
 
@@ -710,7 +707,6 @@ enum ParserKind {
     NonogramsOrg,
 }
 
-#[derive(Debug)]
 pub struct DetectedParser {
     parser_kind: ParserKind,
     inner: Box<dyn Any>,
@@ -769,6 +765,21 @@ impl BoardParser for DetectedParser {
             ParserKind::WebPbn => self.cast::<WebPbn>().infer_scheme(),
             ParserKind::NonogramsOrg => self.cast::<NonogramsOrg>().infer_scheme(),
         }
+    }
+}
+
+impl fmt::Debug for DetectedParser {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        writeln!(f, "DetectedParser {{")?;
+        writeln!(f, "    parser_kind: Olsak,")?;
+        write!(f, "    inner: ",)?;
+        match self.parser_kind {
+            ParserKind::Toml => write!(f, "{:?}", self.cast::<MyFormat>()),
+            ParserKind::WebPbn => write!(f, "{:?}", self.cast::<WebPbn>()),
+            ParserKind::NonogramsOrg => write!(f, "{:?}", self.cast::<NonogramsOrg>()),
+        }?;
+        writeln!(f, ",",)?;
+        writeln!(f, "}}")
     }
 }
 

@@ -167,7 +167,7 @@ where
                 .desc_by_id(color_id)
                 .map(|color_desc| to_color_string(&color_desc))
         })
-        .unwrap_or_else(|| <_>::from(cell.to_string().as_str()))
+        .unwrap_or_else(|| cell.to_string().as_str().into())
     }
 
     fn grid_lines(&self) -> Vec<Vec<ColoredString>> {
