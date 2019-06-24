@@ -7,13 +7,12 @@ use hashbrown::HashMap;
 #[cfg(feature = "web")]
 use reqwest;
 use serde_derive::Deserialize;
-use sxd_document as xml;
-use sxd_xpath::{
-    evaluate_xpath,
-    nodeset::{Node, Nodeset},
-    Value,
-};
 use toml;
+
+#[cfg(not(feature = "xml"))]
+pub use dummy_xml::WebPbn;
+#[cfg(feature = "xml")]
+pub use xml::WebPbn;
 
 use crate::block::{
     base::{
@@ -23,12 +22,7 @@ use crate::block::{
     Block, Description,
 };
 use crate::board::Board;
-use crate::utils::{
-    iter::FindOk,
-    product,
-    rc::{mutate_ref, read_ref, InteriorMutableRef},
-    split_sections,
-};
+use crate::utils::{iter::FindOk, product, split_sections};
 
 #[derive(Debug)]
 pub struct ParseError(pub String);
@@ -285,216 +279,265 @@ impl Paletted for MyFormat {
     }
 }
 
-#[derive(Debug)]
-pub struct WebPbn {
-    package: xml::Package,
-    cached_colors: InteriorMutableRef<Option<Vec<(String, char, String)>>>,
-    cached_palette: InteriorMutableRef<Option<ColorPalette>>,
-}
+#[cfg(feature = "xml")]
+mod xml {
+    use sxd_document as xml;
+    use sxd_xpath::{
+        evaluate_xpath,
+        nodeset::{Node, Nodeset},
+        Value,
+    };
 
-impl LocalReader for WebPbn {}
+    use crate::utils::rc::{mutate_ref, read_ref, InteriorMutableRef};
 
-impl NetworkReader for WebPbn {
-    fn read_remote(file_name: &str) -> Result<Self, ParseError> {
-        let url = format!("{}/XMLpuz.cgi?id={}", Self::BASE_URL, file_name);
+    use super::*;
 
-        let content = Self::http_content(url)?;
-        Self::with_content(content)
-    }
-}
-
-impl From<xml::parser::Error> for ParseError {
-    fn from(err: xml::parser::Error) -> Self {
-        Self(format!("{:?}", err))
-    }
-}
-
-impl BoardParser for WebPbn {
-    fn with_content(content: String) -> Result<Self, ParseError> {
-        let package = xml::parser::parse(&content)?;
-
-        Ok(Self {
-            package,
-            cached_colors: InteriorMutableRef::new(None),
-            cached_palette: InteriorMutableRef::new(None),
-        })
+    #[derive(Debug)]
+    pub struct WebPbn {
+        package: xml::Package,
+        cached_colors: InteriorMutableRef<Option<Vec<(String, char, String)>>>,
+        cached_palette: InteriorMutableRef<Option<ColorPalette>>,
     }
 
-    fn parse<B>(&self) -> Board<B>
-    where
-        B: Block,
-    {
-        Board::with_descriptions_and_palette(
-            self.parse_clues("rows"),
-            self.parse_clues("columns"),
-            Some(self.get_palette()),
-        )
+    impl LocalReader for WebPbn {}
+
+    impl NetworkReader for WebPbn {
+        fn read_remote(file_name: &str) -> Result<Self, ParseError> {
+            let url = format!("{}/XMLpuz.cgi?id={}", Self::BASE_URL, file_name);
+
+            let content = Self::http_content(url)?;
+            Self::with_content(content)
+        }
     }
 
-    fn infer_scheme(&self) -> PuzzleScheme {
-        let colors = self.get_colors();
-        let mut names: Vec<_> = colors.iter().map(|(name, ..)| name).collect();
-        names.sort_unstable();
-        if names.is_empty() || names == ["black", "white"] {
-            return PuzzleScheme::BlackAndWhite;
+    impl From<xml::parser::Error> for ParseError {
+        fn from(err: xml::parser::Error) -> Self {
+            Self(format!("{:?}", err))
+        }
+    }
+
+    impl BoardParser for WebPbn {
+        fn with_content(content: String) -> Result<Self, ParseError> {
+            let package = xml::parser::parse(&content)?;
+
+            Ok(Self {
+                package,
+                cached_colors: InteriorMutableRef::new(None),
+                cached_palette: InteriorMutableRef::new(None),
+            })
         }
 
-        PuzzleScheme::MultiColor
-    }
-}
+        fn parse<B>(&self) -> Board<B>
+        where
+            B: Block,
+        {
+            Board::with_descriptions_and_palette(
+                self.parse_clues("rows"),
+                self.parse_clues("columns"),
+                Some(self.get_palette()),
+            )
+        }
 
-impl WebPbn {
-    const BASE_URL: &'static str = "http://webpbn.com";
-
-    fn parse_block<B>(block: &Node, palette: &ColorPalette) -> B
-    where
-        B: Block,
-    {
-        let value = &block.string_value();
-
-        let block_color = if let Node::Element(e) = block {
-            if let Some(color) = e.attribute("color") {
-                Some(color.value().to_string())
-            } else {
-                palette.get_default()
+        fn infer_scheme(&self) -> PuzzleScheme {
+            let colors = self.get_colors();
+            let mut names: Vec<_> = colors.iter().map(|(name, ..)| name).collect();
+            names.sort_unstable();
+            if names.is_empty() || names == ["black", "white"] {
+                return PuzzleScheme::BlackAndWhite;
             }
-        } else {
-            None
-        };
-        let color_id = if let Some(name) = &block_color {
-            palette.id_by_name(name)
-        } else {
-            None
-        };
-        B::from_str_and_color(value, color_id)
-    }
 
-    fn parse_line<B>(description: &Node, palette: &ColorPalette) -> Description<B>
-    where
-        B: Block,
-    {
-        Description::new(
-            description
-                .children()
-                .iter()
-                .filter_map(|child| {
-                    if let Node::Text(_text) = child {
-                        // ignore newlines and whitespaces
-                        None
-                    } else {
-                        Some(Self::parse_block(child, palette))
-                    }
-                })
-                .collect(),
-        )
-    }
-
-    fn get_clues<B>(descriptions: &Nodeset, palette: &ColorPalette) -> Vec<Description<B>>
-    where
-        B: Block,
-    {
-        descriptions
-            .document_order()
-            .iter()
-            .map(|line_node| Self::parse_line(line_node, palette))
-            .collect()
-    }
-
-    fn parse_clues<B>(&self, type_: &str) -> Vec<Description<B>>
-    where
-        B: Block,
-    {
-        let document = self.package.as_document();
-        let value = evaluate_xpath(&document, &format!(".//clues[@type='{}']/line", type_))
-            .expect("XPath evaluation failed");
-
-        if let Value::Nodeset(ns) = value {
-            Self::get_clues(&ns, &self.get_palette())
-        } else {
-            vec![]
-        }
-    }
-}
-
-impl WebPbn {
-    fn _get_colors(&self) -> Vec<(String, char, String)> {
-        let document = self.package.as_document();
-        let value = evaluate_xpath(&document, ".//color").expect("XPath evaluation failed");
-
-        if let Value::Nodeset(ns) = value {
-            let mut colors: Vec<_> = ns
-                .iter()
-                .filter_map(|color_node| {
-                    let value = color_node.string_value();
-                    if let Node::Element(e) = color_node {
-                        let name = e
-                            .attribute("name")
-                            .expect("Not found 'name' attribute in the 'color' element")
-                            .value();
-                        let symbol = e
-                            .attribute("char")
-                            .expect("Not found 'char' attribute in the 'color' element")
-                            .value();
-                        let symbol: char = symbol.as_bytes()[0] as char;
-                        Some((name.to_string(), symbol, value))
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            colors.sort_unstable_by_key(|(name, ..)| name.clone());
-            colors
-        } else {
-            vec![]
+            PuzzleScheme::MultiColor
         }
     }
 
-    fn _get_palette(&self) -> ColorPalette {
-        let mut palette = ColorPalette::with_white_and_black("white", "black");
+    impl WebPbn {
+        const BASE_URL: &'static str = "http://webpbn.com";
 
-        let colors = self.get_colors();
-        colors.iter().for_each(|(name, symbol, value)| {
-            let val = ColorValue::parse(value);
-            palette.color_with_name_value_and_symbol(name, val, *symbol);
-        });
+        fn parse_block<B>(block: &Node, palette: &ColorPalette) -> B
+        where
+            B: Block,
+        {
+            let value = &block.string_value();
 
-        let document = self.package.as_document();
-        let value =
-            evaluate_xpath(&document, ".//puzzle[@type='grid']").expect("XPath evaluation failed");
-        if let Value::Nodeset(ns) = value {
-            let first_node = ns.iter().next();
-            if let Some(Node::Element(e)) = first_node {
-                if let Some(default_color) = e.attribute("defaultcolor") {
-                    palette.set_default(default_color.value()).unwrap();
+            let block_color = if let Node::Element(e) = block {
+                if let Some(color) = e.attribute("color") {
+                    Some(color.value().to_string())
+                } else {
+                    palette.get_default()
+                }
+            } else {
+                None
+            };
+            let color_id = if let Some(name) = &block_color {
+                palette.id_by_name(name)
+            } else {
+                None
+            };
+            B::from_str_and_color(value, color_id)
+        }
+
+        fn parse_line<B>(description: &Node, palette: &ColorPalette) -> Description<B>
+        where
+            B: Block,
+        {
+            Description::new(
+                description
+                    .children()
+                    .iter()
+                    .filter_map(|child| {
+                        if let Node::Text(_text) = child {
+                            // ignore newlines and whitespaces
+                            None
+                        } else {
+                            Some(Self::parse_block(child, palette))
+                        }
+                    })
+                    .collect(),
+            )
+        }
+
+        fn get_clues<B>(descriptions: &Nodeset, palette: &ColorPalette) -> Vec<Description<B>>
+        where
+            B: Block,
+        {
+            descriptions
+                .document_order()
+                .iter()
+                .map(|line_node| Self::parse_line(line_node, palette))
+                .collect()
+        }
+
+        fn parse_clues<B>(&self, type_: &str) -> Vec<Description<B>>
+        where
+            B: Block,
+        {
+            let document = self.package.as_document();
+            let value = evaluate_xpath(&document, &format!(".//clues[@type='{}']/line", type_))
+                .expect("XPath evaluation failed");
+
+            if let Value::Nodeset(ns) = value {
+                Self::get_clues(&ns, &self.get_palette())
+            } else {
+                vec![]
+            }
+        }
+    }
+
+    impl WebPbn {
+        fn _get_colors(&self) -> Vec<(String, char, String)> {
+            let document = self.package.as_document();
+            let value = evaluate_xpath(&document, ".//color").expect("XPath evaluation failed");
+
+            if let Value::Nodeset(ns) = value {
+                let mut colors: Vec<_> = ns
+                    .iter()
+                    .filter_map(|color_node| {
+                        let value = color_node.string_value();
+                        if let Node::Element(e) = color_node {
+                            let name = e
+                                .attribute("name")
+                                .expect("Not found 'name' attribute in the 'color' element")
+                                .value();
+                            let symbol = e
+                                .attribute("char")
+                                .expect("Not found 'char' attribute in the 'color' element")
+                                .value();
+                            let symbol: char = symbol.as_bytes()[0] as char;
+                            Some((name.to_string(), symbol, value))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                colors.sort_unstable_by_key(|(name, ..)| name.clone());
+                colors
+            } else {
+                vec![]
+            }
+        }
+
+        fn _get_palette(&self) -> ColorPalette {
+            let mut palette = ColorPalette::with_white_and_black("white", "black");
+
+            let colors = self.get_colors();
+            colors.iter().for_each(|(name, symbol, value)| {
+                let val = ColorValue::parse(value);
+                palette.color_with_name_value_and_symbol(name, val, *symbol);
+            });
+
+            let document = self.package.as_document();
+            let value = evaluate_xpath(&document, ".//puzzle[@type='grid']")
+                .expect("XPath evaluation failed");
+            if let Value::Nodeset(ns) = value {
+                let first_node = ns.iter().next();
+                if let Some(Node::Element(e)) = first_node {
+                    if let Some(default_color) = e.attribute("defaultcolor") {
+                        palette.set_default(default_color.value()).unwrap();
+                    }
                 }
             }
+            palette
         }
-        palette
+    }
+
+    impl Paletted for WebPbn {
+        fn get_colors(&self) -> Vec<(String, char, String)> {
+            if let Some(ref colors) = *read_ref(&self.cached_colors) {
+                return colors.clone();
+            }
+
+            let result = self._get_colors();
+            let mut cache = mutate_ref(&self.cached_colors);
+            *cache = Some(result.clone());
+            result
+        }
+
+        fn get_palette(&self) -> ColorPalette {
+            if let Some(ref palette) = *read_ref(&self.cached_palette) {
+                return palette.clone();
+            }
+
+            let result = self._get_palette();
+            let mut cache = mutate_ref(&self.cached_palette);
+            *cache = Some(result.clone());
+            result
+        }
     }
 }
 
-impl Paletted for WebPbn {
-    fn get_colors(&self) -> Vec<(String, char, String)> {
-        if let Some(ref colors) = *read_ref(&self.cached_colors) {
-            return colors.clone();
-        }
+#[cfg(not(feature = "xml"))]
+mod dummy_xml {
+    use super::*;
 
-        let result = self._get_colors();
-        let mut cache = mutate_ref(&self.cached_colors);
-        *cache = Some(result.clone());
-        result
+    #[derive(Debug, Clone, Copy)]
+    pub enum WebPbn {}
+
+    impl WebPbn {
+        const NO_FEATURE_ENABLED_MSG: &'static str =
+            "Cannot parse XML-based puzzles: no support for XML (hint: add --features=xml)";
     }
 
-    fn get_palette(&self) -> ColorPalette {
-        if let Some(ref palette) = *read_ref(&self.cached_palette) {
-            return palette.clone();
+    impl BoardParser for WebPbn {
+        fn with_content(_content: String) -> Result<Self, ParseError>
+        where
+            Self: Sized,
+        {
+            Err(ParseError(Self::NO_FEATURE_ENABLED_MSG.to_string()))
         }
 
-        let result = self._get_palette();
-        let mut cache = mutate_ref(&self.cached_palette);
-        *cache = Some(result.clone());
-        result
+        fn parse<B>(&self) -> Board<B>
+        where
+            B: Block,
+        {
+            unimplemented!("{}", Self::NO_FEATURE_ENABLED_MSG)
+        }
+
+        fn infer_scheme(&self) -> PuzzleScheme {
+            unimplemented!("{}", Self::NO_FEATURE_ENABLED_MSG)
+        }
     }
+
+    impl NetworkReader for WebPbn {}
 }
 
 type EncodedInt = u16;

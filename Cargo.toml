@@ -24,8 +24,9 @@ log = "0.4"
 toml = "0.4"
 serde_derive = "1.0"
 serde = "1.0"
-sxd-document = "0.3"
-sxd-xpath = "0.4"
+
+sxd-document = {version="0.3", optional=true}
+sxd-xpath = {version="0.4", optional=true}
 
 clap = {version="2.32", optional=true}
 colored = {version="1.7", optional=true}
@@ -35,6 +36,7 @@ reqwest = {version="0.9", optional=true}
 
 [features]
 std_time = []
+xml = ["sxd-document", "sxd-xpath"]
 default = ["clap", "std_time", "colored", "env_logger"]
 web = ["reqwest"]
 # slower, but allows to use with concurrency

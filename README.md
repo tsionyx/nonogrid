@@ -54,6 +54,12 @@ You can disable this feature and the timeout will simply be ignored.
 cargo run --no-default-features --features=clap -- puzzles/2040.xml
 ```
 
+### XML puzzles parsing support
+
+The [Jan Wolter's XML format](https://webpbn.com/pbn_fmt.html) supported via feature `xml`.
+You can enable it by building with the `--features=xml`.
+
+
 ### Colored nonograms
 
 By default the feature `colored` is enabled to allow to print colored nonograms with real terminal colors.

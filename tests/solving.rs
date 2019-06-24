@@ -1,7 +1,7 @@
 use log::warn;
 
 #[cfg(feature = "web")]
-use nonogrid::parser::{NetworkReader, NonogramsOrg, WebPbn};
+use nonogrid::parser::{NetworkReader, NonogramsOrg};
 #[cfg(feature = "threaded")]
 use nonogrid::{
     block::base::Block,
@@ -107,7 +107,9 @@ fn uk_flag() {
 
 #[test]
 #[cfg(feature = "web")]
+#[cfg(feature = "xml")]
 fn webpbn_18() {
+    use nonogrid::parser::WebPbn;
     let p = WebPbn::read_remote("18").unwrap();
     assert_eq!(p.infer_scheme(), PuzzleScheme::MultiColor);
 
