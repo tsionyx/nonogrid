@@ -775,7 +775,10 @@ impl BoardParser for DetectedParser {
                 parser_kind: ParserKind::WebPbn,
                 inner: Box::new(WebPbn::with_content(content)?),
             }
-        } else if trim_content.starts_with("<!DOCTYPE HTML") || trim_content.starts_with("<html") {
+        } else if ["<!DOCTYPE HTML", "<html", NonogramsOrg::CYPHER_PREFIX]
+            .iter()
+            .any(|&prefix| trim_content.starts_with(prefix))
+        {
             Self {
                 parser_kind: ParserKind::NonogramsOrg,
                 inner: Box::new(NonogramsOrg::with_content(content)?),

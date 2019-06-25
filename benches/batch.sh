@@ -73,13 +73,13 @@ function find_nonogram_url() {
 function run_single_nonogram() {
     local puzzle_id=$1
 
-    local path=puzzles-norg/${puzzle_id}.html
+    local path=puzzles-norg/${puzzle_id}.js
     if [[ ! -f ${path} ]]; then
         echo "File not found locally. Download into $path"
         url=$(find_nonogram_url ${puzzle_id})
         if [[ ! ${url} ]]; then
             echo "Not found URL for puzzle #$i" >&2
-            continue
+            return
         fi
 
         wget --timeout=10 -qO- ${url} > ${path}
@@ -89,10 +89,11 @@ function run_single_nonogram() {
     fi
 
     local lines=$(cat ${path} | wc -l)
-    if [[ ${lines} < 2 ]]; then
+    if [[ ${lines} -lt 1 ]]; then
         echo "Removing empty file $path"
         rm -f ${path}
     else
+        sed -n '/^var d=.\+;/p' -i ${path}
         echo "Solving NORG puzzle #$i ${url}..."
         /usr/bin/time -f 'Total: %U' target/release/nonogrid ${path} --timeout=3600 --max-solutions=2 2>&1 1>solutions-norg/${puzzle_id}
     fi
