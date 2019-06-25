@@ -54,6 +54,11 @@ You can disable this feature and the timeout will simply be ignored.
 cargo run --no-default-features --features=clap -- puzzles/2040.xml
 ```
 
+### TOML puzzles parsing support
+
+[My custom TOML-based format](examples/hello.toml) is supported by default via feature `ini`.
+It can be disabled when using the solver as a library in another projects, [e.g.](https://github.com/tsionyx/nono/blob/8e2f8f27/Cargo.toml#L19)
+
 ### XML puzzles parsing support
 
 The [Jan Wolter's XML format](https://webpbn.com/pbn_fmt.html) supported via feature `xml`.

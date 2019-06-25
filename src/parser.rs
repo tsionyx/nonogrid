@@ -6,8 +6,11 @@ use std::io;
 use hashbrown::HashMap;
 #[cfg(feature = "web")]
 use reqwest;
-use serde_derive::Deserialize;
-use toml;
+
+#[cfg(not(feature = "ini"))]
+pub use dummy_ini::MyFormat;
+#[cfg(feature = "ini")]
+pub use ini::MyFormat;
 
 #[cfg(not(feature = "xml"))]
 pub use dummy_xml::WebPbn;
@@ -103,180 +106,226 @@ pub enum PuzzleScheme {
     MultiColor,
 }
 
-#[derive(Debug, Deserialize)]
-struct Clues {
-    rows: String,
-    columns: String,
-}
+#[cfg(feature = "ini")]
+mod ini {
+    use serde_derive::Deserialize;
+    use toml;
 
-#[derive(Debug, Deserialize)]
-struct Colors {
-    defs: Option<Vec<String>>,
-}
+    use super::*;
 
-#[derive(Debug, Deserialize)]
-struct NonoToml {
-    clues: Clues,
-    colors: Option<Colors>,
-}
-
-#[derive(Debug)]
-pub struct MyFormat {
-    structure: NonoToml,
-    //board_str: String,
-}
-
-impl LocalReader for MyFormat {}
-
-impl From<toml::de::Error> for ParseError {
-    fn from(err: toml::de::Error) -> Self {
-        Self(format!("{:?}", err))
-    }
-}
-
-impl BoardParser for MyFormat {
-    fn with_content(content: String) -> Result<Self, ParseError> {
-        let nono = toml::from_str(&content)?;
-
-        Ok(Self {
-            structure: nono,
-            //board_str: content,
-        })
+    #[derive(Debug, Deserialize)]
+    struct Clues {
+        rows: String,
+        columns: String,
     }
 
-    fn parse<B>(&self) -> Board<B>
-    where
-        B: Block,
-    {
-        let clues = &self.structure.clues;
-        let palette = self.get_palette();
-        Board::with_descriptions_and_palette(
-            Self::parse_clues(&clues.rows, &palette),
-            Self::parse_clues(&clues.columns, &palette),
-            Some(palette),
-        )
+    #[derive(Debug, Deserialize)]
+    struct Colors {
+        defs: Option<Vec<String>>,
     }
 
-    fn infer_scheme(&self) -> PuzzleScheme {
-        if let Some(colors) = &self.structure.colors {
-            if let Some(defs) = &colors.defs {
-                if !defs.is_empty() {
-                    return PuzzleScheme::MultiColor;
+    #[derive(Debug, Deserialize)]
+    struct NonoToml {
+        clues: Clues,
+        colors: Option<Colors>,
+    }
+
+    #[derive(Debug)]
+    pub struct MyFormat {
+        structure: NonoToml,
+        //board_str: String,
+    }
+
+    impl LocalReader for MyFormat {}
+
+    impl From<toml::de::Error> for ParseError {
+        fn from(err: toml::de::Error) -> Self {
+            Self(format!("{:?}", err))
+        }
+    }
+
+    impl BoardParser for MyFormat {
+        fn with_content(content: String) -> Result<Self, ParseError> {
+            let nono = toml::from_str(&content)?;
+
+            Ok(Self {
+                structure: nono,
+                //board_str: content,
+            })
+        }
+
+        fn parse<B>(&self) -> Board<B>
+        where
+            B: Block,
+        {
+            let clues = &self.structure.clues;
+            let palette = self.get_palette();
+            Board::with_descriptions_and_palette(
+                Self::parse_clues(&clues.rows, &palette),
+                Self::parse_clues(&clues.columns, &palette),
+                Some(palette),
+            )
+        }
+
+        fn infer_scheme(&self) -> PuzzleScheme {
+            if let Some(colors) = &self.structure.colors {
+                if let Some(defs) = &colors.defs {
+                    if !defs.is_empty() {
+                        return PuzzleScheme::MultiColor;
+                    }
                 }
             }
+
+            PuzzleScheme::BlackAndWhite
+        }
+    }
+
+    impl MyFormat {
+        fn parse_block<B>(block: &str, palette: &ColorPalette) -> B
+        where
+            B: Block,
+        {
+            let mut as_chars = block.chars();
+            let value_color_pos = as_chars.position(|c| !c.is_digit(10));
+            let (value, block_color) = if let Some(pos) = value_color_pos {
+                let (value, color) = block.split_at(pos);
+                (value, Some(color.to_string()))
+            } else {
+                (block, palette.get_default())
+            };
+
+            let color_id = block_color.and_then(|name| palette.id_by_name(&name));
+            B::from_str_and_color(value, color_id)
         }
 
-        PuzzleScheme::BlackAndWhite
-    }
-}
+        fn parse_line<B>(descriptions: &str, palette: &ColorPalette) -> Option<Vec<Description<B>>>
+        where
+            B: Block,
+        {
+            let descriptions = descriptions.trim();
+            let parts: Vec<_> = descriptions.split(|c| c == '#' || c == ';').collect();
 
-impl MyFormat {
-    fn parse_block<B>(block: &str, palette: &ColorPalette) -> B
-    where
-        B: Block,
-    {
-        let mut as_chars = block.chars();
-        let value_color_pos = as_chars.position(|c| !c.is_digit(10));
-        let (value, block_color) = if let Some(pos) = value_color_pos {
-            let (value, color) = block.split_at(pos);
-            (value, Some(color.to_string()))
-        } else {
-            (block, palette.get_default())
-        };
+            let non_comment = parts[0];
+            // dbg!(&non_comment);
 
-        let color_id = block_color.and_then(|name| palette.id_by_name(&name));
-        B::from_str_and_color(value, color_id)
-    }
-
-    fn parse_line<B>(descriptions: &str, palette: &ColorPalette) -> Option<Vec<Description<B>>>
-    where
-        B: Block,
-    {
-        let descriptions = descriptions.trim();
-        let parts: Vec<_> = descriptions.split(|c| c == '#' || c == ';').collect();
-
-        let non_comment = parts[0];
-        // dbg!(&non_comment);
-
-        if non_comment == "" {
-            return None;
-        }
-
-        Some(
-            non_comment
-                .split(',')
-                .filter_map(|row| {
-                    let row: &str = row.trim().trim_matches(|c| c == '\'' || c == '"');
-                    if row == "" {
-                        None
-                    } else {
-                        Some(Description::new(
-                            row.split_whitespace()
-                                .map(|block| Self::parse_block(block, palette))
-                                .collect(),
-                        ))
-                    }
-                })
-                .collect(),
-        )
-    }
-
-    fn parse_clues<B>(descriptions: &str, palette: &ColorPalette) -> Vec<Description<B>>
-    where
-        B: Block,
-    {
-        descriptions
-            .lines()
-            .flat_map(|line| Self::parse_line(line, palette).unwrap_or_else(|| vec![]))
-            .collect()
-    }
-
-    ///```
-    /// use nonogrid::parser::MyFormat;
-    ///
-    /// let s = "b = (blue) *";
-    /// let colors = MyFormat::parse_color_def(s);
-    /// assert_eq!(colors, ("b".to_string(), '*', "blue".to_string()));
-    /// ```
-    pub fn parse_color_def(color_def: &str) -> (String, char, String) {
-        let parts: Vec<_> = color_def.split('=').map(str::trim).collect();
-        let name = parts[0];
-        let mut desc = parts[1].to_string();
-        let symbol = desc.pop().expect("Empty color description in definition");
-
-        desc = desc
-            .trim()
-            .trim_matches(|c| c == '(' || c == ')')
-            .to_string();
-        (name.to_string(), symbol, desc)
-    }
-}
-
-impl Paletted for MyFormat {
-    fn get_colors(&self) -> Vec<(String, char, String)> {
-        if let Some(colors) = &self.structure.colors {
-            if let Some(defs) = &colors.defs {
-                let mut colors: Vec<_> =
-                    defs.iter().map(|def| Self::parse_color_def(def)).collect();
-                colors.sort_unstable_by_key(|(name, ..)| name.clone());
-                return colors;
+            if non_comment == "" {
+                return None;
             }
+
+            Some(
+                non_comment
+                    .split(',')
+                    .filter_map(|row| {
+                        let row: &str = row.trim().trim_matches(|c| c == '\'' || c == '"');
+                        if row == "" {
+                            None
+                        } else {
+                            Some(Description::new(
+                                row.split_whitespace()
+                                    .map(|block| Self::parse_block(block, palette))
+                                    .collect(),
+                            ))
+                        }
+                    })
+                    .collect(),
+            )
         }
 
-        vec![]
+        pub(super) fn parse_clues<B>(
+            descriptions: &str,
+            palette: &ColorPalette,
+        ) -> Vec<Description<B>>
+        where
+            B: Block,
+        {
+            descriptions
+                .lines()
+                .flat_map(|line| Self::parse_line(line, palette).unwrap_or_else(|| vec![]))
+                .collect()
+        }
+
+        ///```
+        /// use nonogrid::parser::MyFormat;
+        ///
+        /// let s = "b = (blue) *";
+        /// let colors = MyFormat::parse_color_def(s);
+        /// assert_eq!(colors, ("b".to_string(), '*', "blue".to_string()));
+        /// ```
+        pub fn parse_color_def(color_def: &str) -> (String, char, String) {
+            let parts: Vec<_> = color_def.split('=').map(str::trim).collect();
+            let name = parts[0];
+            let mut desc = parts[1].to_string();
+            let symbol = desc.pop().expect("Empty color description in definition");
+
+            desc = desc
+                .trim()
+                .trim_matches(|c| c == '(' || c == ')')
+                .to_string();
+            (name.to_string(), symbol, desc)
+        }
     }
 
-    fn get_palette(&self) -> ColorPalette {
-        let mut palette = ColorPalette::with_white_and_black("W", "B");
+    impl Paletted for MyFormat {
+        fn get_colors(&self) -> Vec<(String, char, String)> {
+            if let Some(colors) = &self.structure.colors {
+                if let Some(defs) = &colors.defs {
+                    let mut colors: Vec<_> =
+                        defs.iter().map(|def| Self::parse_color_def(def)).collect();
+                    colors.sort_unstable_by_key(|(name, ..)| name.clone());
+                    return colors;
+                }
+            }
 
-        let colors = self.get_colors();
-        colors.iter().for_each(|(name, symbol, value)| {
-            let val = ColorValue::parse(value);
-            palette.color_with_name_value_and_symbol(name, val, *symbol);
-        });
+            vec![]
+        }
 
-        palette
+        fn get_palette(&self) -> ColorPalette {
+            let mut palette = ColorPalette::with_white_and_black("W", "B");
+
+            let colors = self.get_colors();
+            colors.iter().for_each(|(name, symbol, value)| {
+                let val = ColorValue::parse(value);
+                palette.color_with_name_value_and_symbol(name, val, *symbol);
+            });
+
+            palette
+        }
     }
+}
+
+#[cfg(not(feature = "ini"))]
+mod dummy_ini {
+    use super::*;
+
+    #[derive(Debug, Clone, Copy)]
+    pub enum MyFormat {}
+
+    impl MyFormat {
+        const NO_FEATURE_ENABLED_MSG: &'static str =
+            "Cannot parse TOML-based puzzles: no support for TOML (hint: add --features=ini)";
+    }
+
+    impl BoardParser for MyFormat {
+        fn with_content(_content: String) -> Result<Self, ParseError>
+        where
+            Self: Sized,
+        {
+            Err(ParseError(Self::NO_FEATURE_ENABLED_MSG.to_string()))
+        }
+
+        fn parse<B>(&self) -> Board<B>
+        where
+            B: Block,
+        {
+            unimplemented!("{}", Self::NO_FEATURE_ENABLED_MSG)
+        }
+
+        fn infer_scheme(&self) -> PuzzleScheme {
+            unimplemented!("{}", Self::NO_FEATURE_ENABLED_MSG)
+        }
+    }
+
+    impl NetworkReader for MyFormat {}
 }
 
 #[cfg(feature = "xml")]
@@ -1034,6 +1083,7 @@ impl Paletted for OlsakParser {
 }
 
 #[cfg(test)]
+#[cfg(feature = "ini")]
 mod tests {
     use crate::block::{base::color::ColorPalette, binary::BinaryBlock, Description};
 

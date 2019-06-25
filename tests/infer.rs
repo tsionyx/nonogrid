@@ -1,27 +1,30 @@
-use nonogrid::parser::{BoardParser, LocalReader, MyFormat, Paletted, PuzzleScheme};
+#[cfg(feature = "ini")]
+mod ini {
+    use nonogrid::parser::{BoardParser, LocalReader, MyFormat, Paletted, PuzzleScheme};
 
-#[test]
-fn infer_own_black_and_white() {
-    let f = MyFormat::read_local("examples/MLP.toml").unwrap();
-    assert_eq!(f.infer_scheme(), PuzzleScheme::BlackAndWhite)
-}
+    #[test]
+    fn infer_own_black_and_white() {
+        let f = MyFormat::read_local("examples/MLP.toml").unwrap();
+        assert_eq!(f.infer_scheme(), PuzzleScheme::BlackAndWhite)
+    }
 
-#[test]
-fn get_colors_own() {
-    let f = MyFormat::read_local("examples/UK.toml").unwrap();
+    #[test]
+    fn get_colors_own() {
+        let f = MyFormat::read_local("examples/UK.toml").unwrap();
 
-    let colors = &[
-        ("b".to_string(), '*', "blue".to_string()),
-        ("r".to_string(), '%', "red".to_string()),
-    ];
-    assert_eq!(f.get_colors(), colors);
+        let colors = &[
+            ("b".to_string(), '*', "blue".to_string()),
+            ("r".to_string(), '%', "red".to_string()),
+        ];
+        assert_eq!(f.get_colors(), colors);
 
-    let palette = f.get_palette();
-    assert_eq!(palette.get_default(), Some("B".to_string()));
-    assert_eq!(palette.id_by_name("W"), Some(1));
-    assert_eq!(palette.id_by_name("B"), Some(2));
-    assert_eq!(palette.id_by_name("b"), Some(4));
-    assert_eq!(palette.id_by_name("r"), Some(8));
+        let palette = f.get_palette();
+        assert_eq!(palette.get_default(), Some("B".to_string()));
+        assert_eq!(palette.id_by_name("W"), Some(1));
+        assert_eq!(palette.id_by_name("B"), Some(2));
+        assert_eq!(palette.id_by_name("b"), Some(4));
+        assert_eq!(palette.id_by_name("r"), Some(8));
+    }
 }
 
 #[cfg(feature = "web")]
