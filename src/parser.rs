@@ -9,11 +9,10 @@ use reqwest;
 
 #[cfg(not(feature = "ini"))]
 pub use dummy_ini::MyFormat;
-#[cfg(feature = "ini")]
-pub use ini::MyFormat;
-
 #[cfg(not(feature = "xml"))]
 pub use dummy_xml::WebPbn;
+#[cfg(feature = "ini")]
+pub use ini::MyFormat;
 #[cfg(feature = "xml")]
 pub use xml::WebPbn;
 
@@ -803,6 +802,7 @@ enum ParserKind {
     WebPbn,
     NonogramsOrg,
     Olsak,
+    Simple,
 }
 
 pub struct DetectedParser {
@@ -849,7 +849,10 @@ impl BoardParser for DetectedParser {
                     inner: Box::new(OlsakParser::with_content(content)?),
                 }
             } else {
-                unimplemented!("This puzzle format is not supported")
+                Self {
+                    parser_kind: ParserKind::Simple,
+                    inner: Box::new(SimpleParser::with_content(content)?),
+                }
             }
         })
     }
@@ -863,6 +866,7 @@ impl BoardParser for DetectedParser {
             ParserKind::WebPbn => self.cast::<WebPbn>().parse::<B>(),
             ParserKind::NonogramsOrg => self.cast::<NonogramsOrg>().parse::<B>(),
             ParserKind::Olsak => self.cast::<OlsakParser>().parse::<B>(),
+            ParserKind::Simple => self.cast::<SimpleParser>().parse::<B>(),
         }
     }
 
@@ -872,6 +876,7 @@ impl BoardParser for DetectedParser {
             ParserKind::WebPbn => self.cast::<WebPbn>().infer_scheme(),
             ParserKind::NonogramsOrg => self.cast::<NonogramsOrg>().infer_scheme(),
             ParserKind::Olsak => self.cast::<OlsakParser>().infer_scheme(),
+            ParserKind::Simple => self.cast::<SimpleParser>().infer_scheme(),
         }
     }
 }
@@ -886,6 +891,7 @@ impl fmt::Debug for DetectedParser {
             ParserKind::WebPbn => write!(f, "{:?}", self.cast::<WebPbn>()),
             ParserKind::NonogramsOrg => write!(f, "{:?}", self.cast::<NonogramsOrg>()),
             ParserKind::Olsak => write!(f, "{:?}", self.cast::<OlsakParser>()),
+            ParserKind::Simple => write!(f, "{:?}", self.cast::<SimpleParser>()),
         }?;
         writeln!(f, ",",)?;
         writeln!(f, "}}")
@@ -955,7 +961,7 @@ impl BoardParser for OlsakParser {
         Self: Sized,
     {
         let names = [": rows", ": columns", "#d"];
-        let mut sections = split_sections(&content, &names, false)?;
+        let mut sections = split_sections(&content, &names, false, None)?;
         let mut splitted: HashMap<_, _> = sections
             .iter()
             .map(|(&name, lines)| {
@@ -1071,6 +1077,128 @@ impl Paletted for OlsakParser {
             .values()
             .map(|x| (x.name.clone(), x.symbol, x.rgb.clone()))
             .collect()
+    }
+
+    fn get_palette(&self) -> ColorPalette {
+        self.default_palette("white", "black")
+    }
+}
+
+#[derive(Debug)]
+/// This kind of parser only valid for Black-and-White puzzles.
+/// See the full list of formats here https://webpbn.com/export.cgi.
+struct SimpleParser {
+    rows: Vec<Vec<String>>,
+    columns: Vec<Vec<String>>,
+}
+
+impl SimpleParser {
+    fn parse_clues<B>(descriptions: &[Vec<String>]) -> Vec<Description<B>>
+    where
+        B: Block,
+    {
+        descriptions
+            .iter()
+            .map(|line| {
+                Description::new(
+                    line.iter()
+                        .map(|block| B::from_str_and_color(block, None))
+                        .collect(),
+                )
+            })
+            .collect()
+    }
+
+    fn split_into_blocks(lines: &[&str]) -> Vec<Vec<String>> {
+        lines
+            .iter()
+            .filter(|&line| !line.is_empty())
+            .map(|&line| {
+                // 'ish' and 'ss' has comma-separated blocks
+                line.split(&[' ', ','][..])
+                    .map(|block| block.to_string())
+                    .collect()
+            })
+            .collect()
+    }
+
+    fn remove_comments(text: &str) -> String {
+        text.lines()
+            .map(|line| {
+                // 'ish', 'mk' and 'syro' can have '#' comments
+                // 'makhorin' has a '*' comments and '&' rows-columns delimiter
+                if line.starts_with(&['#', '*'][..]) || line == "&" {
+                    ""
+                } else {
+                    // every line in 'syro' terminated with '0' block
+                    line.trim_end_matches(" 0")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+            .trim()
+            .to_string()
+    }
+}
+
+impl BoardParser for SimpleParser {
+    fn with_content(content: String) -> Result<Self, ParseError>
+    where
+        Self: Sized,
+    {
+        let content = Self::remove_comments(&content);
+
+        let (rows, columns) = {
+            // 'faase' and 'ss' formats
+            let names = ["rows", "columns"];
+
+            let mut sections = split_sections(&content, &names, false, None);
+            if let Ok(sections) = sections.as_mut() {
+                (
+                    sections.remove(names[0]).expect("Cannot find rows"),
+                    sections.remove(names[1]).expect("Cannot find rows"),
+                )
+            } else {
+                let mut sections = split_sections(&content, &[""], true, Some(names[0]));
+
+                if let Ok(sections) = sections.as_mut() {
+                    let columns = sections.remove("").expect("Cannot find empty section");
+                    (
+                        sections.remove(names[0]).expect("Cannot find rows"),
+                        columns,
+                    )
+                } else {
+                    unimplemented!("This puzzle format is not supported")
+                }
+            }
+        };
+
+        Ok(Self {
+            rows: Self::split_into_blocks(&rows),
+            columns: Self::split_into_blocks(&columns),
+        })
+    }
+
+    fn parse<B>(&self) -> Board<B>
+    where
+        B: Block,
+    {
+        let palette = self.get_palette();
+        Board::with_descriptions_and_palette(
+            Self::parse_clues(&self.rows),
+            Self::parse_clues(&self.columns),
+            Some(palette),
+        )
+    }
+
+    fn infer_scheme(&self) -> PuzzleScheme {
+        PuzzleScheme::BlackAndWhite
+    }
+}
+
+impl Paletted for SimpleParser {
+    fn get_colors(&self) -> Vec<(String, char, String)> {
+        vec![]
     }
 
     fn get_palette(&self) -> ColorPalette {

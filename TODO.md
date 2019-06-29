@@ -24,7 +24,6 @@
 
 ## Optimizations
 - implement [these ideas](https://habr.com/ru/post/454586/#comment_20248388)
-- load puzzles in other formats (syr for black, olsak for multi) to reduce network latency
 
 
 ## Refactoring

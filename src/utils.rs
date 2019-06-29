@@ -214,8 +214,11 @@ pub fn split_sections<'a, 'b>(
     text: &'a str,
     section_names: &'b [&'b str],
     include_header: bool,
+    first_section: Option<&'b str>,
 ) -> Result<HashMap<&'b str, Vec<&'a str>>, String> {
     let lines: Vec<_> = text.lines().map(|line| line.trim()).collect();
+
+    let first_section_name = first_section.unwrap_or("");
 
     let section_indexes: Result<HashMap<_, _>, String> = section_names
         .iter()
@@ -228,7 +231,7 @@ pub fn split_sections<'a, 'b>(
                     .ok_or_else(|| format!("{:?} section not found", section))?,
             ))
         })
-        .chain(once(Ok(("", 0))))
+        .chain(once(Ok((first_section_name, 0))))
         .collect();
 
     let section_indexes = section_indexes?;
