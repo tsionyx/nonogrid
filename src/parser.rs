@@ -97,6 +97,17 @@ pub trait NetworkReader: BoardParser {
 
 pub trait Paletted {
     fn get_colors(&self) -> Vec<(String, char, String)>;
+    fn default_palette(&self, white_name: &str, black_name: &str) -> ColorPalette {
+        let mut palette = ColorPalette::with_white_and_black(white_name, black_name);
+
+        let colors = self.get_colors();
+        colors.iter().for_each(|(name, symbol, value)| {
+            let val = ColorValue::parse(value);
+            palette.color_with_name_value_and_symbol(name, val, *symbol);
+        });
+
+        palette
+    }
     fn get_palette(&self) -> ColorPalette;
 }
 
@@ -280,15 +291,7 @@ mod ini {
         }
 
         fn get_palette(&self) -> ColorPalette {
-            let mut palette = ColorPalette::with_white_and_black("W", "B");
-
-            let colors = self.get_colors();
-            colors.iter().for_each(|(name, symbol, value)| {
-                let val = ColorValue::parse(value);
-                palette.color_with_name_value_and_symbol(name, val, *symbol);
-            });
-
-            palette
+            self.default_palette("W", "B")
         }
     }
 }
@@ -505,25 +508,26 @@ mod xml {
             }
         }
 
-        fn _get_palette(&self) -> ColorPalette {
-            let mut palette = ColorPalette::with_white_and_black("white", "black");
-
-            let colors = self.get_colors();
-            colors.iter().for_each(|(name, symbol, value)| {
-                let val = ColorValue::parse(value);
-                palette.color_with_name_value_and_symbol(name, val, *symbol);
-            });
-
+        fn get_default_color(&self) -> Option<String> {
             let document = self.package.as_document();
             let value = evaluate_xpath(&document, ".//puzzle[@type='grid']")
                 .expect("XPath evaluation failed");
             if let Value::Nodeset(ns) = value {
                 let first_node = ns.iter().next();
                 if let Some(Node::Element(e)) = first_node {
-                    if let Some(default_color) = e.attribute("defaultcolor") {
-                        palette.set_default(default_color.value()).unwrap();
-                    }
+                    return e
+                        .attribute("defaultcolor")
+                        .map(|color| color.value().to_string());
                 }
+            }
+            None
+        }
+
+        fn _get_palette(&self) -> ColorPalette {
+            let mut palette = self.default_palette("white", "black");
+
+            if let Some(default_color) = self.get_default_color() {
+                palette.set_default(&default_color).unwrap();
             }
             palette
         }
@@ -1070,15 +1074,7 @@ impl Paletted for OlsakParser {
     }
 
     fn get_palette(&self) -> ColorPalette {
-        let mut palette = ColorPalette::with_white_and_black("white", "black");
-
-        let colors = self.get_colors();
-        colors.iter().for_each(|(name, symbol, value)| {
-            let val = ColorValue::parse(value);
-            palette.color_with_name_value_and_symbol(name, val, *symbol);
-        });
-
-        palette
+        self.default_palette("white", "black")
     }
 }
 
