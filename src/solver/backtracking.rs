@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 use std::time::Instant;
 
 use hashbrown::{HashMap, HashSet};
+use log::Level;
 use ordered_float::OrderedFloat;
 
 use crate::block::{Block, Color};
@@ -38,7 +39,7 @@ where
     pub solutions: Vec<Solution<B>>,
     depth_reached: usize,
     start_time: Option<Instant>,
-    explored_paths: HashSet<Vec<(Point, B::Color)>>,
+    //explored_paths: HashSet<Vec<(Point, B::Color)>>,
     pub search_tree: SearchTreeRef<(Point, B::Color), f64>,
 
     _phantom: PhantomData<S>,
@@ -236,7 +237,7 @@ where
             solutions: vec![],
             depth_reached: 0,
             start_time: None,
-            explored_paths: HashSet::new(),
+            //explored_paths: HashSet::new(),
             search_tree: MutRc::new(SearchTree::new()),
             _phantom: PhantomData,
         }
@@ -294,15 +295,18 @@ where
     }
 
     fn set_explored(&mut self, path: &[(Point, B::Color)]) {
-        let mut path = path.to_vec();
-        path.sort();
-        let _ = self.explored_paths.insert(path);
+        //let mut path = path.to_vec();
+        //path.sort();
+        //let _ = self.explored_paths.insert(path);
+        debug!("The explored paths feature disabled. Path: {:?}", path);
     }
 
     fn is_explored(&self, path: &[(Point, B::Color)]) -> bool {
-        let mut path = path.to_vec();
-        path.sort();
-        self.explored_paths.contains(&path)
+        //let mut path = path.to_vec();
+        //path.sort();
+        //self.explored_paths.contains(&path)
+        debug!("The explored paths feature disabled. Path: {:?}", path);
+        false
     }
 
     fn already_found(&self) -> bool {
@@ -510,7 +514,7 @@ where
             full_path.push(direction);
 
             if self.is_explored(&full_path) {
-                info!("The path {:?} already explored", full_path);
+                warn!("The path {:?} already explored", full_path);
                 continue;
             }
 
@@ -613,11 +617,15 @@ where
     }
 
     fn add_search_score(&mut self, path: &[(Point, B::Color)], score: f64) {
-        SearchTree::add(MutRc::clone(&self.search_tree), path, Some(score));
+        if log_enabled!(Level::Warn) {
+            SearchTree::add(MutRc::clone(&self.search_tree), path, Some(score));
+        }
     }
 
     fn add_search_deadend(&mut self, path: &[(Point, B::Color)]) {
-        SearchTree::add(MutRc::clone(&self.search_tree), path, None);
+        if log_enabled!(Level::Warn) {
+            SearchTree::add(MutRc::clone(&self.search_tree), path, None);
+        }
     }
 
     /// Trying to search for solutions in the given direction.
