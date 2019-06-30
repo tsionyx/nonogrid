@@ -60,9 +60,9 @@ where
     cols_cache_indexes: Vec<usize>,
     cell_rate_memo: InteriorMutableRef<HashMap<B::Color, f64>>,
     // callbacks
-    on_set_line: Option<Box<Fn(bool, usize) + Send + Sync>>,
-    on_restore: Option<Box<Fn() + Send + Sync>>,
-    on_change_color: Option<Box<Fn(Point) + Send + Sync>>,
+    on_set_line: Option<Box<dyn Fn(bool, usize) + Send + Sync>>,
+    on_restore: Option<Box<dyn Fn() + Send + Sync>>,
+    on_change_color: Option<Box<dyn Fn(Point) + Send + Sync>>,
 }
 
 impl<B> fmt::Debug for Board<B>

@@ -59,26 +59,27 @@ fn main() -> Result<(), ParseError> {
 
     match source {
         Source::LocalFile => run(
-            parser::DetectedParser::with_content(content)?,
+            &parser::DetectedParser::with_content(content)?,
             search_options,
         ),
-        Source::WebPbn => run(parser::WebPbn::read_remote(&content)?, search_options),
-        Source::NonogramsOrg => run(parser::NonogramsOrg::read_remote(&content)?, search_options),
+        Source::WebPbn => run(&parser::WebPbn::read_remote(&content)?, search_options),
+        Source::NonogramsOrg => run(
+            &parser::NonogramsOrg::read_remote(&content)?,
+            search_options,
+        ),
     };
     Ok(())
 }
 
-fn run<P>(board_parser: P, search_options: SearchOptions)
+fn run<P>(board_parser: &P, search_options: SearchOptions)
 where
     P: BoardParser,
 {
     match board_parser.infer_scheme() {
         PuzzleScheme::BlackAndWhite => {
-            run_with_block::<BinaryBlock, _>(&board_parser, search_options)
+            run_with_block::<BinaryBlock, _>(board_parser, search_options)
         }
-        PuzzleScheme::MultiColor => {
-            run_with_block::<ColoredBlock, _>(&board_parser, search_options)
-        }
+        PuzzleScheme::MultiColor => run_with_block::<ColoredBlock, _>(board_parser, search_options),
     }
 }
 

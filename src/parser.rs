@@ -838,7 +838,7 @@ impl BoardParser for DetectedParser {
                 inner: Box::new(NonogramsOrg::with_content(content)?),
             }
         } else {
-            let lines: Vec<_> = trim_content.lines().map(|line| line.trim()).collect();
+            let lines: Vec<_> = trim_content.lines().map(str::trim).collect();
             if lines.contains(&"[clues]") {
                 Self {
                     parser_kind: ParserKind::Toml,
@@ -970,11 +970,7 @@ impl BoardParser for OlsakParser {
                     name,
                     lines
                         .iter()
-                        .map(|&line| {
-                            line.split_whitespace()
-                                .map(|block| block.to_string())
-                                .collect()
-                        })
+                        .map(|&line| line.split_whitespace().map(ToString::to_string).collect())
                         .collect(),
                 )
             })
@@ -1087,7 +1083,7 @@ impl Paletted for OlsakParser {
 
 #[derive(Debug)]
 /// This kind of parser only valid for Black-and-White puzzles.
-/// See the full list of formats here https://webpbn.com/export.cgi.
+/// See the full list of formats here <https://webpbn.com/export.cgi>.
 struct SimpleParser {
     rows: Vec<Vec<String>>,
     columns: Vec<Vec<String>>,
@@ -1123,7 +1119,7 @@ impl SimpleParser {
             .map(|&line| {
                 // 'ish' and 'ss' has comma-separated blocks
                 line.split(&[' ', ','][..])
-                    .map(|block| block.to_string())
+                    .map(ToString::to_string)
                     .collect()
             })
             .collect()
@@ -1181,7 +1177,7 @@ impl BoardParser for SimpleParser {
                         .next()
                         .expect("Empty content")
                         .split_whitespace()
-                        .map(|x| x.parse::<usize>())
+                        .map(str::parse::<usize>)
                         .collect();
 
                     let dimensions = dimensions?;

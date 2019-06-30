@@ -269,18 +269,19 @@ where
                 let solved = self.run_propagation::<S>(&point);
                 Board::restore_with_callback(MutRc::clone(&self.board), save);
 
-                let impact_size = solved
-                    .map(|new_cells| {
+                let impact_size = solved.ok().map_or_else(
+                    || {
+                        info!("Contradiction found! {:?}: {:?}", point, assumption);
+                        None
+                    },
+                    |new_cells| {
                         if !new_cells.is_empty() {
                             info!("Probing {:?}: {:?}", point, assumption);
                             debug!("New info: {:?}", new_cells);
                         }
                         Some(new_cells.len())
-                    })
-                    .unwrap_or_else(|_err| {
-                        info!("Contradiction found! {:?}: {:?}", point, assumption);
-                        None
-                    });
+                    },
+                );
                 (assumption, impact_size)
             })
             .collect()
