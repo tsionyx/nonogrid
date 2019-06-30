@@ -2,6 +2,7 @@ use std::any::Any;
 use std::fmt;
 use std::fs;
 use std::io;
+use std::num::ParseIntError;
 
 use hashbrown::HashMap;
 #[cfg(feature = "web")]
@@ -1092,6 +1093,12 @@ struct SimpleParser {
     columns: Vec<Vec<String>>,
 }
 
+impl From<ParseIntError> for ParseError {
+    fn from(err: ParseIntError) -> Self {
+        Self(format!("{}", err))
+    }
+}
+
 impl SimpleParser {
     fn parse_clues<B>(descriptions: &[Vec<String>]) -> Vec<Description<B>>
     where
@@ -1168,7 +1175,24 @@ impl BoardParser for SimpleParser {
                         columns,
                     )
                 } else {
-                    unimplemented!("This puzzle format is not supported")
+                    // no empty lines, 'nin' format
+                    let mut content_iter = content.lines();
+                    let dimensions: Result<Vec<_>, ParseIntError> = content_iter
+                        .next()
+                        .expect("Empty content")
+                        .split_whitespace()
+                        .map(|x| x.parse::<usize>())
+                        .collect();
+
+                    let dimensions = dimensions?;
+                    if dimensions.len() == 2 {
+                        let (width, height) = (dimensions[0], dimensions[1]);
+                        let rows = content_iter.clone().take(height).collect();
+                        let columns = content_iter.skip(height).take(width).collect();
+                        (rows, columns)
+                    } else {
+                        unimplemented!("This puzzle format is not supported")
+                    }
                 }
             }
         };
