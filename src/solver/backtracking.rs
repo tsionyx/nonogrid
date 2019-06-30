@@ -514,27 +514,24 @@ where
                 continue;
             }
 
-            let rate = self.board().solution_rate();
+            {
+                let rate = self.board().solution_rate();
+                warn!(
+                    "Trying direction ({}/{}): {:?} (depth={}, rate={:.4})",
+                    search_counter, total_number_of_directions, direction, depth, rate
+                );
+                info!("Previous path: {:?}", path);
+
+                self.add_search_score(path, rate);
+            }
+
             let guess_save = self.board().make_snapshot();
-
-            warn!(
-                "Trying direction ({}/{}): {:?} (depth={}, rate={:.4})",
-                search_counter, total_number_of_directions, direction, depth, rate
-            );
-            info!("Previous path: {:?}", path);
-
-            self.add_search_score(path, rate);
-
             let state_result = self.try_direction(&full_path);
             //let is_solved = board.is_solved_full();
             Board::restore_with_callback(MutRc::clone(&self.board), guess_save);
             self.set_explored(&full_path);
 
-            if state_result.is_err() {
-                return state_result;
-            }
-
-            let success = state_result.unwrap();
+            let success = state_result?;
 
             if !success {
                 // TODO: add backjumping here
@@ -543,11 +540,10 @@ where
                     color, point
                 );
 
-                let err =
-                    Board::unset_color_with_callback(MutRc::clone(&self.board), &point, &color)
-                        .err();
-                board_changed = true;
-                if err.is_some() {
+                let unset_result =
+                    Board::unset_color_with_callback(MutRc::clone(&self.board), &point, &color);
+                //board_changed = true;
+                if unset_result.is_err() {
                     // the whole `path` branch of a search tree is a dead end
                     warn!(
                         "The last possible color {:?} for the {:?} cannot be unset. The whole branch (depth={}) is invalid.",
@@ -556,14 +552,14 @@ where
                     return Ok(false);
                 }
 
-                if !board_changed {
-                    info!("The board does not change since the last unconditional solving, skip.");
-                    continue;
-                }
+                //if !board_changed {
+                //    info!("The board does not change since the last unconditional solving, skip.");
+                //    continue;
+                //}
 
-                let err = self.probe_solver.run_unsolved::<S>();
+                let run_with_new_info = self.probe_solver.run_unsolved::<S>();
                 board_changed = false;
-                if err.is_err() {
+                if run_with_new_info.is_err() {
                     // the whole `path` branch of a search tree is a dead end
                     warn!(
                         "The last possible color {:?} for the {:?} lead to the contradiction. The whole branch (depth={}) is invalid.",
@@ -588,9 +584,10 @@ where
                 // if all of them goes to the dead end,
                 // then the parent path is a dead end
 
+                let cell_colors = self.board().cell(&point).variants();
                 let states_to_try: Vec<_> = cell_colors
-                    .iter()
-                    .filter_map(|&other_color| {
+                    .into_iter()
+                    .filter_map(|other_color| {
                         if other_color == color {
                             None
                         } else {
