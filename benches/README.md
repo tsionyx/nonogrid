@@ -93,4 +93,12 @@ for i in {1..300}; do
 done
 ```
 
-# Results
+
+### Export various formats
+
+```
+for fmt in $(curl -s https://webpbn.com/export.cgi | grep -oP 'name="fmt" value="\K([^"]+)'); do
+    echo "Downloading puzzle $ID with format $fmt"
+    curl -s https://webpbn.com/export.cgi --data "id=$ID&fmt=$fmt&go=1" > ${ID}.${fmt}
+done
+```

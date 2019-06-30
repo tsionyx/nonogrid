@@ -1,6 +1,5 @@
 ## Experiments
 - try the [SAT](https://jix.one/tags/sat/) [solver](https://jix.github.io/varisat/manual/master/index.html)
-- optimize solver cache: use bitset
 - reduce board by removing solved lines:
   - if there is a fully solved row (column), one can safely remove it (with 'comparing neighbours' check)
   - if the block position is fully revealed, one can replace that block with white (for the whole board).
