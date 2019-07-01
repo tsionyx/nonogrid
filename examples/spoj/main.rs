@@ -671,12 +671,12 @@ mod line {
 
         fn solve(&mut self) -> Result<(), String> {
             if self.try_solve() {
-                let mut solved = &mut self.solved_line;
+                let solved = &mut self.solved_line;
 
                 let both = BW::both_colors();
                 if let Some(both) = both {
                     let init = BW::default();
-                    replace(&mut solved, &both, &init);
+                    replace(solved, &both, &init);
                 }
                 Ok(())
             } else {
@@ -967,13 +967,13 @@ mod propagation {
             while let Some((is_column, index)) = queue.pop() {
                 let new_jobs = self.update_line(index, is_column)?;
 
-                let new_states = new_jobs.iter().map(|another_index| {
+                let new_states = new_jobs.iter().map(|&another_index| {
                     let (x, y) = if is_column {
-                        (&index, another_index)
+                        (index, another_index)
                     } else {
-                        (another_index, &index)
+                        (another_index, index)
                     };
-                    Point::new(*x, *y)
+                    Point::new(x, y)
                 });
 
                 solved_cells.extend(new_states);
@@ -1074,10 +1074,10 @@ mod probing {
     use std::collections::HashMap;
     use std::rc::Rc;
 
-    use super::{priority_ord, propagation, Board, Point, BW};
+    use super::{priority_ord, propagation, Board, PartialEntry, Point, BW};
 
     pub type Impact = HashMap<(Point, BW), (usize, u32)>;
-    type FloatPriorityQueue<K> = BinaryHeap<K>;
+    type OrderedPoints = BinaryHeap<(u32, Point)>;
 
     pub struct FullProbe1 {
         board: Rc<RefCell<Board>>,
@@ -1092,16 +1092,21 @@ mod probing {
             FullProbe1 { board: board }
         }
 
-        pub fn unsolved_cells(&self) -> FloatPriorityQueue<(u32, Point)> {
+        pub fn unsolved_cells(&self) -> OrderedPoints {
             let board = self.board();
             let unsolved = board.unsolved_cells();
 
-            let mut queue = FloatPriorityQueue::new();
+            let mut row_rate_cache = Vec::with_none(board.height());
+            let mut column_rate_cache = Vec::with_none(board.width());
+
+            let mut queue = OrderedPoints::new();
             queue.extend(unsolved.into_iter().map(|point| {
-                let no_unsolved = board.unsolved_neighbours_count(&point) as f64;
-                let row_rate = board.row_solution_rate(point.y());
-                let column_rate = board.column_solution_rate(point.x());
-                let priority = row_rate + column_rate - no_unsolved + 4.0;
+                let no_solved = 4 - board.unsolved_neighbours_count(&point);
+                let row_rate = row_rate_cache
+                    .unwrap_or_insert_with(point.y(), || board.row_solution_rate(point.y()));
+                let column_rate = column_rate_cache
+                    .unwrap_or_insert_with(point.x(), || board.column_solution_rate(point.x()));
+                let priority = no_solved as f64 + row_rate + column_rate;
                 (priority_ord(priority), point)
             }));
 
@@ -1110,29 +1115,38 @@ mod probing {
 
         pub fn propagate_point(&self, point: &Point) -> Result<Vec<(u32, Point)>, String> {
             let fixed_points = self.run_propagation(point)?;
-            let mut new_jobs = vec![];
 
-            for new_point in fixed_points {
-                for neighbour in self.board().unsolved_neighbours(&new_point) {
-                    new_jobs.push((priority_ord(PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED), neighbour));
-                }
-            }
+            let board = self.board();
 
-            for neighbour in self.board().unsolved_neighbours(&point) {
-                new_jobs.push((
-                    priority_ord(PRIORITY_NEIGHBOURS_OF_CONTRADICTION),
-                    neighbour,
-                ));
-            }
-
-            Ok(new_jobs)
+            Ok(fixed_points
+                .into_iter()
+                .flat_map(|new_point| {
+                    board
+                        .unsolved_neighbours(&new_point)
+                        .into_iter()
+                        .map(|neighbour| {
+                            (priority_ord(PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED), neighbour)
+                        })
+                })
+                .chain(
+                    self.board()
+                        .unsolved_neighbours(&point)
+                        .into_iter()
+                        .map(|neighbour| {
+                            (
+                                priority_ord(PRIORITY_NEIGHBOURS_OF_CONTRADICTION),
+                                neighbour,
+                            )
+                        }),
+                )
+                .collect())
         }
 
         pub fn run_unsolved(&self) -> Result<Impact, String> {
             self.run(&mut self.unsolved_cells())
         }
 
-        pub fn run(&self, probes: &mut FloatPriorityQueue<(u32, Point)>) -> Result<Impact, String> {
+        pub fn run(&self, probes: &mut OrderedPoints) -> Result<Impact, String> {
             let mut impact;
             loop {
                 impact = HashMap::new();
@@ -1160,11 +1174,12 @@ mod probing {
                         break;
                     }
 
-                    for (color, updated) in non_contradictions {
-                        if let Some(updated_cells) = updated {
-                            impact.insert((point, color), (updated_cells, priority));
-                        }
-                    }
+                    impact.extend(non_contradictions.into_iter().map(|(color, updated)| {
+                        (
+                            (point, color),
+                            (updated.expect("Number of cells"), priority),
+                        )
+                    }));
                 }
 
                 if let Some((contradiction, colors)) = false_probes {
@@ -1172,9 +1187,8 @@ mod probing {
                         self.board.borrow_mut().unset_color(&contradiction, color)?;
                     }
                     let new_probes = self.propagate_point(&contradiction)?;
-                    for (priority, point) in new_probes {
-                        probes.push((priority, point));
-                    }
+
+                    probes.extend(new_probes);
                 } else {
                     break;
                 }
@@ -1198,22 +1212,20 @@ mod probing {
             self.board().is_solved_full()
         }
 
-        fn probe(&self, point: Point) -> HashMap<BW, Option<usize>> {
-            let mut changes = HashMap::new();
-
+        fn probe(&self, point: Point) -> Vec<(BW, Option<usize>)> {
             let vars = self.board().cell(&point).variants();
 
-            for assumption in vars {
-                let save = self.board().make_snapshot();
-                self.board.borrow_mut().set_color(&point, assumption);
+            vars.into_iter()
+                .map(|assumption| {
+                    let save = self.board().make_snapshot();
+                    self.board.borrow_mut().set_color(&point, assumption);
 
-                let solved = self.run_propagation(&point);
-                self.board.borrow_mut().restore(save);
+                    let solved = self.run_propagation(&point);
+                    self.board.borrow_mut().restore(save);
 
-                changes.insert(assumption, solved.ok().map(|new_cells| new_cells.len()));
-            }
-
-            changes
+                    (assumption, solved.ok().map(|new_cells| new_cells.len()))
+                })
+                .collect()
         }
     }
 }
@@ -1267,7 +1279,6 @@ mod backtracking {
         probe_solver: FullProbe1,
         max_solutions: Option<usize>,
         pub solutions: Vec<Solution>,
-        explored_paths: HashSet<Vec<(Point, BW)>>,
     }
 
     #[allow(dead_code)]
@@ -1289,7 +1300,6 @@ mod backtracking {
                 probe_solver: probe_solver,
                 max_solutions: max_solutions,
                 solutions: vec![],
-                explored_paths: HashSet::new(),
             }
         }
 
@@ -1303,8 +1313,11 @@ mod backtracking {
                 return Ok(());
             }
 
-            let directions = self.choose_directions(&impact);
-            self.search(&directions, &[])?;
+            let directions = self.choose_directions(impact);
+            let success = self.search(&directions, &[])?;
+            if !success {
+                return Err("Backtracking failed".to_string());
+            }
             Ok(())
         }
 
@@ -1314,18 +1327,6 @@ mod backtracking {
 
         fn is_solved(&self) -> bool {
             self.board().is_solved_full()
-        }
-
-        fn set_explored(&mut self, path: &[(Point, BW)]) {
-            let mut path = path.to_vec();
-            path.sort();
-            self.explored_paths.insert(path);
-        }
-
-        fn is_explored(&self, path: &[(Point, BW)]) -> bool {
-            let mut path = path.to_vec();
-            path.sort();
-            self.explored_paths.contains(&path)
         }
 
         fn already_found(&self) -> bool {
@@ -1339,8 +1340,6 @@ mod backtracking {
         }
 
         fn add_solution(&mut self) -> Result<(), String> {
-            self.probe_solver.run_unsolved()?;
-
             if !self.already_found() {
                 let cells = self.board().make_snapshot();
                 self.solutions.push(cells);
@@ -1349,10 +1348,10 @@ mod backtracking {
             Ok(())
         }
 
-        fn choose_directions(&self, impact: &Impact) -> Vec<(Point, BW)> {
+        fn choose_directions(&self, impact: Impact) -> Vec<(Point, BW)> {
             let mut point_wise = HashMap::new();
 
-            for (&(point, color), &(new_points, priority)) in impact.iter() {
+            for ((point, color), (new_points, priority)) in impact {
                 if self.board().cell(&point).is_solved() {
                     continue;
                 }
@@ -1373,7 +1372,7 @@ mod backtracking {
                 .iter()
                 .flat_map(|&(point, _rate)| {
                     let mut point_colors: Vec<_> =
-                        point_wise[point].iter().map(|(k, v)| (*k, *v)).collect();
+                        point_wise[point].iter().map(|(&k, &v)| (k, v)).collect();
                     point_colors
                         .sort_by_key(|&(_color, (new_points, _priority))| Reverse(new_points));
                     let point_order: Vec<_> = point_colors
@@ -1428,10 +1427,6 @@ mod backtracking {
             directions: &[(Point, BW)],
             path: &[(Point, BW)],
         ) -> Result<bool, String> {
-            if self.is_explored(path) {
-                return Ok(true);
-            }
-
             if self.limits_reached() {
                 return Ok(true);
             }
@@ -1441,7 +1436,6 @@ mod backtracking {
 
             if !path.is_empty() {
                 self.board.borrow_mut().restore(save);
-                self.set_explored(path);
             }
 
             result
@@ -1497,36 +1491,21 @@ mod backtracking {
                 let mut full_path = path.to_vec();
                 full_path.push(direction);
 
-                if self.is_explored(&full_path) {
-                    continue;
-                }
-
                 let guess_save = self.board().make_snapshot();
-
                 let state_result = self.try_direction(&full_path);
                 self.board.borrow_mut().restore(guess_save);
-                self.set_explored(&full_path);
 
-                if state_result.is_err() {
-                    return state_result;
-                }
-
-                let success = state_result.unwrap();
+                let success = state_result?;
 
                 if !success {
-                    let err = self.board.borrow_mut().unset_color(&point, color).err();
-                    board_changed = true;
-                    if err.is_some() {
+                    let unset_result = self.board.borrow_mut().unset_color(&point, color);
+                    if unset_result.is_err() {
                         return Ok(false);
                     }
 
-                    if !board_changed {
-                        continue;
-                    }
-
-                    let err = self.probe_solver.run_unsolved();
+                    let run_with_new_info = self.probe_solver.run_unsolved();
                     board_changed = false;
-                    if err.is_err() {
+                    if run_with_new_info.is_err() {
                         return Ok(false);
                     }
 
@@ -1584,7 +1563,7 @@ mod backtracking {
                         return Ok(true);
                     }
 
-                    let directions = self.choose_directions(&impact);
+                    let directions = self.choose_directions(impact);
                     if directions.is_empty() {
                         Ok(true)
                     } else {
@@ -1602,18 +1581,15 @@ mod backtracking {
                 return Ok(vec![]);
             }
 
-            let mut probes = vec![];
             self.board.borrow_mut().set_color(&point, color);
             let new_probes = self.probe_solver.propagate_point(&point)?;
-            for (priority, new_point) in new_probes {
-                probes.push((priority, new_point));
-            }
+
             if self.board().is_solved_full() {
                 self.add_solution()?;
                 return Ok(vec![]);
             }
 
-            Ok(probes)
+            Ok(new_probes)
         }
 
         fn limits_reached(&self) -> bool {
@@ -1721,5 +1697,38 @@ fn main() {
                 print!("{}", *board.borrow());
             }
         }
+    }
+}
+
+pub trait PartialEntry {
+    type Output: Copy;
+
+    fn unwrap_or_insert_with<F>(&mut self, index: usize, default: F) -> Self::Output
+    where
+        F: FnOnce() -> Self::Output;
+
+    fn with_none(capacity: usize) -> Self;
+}
+
+impl<T> PartialEntry for Vec<Option<T>>
+where
+    T: Copy,
+{
+    type Output = T;
+
+    fn unwrap_or_insert_with<F: FnOnce() -> T>(&mut self, index: usize, default: F) -> T {
+        if let Some(elem) = self.get(index) {
+            if let Some(y) = *elem {
+                return y;
+            }
+        }
+
+        let new = default();
+        self[index] = Some(new);
+        new
+    }
+
+    fn with_none(capacity: usize) -> Self {
+        vec![None; capacity]
     }
 }
