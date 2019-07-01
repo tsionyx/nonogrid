@@ -3,14 +3,13 @@ extern crate log;
 
 use std::fmt::Display;
 use std::fs;
-use std::io::{stdin, Read};
-use std::str::FromStr;
+use std::io::{self, stdin, Read};
 
-use clap::{value_t, App, Arg, ArgMatches};
 use log::Level;
 
 use block::{binary::BinaryBlock, multicolor::ColoredBlock, Block};
 use board::Board;
+use cli::Params;
 use parser::{BoardParser, NetworkReader, ParseError, PuzzleScheme};
 use render::{Renderer, ShellRenderer};
 use solver::{
@@ -27,35 +26,143 @@ pub mod render;
 pub mod solver;
 pub(crate) mod utils;
 
+#[cfg(feature = "clap")]
+mod cli {
+    use std::str::FromStr;
+
+    use clap::{value_t, App, Arg, ArgMatches};
+
+    use super::*;
+
+    pub(super) struct Params<'a> {
+        matches: ArgMatches<'a>,
+    }
+
+    impl<'a> Params<'a> {
+        pub(super) fn new() -> Self {
+            let matches = App::new("nonogrid")
+                .version("0.1.0")
+                .about("Efficient nonogram solver")
+                .arg(
+                    Arg::with_name("INPUT")
+                        .help("The nonogram file or puzzle ID to solve. When no input is present, read from the stdin.")
+                        .index(1)
+                )
+                .arg(
+                    Arg::with_name("webpbn").help("Solve puzzle from http://webpbn.com with specified ID")
+                        .short("w").long("webpbn").requires("INPUT")
+                )
+                .arg(
+                    Arg::with_name("nonograms-org").help("Solve puzzle from http://www.nonograms.org/ with specified ID")
+                        .short("o").long("nonograms-org").requires("INPUT").conflicts_with("webpbn")
+                )
+                .args_from_usage(
+                    "-m, --max-solutions=[THRESHOLD] 'Stop searching after finding enough solutions'
+             -t, --timeout=[SECONDS] 'Stop searching after specified timeout in seconds'
+             -d, --max-depth=[DEPTH] 'Stop searching after reaching specified search depth'",
+                )
+                .get_matches();
+
+            Self { matches }
+        }
+
+        pub(super) fn get_content(&self) -> Result<(Source, String), ParseError> {
+            let input_id = self.matches.value_of("INPUT");
+
+            if self.matches.is_present("webpbn") {
+                return Ok((
+                    Source::WebPbn,
+                    input_id
+                        .expect("INPUT should be present in --webpbn mode")
+                        .to_string(),
+                ));
+            }
+
+            if self.matches.is_present("nonograms-org") {
+                return Ok((
+                    Source::NonogramsOrg,
+                    input_id
+                        .expect("INPUT should be present in --nonograms-org mode")
+                        .to_string(),
+                ));
+            }
+
+            let content = if let Some(input_file) = input_id {
+                fs::read_to_string(input_file)?
+            } else {
+                read_stdin()?
+            };
+
+            Ok((Source::LocalFile, content))
+        }
+
+        pub(super) fn get_search_options(&self) -> SearchOptions {
+            (
+                self.parse_arg::<usize>("max-solutions"),
+                self.parse_arg::<u32>("timeout"),
+                self.parse_arg::<usize>("max-depth"),
+            )
+        }
+
+        fn parse_arg<T>(&self, name: &str) -> Option<T>
+        where
+            T: FromStr,
+        {
+            let matches = &self.matches;
+            if matches.is_present(name) {
+                let value = value_t!(matches, name, T).unwrap_or_else(|e| e.exit());
+                return Some(value);
+            }
+
+            None
+        }
+    }
+}
+
+#[cfg(not(feature = "clap"))]
+mod cli {
+    use std::env;
+
+    use super::*;
+
+    pub(super) struct Params {
+        file_name: Option<String>,
+    }
+
+    impl Params {
+        pub(super) fn new() -> Self {
+            let file_name = env::args().nth(1);
+            Self { file_name }
+        }
+        pub(super) fn get_content(&self) -> Result<(Source, String), ParseError> {
+            let content = if let Some(input_file) = &self.file_name {
+                fs::read_to_string(input_file)?
+            } else {
+                read_stdin()?
+            };
+            Ok((Source::LocalFile, content))
+        }
+
+        pub(super) fn get_search_options(&self) -> SearchOptions {
+            (None, None, None)
+        }
+    }
+}
+
+fn read_stdin() -> Result<String, io::Error> {
+    warn!("Reading from stdin...");
+    let mut buffer = String::new();
+    stdin().read_to_string(&mut buffer)?;
+    Ok(buffer)
+}
+
 fn main() -> Result<(), ParseError> {
     #[cfg(feature = "env_logger")]
     env_logger::init();
 
-    let matches = App::new("nonogrid")
-        .version("0.1.0")
-        .about("Efficient nonogram solver")
-        .arg(
-            Arg::with_name("INPUT")
-                .help("The nonogram file or puzzle ID to solve. When no input is present, read from the stdin.")
-                .index(1)
-        )
-        .arg(
-            Arg::with_name("webpbn").help("Solve puzzle from http://webpbn.com with specified ID")
-                .short("w").long("webpbn").requires("INPUT")
-        )
-        .arg(
-            Arg::with_name("nonograms-org").help("Solve puzzle from http://www.nonograms.org/ with specified ID")
-                .short("o").long("nonograms-org").requires("INPUT").conflicts_with("webpbn")
-        )
-        .args_from_usage(
-            "-m, --max-solutions=[THRESHOLD] 'Stop searching after finding enough solutions'
-             -t, --timeout=[SECONDS] 'Stop searching after specified timeout in seconds'
-             -d, --max-depth=[DEPTH] 'Stop searching after reaching specified search depth'",
-        )
-        .get_matches();
-
-    let search_options = search_options_from_args(&matches);
-    let (source, content) = content_from_args(&matches)?;
+    let params = Params::new();
+    let search_options = params.get_search_options();
+    let (source, content) = params.get_content()?;
 
     match source {
         Source::LocalFile => run(
@@ -122,61 +229,9 @@ where
     }
 }
 
-fn content_from_args(matches: &ArgMatches) -> Result<(Source, String), ParseError> {
-    let input_id = matches.value_of("INPUT");
-
-    if matches.is_present("webpbn") {
-        return Ok((
-            Source::WebPbn,
-            input_id
-                .expect("INPUT should be present in --webpbn mode")
-                .to_string(),
-        ));
-    }
-
-    if matches.is_present("nonograms-org") {
-        return Ok((
-            Source::NonogramsOrg,
-            input_id
-                .expect("INPUT should be present in --nonograms-org mode")
-                .to_string(),
-        ));
-    }
-
-    let content = if let Some(input_file) = input_id {
-        fs::read_to_string(input_file)?
-    } else {
-        warn!("Reading from stdin...");
-        let mut buffer = String::new();
-        stdin().read_to_string(&mut buffer)?;
-        buffer
-    };
-
-    Ok((Source::LocalFile, content))
-}
-
 type SearchOptions = (Option<usize>, Option<u32>, Option<usize>);
 
-fn search_options_from_args(matches: &ArgMatches) -> SearchOptions {
-    (
-        parse_arg::<usize>(&matches, "max-solutions"),
-        parse_arg::<u32>(&matches, "timeout"),
-        parse_arg::<usize>(&matches, "max-depth"),
-    )
-}
-
-fn parse_arg<T>(matches: &ArgMatches, name: &str) -> Option<T>
-where
-    T: FromStr,
-{
-    if matches.is_present(name) {
-        let value = value_t!(matches, name, T).unwrap_or_else(|e| e.exit());
-        return Some(value);
-    }
-
-    None
-}
-
+#[allow(dead_code)]
 enum Source {
     LocalFile,
     WebPbn,
