@@ -36,7 +36,7 @@ RUST_BACKTRACE=1 RUST_LOG=nonogrid=info cargo run -- examples/hello.toml
 
 ## Features
 
-By default the `--no-default-features --features="clap std_time colored env_logger"` are enabled but you can disable almost anything
+By default the `--no-default-features --features="clap std_time env_logger"` are enabled but you can disable almost anything
 to speed up and/or shrink the size of the application.
 
 ### Arguments parsing
@@ -67,11 +67,10 @@ You can enable it by building with the `--features=xml`.
 
 ### Colored nonograms
 
-By default the feature `colored` is enabled to allow to print colored nonograms with real terminal colors.
-You can disable this feature:
+You can enable the feature `colored` to allow to print colored nonograms with real terminal colors:
 
 ```
-cargo run --no-default-features --features="clap env_logger" -- puzzles/2192.xml
+cargo run --no-default-features --features="clap colored" -- puzzles/2192.xml
 ```
 
 ### Logging

@@ -38,7 +38,7 @@ reqwest = {version="0.9", optional=true}
 std_time = []
 xml = ["sxd-document", "sxd-xpath"]
 ini = ["toml", "serde", "serde_derive"]
-default = ["clap", "std_time", "colored", "env_logger", "ini"]
+default = ["clap", "std_time", "env_logger", "ini"]
 web = ["reqwest"]
 # slower, but allows to use with concurrency
 threaded = []
