@@ -41,7 +41,7 @@ mod cli {
     impl<'a> Params<'a> {
         pub(super) fn new() -> Self {
             let matches = App::new("nonogrid")
-                .version("0.1.0")
+                .version("0.5.0")
                 .about("Efficient nonogram solver")
                 .arg(
                     Arg::with_name("INPUT")

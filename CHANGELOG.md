@@ -60,3 +60,29 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Updated
 - published on crates.io repository
+
+
+## [0.5.0] - 2019-07-03
+### Added
+- olsak is the new default format for webpbn puzzles
+- support for [more formats](https://webpbn.com/export.cgi/) (faase, ish, keen, makhorin, ss, syro, nin)
+- _LOW_PRIORITY_ environment variable to prevent probing the cells with possibly low impact
+- [more checks](src/lib.rs)
+- implement `Debug` for all the structures
+- [travis](https://travis-ci.org/tsionyx/nonogrid) tests support
+- 'stat' mode for [batch.sh](benches/batch.sh) script
+- performance comparison [results as csv](benches)
+- [article](doc/README.md) on [habr.com]((https://habr.com/ru/post/454586/))
+
+### Fixed
+- remove `Color::is_updated_with` and `Board::diff` to improve performance
+- disable `backtracking::Solver::explored_paths` to improve performance
+- improve `backtracking::SearchTree::debug` to prevent high memory usage
+- add 'repository' in crate metadata
+
+### Updated
+- move all but the core dependencies into optional features (clap, env_logger, ini, xml, colored)
+- iterators refactoring
+- [bench results](benches/results.md)
+- merge 'benches/batch-nonograms.org.sh' and 'benches/batch-webpbn.sh' into [single script](benches/batch.sh)
+- remove unnecessary `pub`
