@@ -151,7 +151,9 @@ pub mod color {
     /// use nonogrid::block::base::color::ColorValue;
     ///
     /// assert_eq!(ColorValue::parse("0F0"), ColorValue::HexValue3(240));
+    /// assert_eq!(ColorValue::parse("#0F0"), ColorValue::HexValue3(240));
     /// assert_eq!(ColorValue::parse("0000FF"), ColorValue::HexValue6(255));
+    /// assert_eq!(ColorValue::parse("#0000FF"), ColorValue::HexValue6(255));
     /// assert_eq!(ColorValue::parse("white"), ColorValue::CommonName("white".to_string()));
     /// assert_eq!(ColorValue::parse("200, 16,0  "), ColorValue::RgbTriplet(200, 16, 0));
     /// // invalid triplet: G component is not an u8
@@ -159,6 +161,12 @@ pub mod color {
     /// ```
     impl ColorValue {
         pub fn parse(value: &str) -> Self {
+            let value = if value.starts_with('#') {
+                &value[1..]
+            } else {
+                value
+            };
+
             if value.len() == 3 {
                 let hex3 = u16::from_str_radix(value, 16);
                 if let Ok(hex3) = hex3 {

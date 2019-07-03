@@ -86,3 +86,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [bench results](benches/results.md)
 - merge 'benches/batch-nonograms.org.sh' and 'benches/batch-webpbn.sh' into [single script](benches/batch.sh)
 - remove unnecessary `pub`
+
+
+## [0.5.1] - 2019-07-03
+
+### Fixed
+- correctly parse the colors starting with '#', e.g. _#FF00FF_
