@@ -5,13 +5,12 @@ use std::time::Instant;
 
 use hashbrown::{HashMap, HashSet};
 use log::Level;
-use ordered_float::OrderedFloat;
 
 use crate::block::{Block, Color};
 use crate::board::{Board, Point};
 use crate::solver::{
     line::LineSolver,
-    probing::{Impact, ProbeSolver},
+    probing::{Impact, Priority, ProbeSolver},
 };
 use crate::utils::{
     rc::{MutRc, ReadRef},
@@ -349,7 +348,8 @@ where
             .iter()
             .map(|(point, color_to_impact)| {
                 let values: Vec<_> = color_to_impact.values().collect();
-                (point, OrderedFloat(Self::rate_by_impact(&values)))
+                let priority: Priority = Self::rate_by_impact(&values).into();
+                (point, priority)
             })
             .collect();
         points_rate.sort_by_key(|&(point, rate)| (Reverse(rate), point));
@@ -373,7 +373,7 @@ where
 
     const CHOOSE_STRATEGY: ChoosePixel = ChoosePixel::Sqrt;
 
-    fn rate_by_impact(impact: &[&(usize, f64)]) -> f64 {
+    fn rate_by_impact(impact: &[&(usize, Priority)]) -> f64 {
         let sizes_only: Vec<_> = impact
             .iter()
             .map(|(new_points, _priority)| *new_points)
@@ -685,10 +685,7 @@ where
         }
     }
 
-    fn set_guess(
-        &mut self,
-        guess: (Point, B::Color),
-    ) -> Result<Vec<(Point, OrderedFloat<f64>)>, String> {
+    fn set_guess(&mut self, guess: (Point, B::Color)) -> Result<Vec<(Point, Priority)>, String> {
         let (point, color) = guess;
 
         if !self.board().cell(&point).variants().contains(&color) {

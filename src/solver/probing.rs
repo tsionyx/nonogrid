@@ -19,11 +19,11 @@ pub struct ProbeImpact<C: Color> {
     point: Point,
     color: C,
     cells_solved: usize,
-    probe_priority: f64,
+    probe_priority: Priority,
 }
 
 impl<C: Color> ProbeImpact<C> {
-    pub fn as_tuple(&self) -> (Point, C, usize, f64) {
+    pub fn as_tuple(&self) -> (Point, C, usize, Priority) {
         (
             self.point,
             self.color,
@@ -33,8 +33,27 @@ impl<C: Color> ProbeImpact<C> {
     }
 }
 
+#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
+//pub struct Priority(pub u32);
+pub struct Priority(pub OrderedFloat<f64>);
+
+impl Priority {
+    //const MULTIPLIER: u32 = 10000;
+    //const NEIGHBOUR_OF_NEWLY_SOLVED: Self = Self(10 * Self::MULTIPLIER);
+    //const NEIGHBOUR_OF_CONTRADICTION: Self = Self(20 * Self::MULTIPLIER);
+    const NEIGHBOUR_OF_NEWLY_SOLVED: Self = Self(OrderedFloat(10.0));
+    const NEIGHBOUR_OF_CONTRADICTION: Self = Self(OrderedFloat(20.0));
+}
+
+impl From<f64> for Priority {
+    fn from(val: f64) -> Self {
+        //Self((val * Self::MULTIPLIER as f64) as u32)
+        Self(OrderedFloat(val))
+    }
+}
+
 pub type Impact<B> = Vec<ProbeImpact<<B as Block>::Color>>;
-type OrderedPoints = PQ<Point, OrderedFloat<f64>, DefaultHashBuilder>;
+type OrderedPoints = PQ<Point, Priority, DefaultHashBuilder>;
 
 pub trait ProbeSolver {
     type BlockType: Block;
@@ -42,7 +61,7 @@ pub trait ProbeSolver {
     fn with_board(board: MutRc<Board<Self::BlockType>>) -> Self;
 
     fn unsolved_cells(&self) -> OrderedPoints;
-    fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, OrderedFloat<f64>)>, String>
+    fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, Priority)>, String>
     where
         S: LineSolver<BlockType = Self::BlockType>;
 
@@ -64,17 +83,15 @@ where
     B: Block,
 {
     board: MutRc<Board<B>>,
-    low_threshold: f64,
+    low_threshold: Priority,
 }
 
-const PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED: f64 = 10.0;
-const PRIORITY_NEIGHBOURS_OF_CONTRADICTION: f64 = 20.0;
-
-fn low_priority_threshold() -> f64 {
+fn low_priority_threshold() -> Priority {
     env::var("LOW_PRIORITY")
         .ok()
         .and_then(|val| val.parse().ok())
         .unwrap_or(0.0)
+        .into()
 }
 
 impl<B> ProbeSolver for FullProbe1<B>
@@ -107,13 +124,13 @@ where
                 .unwrap_or_insert_with(point.x(), || board.column_solution_rate(point.x()));
 
             let priority = no_solved as f64 + row_rate + column_rate;
-            (point, OrderedFloat(priority))
+            (point, priority.into())
         }));
 
         queue
     }
 
-    fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, OrderedFloat<f64>)>, String>
+    fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, Priority)>, String>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -126,14 +143,13 @@ where
             .flat_map(|new_point| {
                 board
                     .unsolved_neighbours(&new_point)
-                    .map(|neighbour| (neighbour, OrderedFloat(PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED)))
+                    .map(|neighbour| (neighbour, Priority::NEIGHBOUR_OF_NEWLY_SOLVED))
             })
-            .chain(self.board().unsolved_neighbours(&point).map(|neighbour| {
-                (
-                    neighbour,
-                    OrderedFloat(PRIORITY_NEIGHBOURS_OF_CONTRADICTION),
-                )
-            }))
+            .chain(
+                self.board()
+                    .unsolved_neighbours(&point)
+                    .map(|neighbour| (neighbour, Priority::NEIGHBOUR_OF_CONTRADICTION)),
+            )
             .collect())
     }
 
@@ -156,11 +172,11 @@ where
                 let mut false_probes = None;
                 let mut probe_counter = 0_u32;
 
-                while let Some((point, OrderedFloat(priority))) = probes.pop() {
+                while let Some((point, priority)) = probes.pop() {
                     probe_counter += 1;
 
                     info!(
-                        "Trying probe #{} {:?} with priority {}",
+                        "Trying probe #{} {:?} with priority {:?}",
                         probe_counter, point, priority
                     );
                     let probe_results = if priority < self.low_threshold {
