@@ -179,17 +179,19 @@ where
                         "Trying probe #{} {:?} with priority {:?}",
                         probe_counter, point, priority
                     );
-                    let probe_results = if priority < self.low_threshold {
-                        self.board()
-                            .cell(&point)
-                            .variants()
-                            .into_iter()
-                            .map(|color| (color, Some(0)))
-                            .collect()
-                    } else {
-                        self.probe::<S>(point)
-                    };
+                    if priority < self.low_threshold {
+                        impact.extend(self.board().cell(&point).variants().into_iter().map(
+                            |color| ProbeImpact {
+                                point,
+                                color,
+                                probe_priority: priority,
+                                cells_solved: 0,
+                            },
+                        ));
+                        continue;
+                    }
 
+                    let probe_results = self.probe::<S>(point);
                     let (contradictions, non_contradictions): (Vec<_>, Vec<_>) = probe_results
                         .into_iter()
                         .partition(|(_color, size)| size.is_none());
