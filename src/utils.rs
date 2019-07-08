@@ -417,13 +417,13 @@ mod tests {
 
     #[test]
     fn transpose_empty() {
-        let m: Vec<Vec<u8>> = vec![];
+        let m = Vec::<Vec<u8>>::new();
         assert_eq!(transpose(&m).unwrap(), Vec::<Vec<u8>>::new())
     }
 
     #[test]
     fn transpose_empty_rows() {
-        let m: Vec<Vec<u8>> = vec![vec![], vec![], vec![]];
+        let m = vec![Vec::<u8>::new(), vec![], vec![]];
         assert_eq!(transpose(&m).unwrap(), Vec::<Vec<u8>>::new())
     }
 

@@ -368,7 +368,7 @@ where
                     .collect();
                 point_order
             })
-            .collect::<Vec<_>>()
+            .collect()
     }
 
     const CHOOSE_STRATEGY: ChoosePixel = ChoosePixel::Sqrt;
