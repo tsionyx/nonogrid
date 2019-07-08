@@ -194,7 +194,7 @@ where
                     let probe_results = self.probe::<S>(point);
                     let (contradictions, non_contradictions): (Vec<_>, Vec<_>) = probe_results
                         .into_iter()
-                        .partition(|(_color, size)| size.is_none());
+                        .partition(|(_color, res)| res.is_contradiction());
 
                     if !contradictions.is_empty() {
                         let bad_colors: Vec<_> = contradictions
@@ -211,7 +211,7 @@ where
                             point,
                             color,
                             probe_priority: priority,
-                            cells_solved: updated.expect("Number of cells"),
+                            cells_solved: updated.unwrap(),
                         }
                     }));
                 }
@@ -246,6 +246,29 @@ where
     }
 }
 
+enum ProbeResult<PropagationResult> {
+    Contradiction,
+    NewInfo(PropagationResult),
+}
+
+impl<PropagationResult> ProbeResult<PropagationResult> {
+    fn is_contradiction(&self) -> bool {
+        if let ProbeResult::Contradiction = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn unwrap(self) -> PropagationResult {
+        if let ProbeResult::NewInfo(res) = self {
+            return res;
+        }
+
+        panic!("The result is contradiction")
+    }
+}
+
 impl<B> FullProbe1<B>
 where
     B: Block,
@@ -268,7 +291,7 @@ where
 
     /// Try every color for given cell
     /// and return the number of solved cells (Some) or contradiction (None)
-    fn probe<S>(&self, point: Point) -> Vec<(B::Color, Option<usize>)>
+    fn probe<S>(&self, point: Point) -> Vec<(B::Color, ProbeResult<usize>)>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -285,22 +308,23 @@ where
                 Board::set_color_with_callback(MutRc::clone(&self.board), &point, &assumption);
 
                 let solved = self.run_propagation::<S>(&point);
-                Board::restore_with_callback(MutRc::clone(&self.board), save);
 
-                let impact_size = solved.ok().map_or_else(
+                let impact = solved.ok().map_or_else(
                     || {
                         info!("Contradiction found! {:?}: {:?}", point, assumption);
-                        None
+                        ProbeResult::Contradiction
                     },
                     |new_cells| {
                         if !new_cells.is_empty() {
                             info!("Probing {:?}: {:?}", point, assumption);
                             debug!("New info: {:?}", new_cells);
                         }
-                        Some(new_cells.len())
+                        ProbeResult::NewInfo(new_cells.len())
                     },
                 );
-                (assumption, impact_size)
+                Board::restore_with_callback(MutRc::clone(&self.board), save);
+
+                (assumption, impact)
             })
             .collect()
     }
