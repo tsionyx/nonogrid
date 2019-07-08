@@ -1,23 +1,5 @@
 #[cfg(feature = "threaded")]
-use nonogrid::{
-    block::base::Block,
-    block::binary::BinaryColor,
-    render::{Renderer, ShellRenderer},
-};
-
-#[cfg(feature = "threaded")]
-fn example_set_line_callback<B, R>(renderer: &R, is_column: bool, index: usize)
-where
-    B: Block,
-    R: Renderer<B>,
-{
-    println!(
-        "Set {}-th {}",
-        index,
-        if is_column { "column" } else { "row" }
-    );
-    println!("{}", renderer.render())
-}
+use nonogrid::{block::binary::BinaryColor, render::ShellRenderer};
 
 #[cfg(feature = "ini")]
 mod ini {
@@ -36,17 +18,29 @@ mod ini {
     #[cfg(feature = "threaded")]
     fn hello() {
         use super::*;
+        use nonogrid::render::Renderer;
 
         let f = MyFormat::read_local("examples/hello.toml").unwrap();
         let board = f.parse::<BinaryBlock>();
         let board = MutRc::new(board);
 
-        let callback_renderer = ShellRenderer::with_board(MutRc::clone(&board));
+        let line_callback_renderer = ShellRenderer::with_board(MutRc::clone(&board));
         board
             .write()
             .set_callback_on_set_line(move |is_column, index| {
-                example_set_line_callback(&callback_renderer, is_column, index)
+                println!(
+                    "Set {}-th {}",
+                    index,
+                    if is_column { "column" } else { "row" }
+                );
+                println!("{}", line_callback_renderer.render())
             });
+
+        let color_callback_renderer = ShellRenderer::with_board(MutRc::clone(&board));
+        board.write().set_callback_on_change_color(move |point| {
+            println!("Changing the {:?}", point,);
+            println!("{}", color_callback_renderer.render())
+        });
 
         warn!("Solving with simple line propagation");
         let solver = propagation::Solver::new(MutRc::clone(&board));
