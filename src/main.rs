@@ -30,7 +30,7 @@ pub(crate) mod utils;
 mod cli {
     use std::str::FromStr;
 
-    use clap::{value_t, App, Arg, ArgMatches};
+    use clap::{crate_version, value_t, App, Arg, ArgMatches};
 
     use super::*;
 
@@ -41,7 +41,7 @@ mod cli {
     impl<'a> Params<'a> {
         pub(super) fn new() -> Self {
             let matches = App::new("nonogrid")
-                .version("0.5.1")
+                .version(crate_version!())
                 .about("Efficient nonogram solver")
                 .arg(
                     Arg::with_name("INPUT")
