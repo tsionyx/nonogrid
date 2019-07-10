@@ -214,7 +214,7 @@ mod ini {
             B: Block,
         {
             let descriptions = descriptions.trim();
-            let parts: Vec<_> = descriptions.split(|c| c == '#' || c == ';').collect();
+            let parts: Vec<&str> = descriptions.split(|c| c == '#' || c == ';').collect();
 
             let non_comment = parts[0];
             // dbg!(&non_comment);

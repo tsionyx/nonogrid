@@ -471,7 +471,7 @@ mod tests {
 
     #[test]
     fn two_powers_factorization() {
-        let numbers = [0, 1, 2, 5, 42, 1000, 23700723];
+        let numbers = [0, 1, 2, 5, 42, 1000, 23_700_723];
         let results = [
             vec![],
             vec![1],
@@ -496,7 +496,7 @@ mod tests {
                 1 << 24,
             ],
         ];
-        for (x, res) in numbers.into_iter().zip(&results) {
+        for (x, res) in numbers.iter().zip(&results) {
             assert_eq!(&two_powers(*x).collect::<Vec<_>>(), res);
         }
     }
