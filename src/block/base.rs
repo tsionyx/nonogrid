@@ -213,16 +213,16 @@ pub mod color {
             match self {
                 ColorValue::RgbTriplet(r, g, b) => (*r, *g, *b),
                 ColorValue::HexValue3(hex3) => {
-                    let (r, gb) = (hex3 >> 8, hex3 % (1 << 8));
+                    let (r, gb) = (hex3 >> 8, *hex3 as u8);
                     let (g, b) = (gb >> 4, gb % (1 << 4));
 
-                    (r as u8 * 17, (g * 17) as u8, (b * 17) as u8)
+                    (r as u8 * 17, g * 17, b * 17)
                 }
                 ColorValue::HexValue6(hex6) => {
-                    let (r, gb) = (hex6 / (1 << 16), hex6 % (1 << 16));
-                    let (g, b) = (gb / 256, gb % 256);
+                    let (r, gb) = (hex6 >> 16, *hex6 as u16);
+                    let (g, b) = (gb >> 8, gb as u8);
 
-                    (r as u8, g as u8, b as u8)
+                    (r as u8, g as u8, b)
                 }
                 // https://www.rapidtables.com/web/color/RGB_Color.html#color-table
                 ColorValue::CommonName(name) => match name.to_lowercase().as_str() {
