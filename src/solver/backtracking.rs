@@ -617,13 +617,13 @@ where
     }
 
     fn add_search_score(&mut self, path: &[(Point, B::Color)], score: f64) {
-        if log_enabled!(Level::Warn) {
+        if log_enabled!(Level::Info) {
             SearchTree::add(MutRc::clone(&self.search_tree), path, Some(score));
         }
     }
 
     fn add_search_deadend(&mut self, path: &[(Point, B::Color)]) {
-        if log_enabled!(Level::Warn) {
+        if log_enabled!(Level::Info) {
             SearchTree::add(MutRc::clone(&self.search_tree), path, None);
         }
     }
