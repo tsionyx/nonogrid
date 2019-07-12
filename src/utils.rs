@@ -189,7 +189,7 @@ where
         .collect()
 }
 
-fn idx_to_ranges<T>(indexes: &[T]) -> Option<Vec<Range<T>>>
+fn idx_to_ranges<T>(mut indexes: Vec<T>) -> Option<Vec<Range<T>>>
 where
     T: Ord + Clone,
 {
@@ -197,7 +197,6 @@ where
         return None;
     }
 
-    let mut indexes = indexes.to_owned();
     indexes.sort_unstable();
     let shifted: Vec<_> = indexes[1..].to_vec();
 
@@ -239,7 +238,7 @@ pub fn split_sections<'a, 'b>(
     let eof = lines.len();
     let indexes_with_eof: Vec<_> = section_indexes.values().cloned().chain(once(eof)).collect();
 
-    let mut ranges: HashMap<_, _> = idx_to_ranges(&indexes_with_eof)
+    let mut ranges: HashMap<_, _> = idx_to_ranges(indexes_with_eof)
         .ok_or_else(|| "Should be enough indexes".to_string())?
         .into_iter()
         .map(|range| (range.start, range))
@@ -505,26 +504,26 @@ mod tests {
     fn to_ranges_empty() {
         let vec: Vec<u8> = vec![];
 
-        assert_eq!(idx_to_ranges(&vec), None);
+        assert_eq!(idx_to_ranges(vec), None);
     }
 
     #[test]
     fn to_ranges_single() {
         let vec = vec![5];
-        assert_eq!(idx_to_ranges(&vec), None);
+        assert_eq!(idx_to_ranges(vec), None);
     }
 
     #[test]
     fn to_ranges_unsorted() {
         let vec = vec![9, 5];
-        assert_eq!(idx_to_ranges(&vec), Some(vec![5..9]));
+        assert_eq!(idx_to_ranges(vec), Some(vec![5..9]));
     }
 
     #[test]
     fn to_ranges_multiple() {
         let vec = vec![5, 9, 42, 111, 84, 7, 0];
         assert_eq!(
-            idx_to_ranges(&vec),
+            idx_to_ranges(vec),
             Some(vec![0..5, 5..7, 7..9, 9..42, 42..84, 84..111])
         );
     }

@@ -259,7 +259,7 @@ where
             "Starting depth-first search (initial rate is {:.4})",
             self.board().solution_rate()
         );
-        let success = self.search(&directions, &[])?;
+        let success = self.search(directions, &[])?;
         if !success {
             return Err("Backtracking failed".to_string());
         }
@@ -411,7 +411,7 @@ where
     /// Return False if the given path is a dead end (no solutions can be found)
     fn search(
         &mut self,
-        directions: &[(Point, B::Color)],
+        directions: Vec<(Point, B::Color)>,
         path: &[(Point, B::Color)],
     ) -> Result<bool, String> {
         if self.is_explored(path) {
@@ -437,7 +437,7 @@ where
 
     fn search_mutable(
         &mut self,
-        directions: &[(Point, B::Color)],
+        mut directions: Vec<(Point, B::Color)>,
         path: &[(Point, B::Color)],
     ) -> Result<bool, String> {
         let depth = path.len();
@@ -449,8 +449,6 @@ where
         // to prevent succeeded useless probing on the same board
         let mut board_changed = true;
         let mut search_counter = 0_u32;
-
-        let mut directions = directions.to_vec();
 
         // push and pop from the end, so the most prioritized items are on the left
         directions.reverse();
@@ -674,7 +672,7 @@ where
                 if directions.is_empty() {
                     Ok(true)
                 } else {
-                    self.search(&directions, path)
+                    self.search(directions, path)
                 }
             }
             Err(err) => {
