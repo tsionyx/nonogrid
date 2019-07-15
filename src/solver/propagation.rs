@@ -180,17 +180,17 @@ where
             //board.solution_round_completed()
             //let rate = board.solution_rate();
             //if rate != 1 {
-            //    warn!("The nonogram is not solved full: {:.4}", rate)
+            //    info!("The nonogram is not solved full: {:.4}", rate)
             //}
 
-            if log_enabled!(Level::Info) {
+            if log_enabled!(Level::Debug) {
                 //let total_time = start.elapsed();
-                //info!(
+                //debug!(
                 //    "Full solution: {}.{:06} sec",
                 //    total_time.as_secs(),
                 //    total_time.subsec_micros()
                 //);
-                info!("Lines solved: {}", lines_solved);
+                debug!("Lines solved: {}", lines_solved);
             }
         }
 

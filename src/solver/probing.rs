@@ -136,7 +136,7 @@ where
     {
         let fixed_points = self.run_propagation::<S>(point)?;
         let board = self.board();
-        info!("Solution rate: {}", self.board().solution_rate());
+        debug!("Solution rate: {:.2}", self.board().solution_rate());
 
         Ok(fixed_points
             .into_iter()
@@ -175,7 +175,7 @@ where
                 while let Some((point, priority)) = probes.pop() {
                     probe_counter += 1;
 
-                    info!(
+                    debug!(
                         "Trying probe #{} {:?} with priority {:?}",
                         probe_counter, point, priority
                     );
@@ -235,7 +235,7 @@ where
 
         if contradictions_number > 0 {
             //let total_time = start.elapsed();
-            //warn!(
+            //info!(
             //    "Full solution: {}.{:06} sec",
             //    total_time.as_secs(),
             //    total_time.subsec_micros()
@@ -311,13 +311,15 @@ where
 
                 let impact = solved.ok().map_or_else(
                     || {
-                        info!("Contradiction found! {:?}: {:?}", point, assumption);
+                        debug!("Contradiction found! {:?}: {:?}", point, assumption);
                         ProbeResult::Contradiction
                     },
                     |new_cells| {
                         if !new_cells.is_empty() {
-                            info!("Probing {:?}: {:?}", point, assumption);
-                            debug!("New info: {:?}", new_cells);
+                            debug!(
+                                "Probing {:?}: {:?} brings some new info: {:?}",
+                                point, assumption, new_cells
+                            );
                         }
                         ProbeResult::NewInfo(new_cells.len())
                     },

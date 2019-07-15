@@ -322,9 +322,7 @@ where
     fn add_solution(&mut self) -> Result<(), String> {
         // TODO: force to check the board
         info!("Found one of solutions");
-        if self.already_found() {
-            info!("Solution already exists.");
-        } else {
+        if !self.already_found() {
             let cells = self.board().make_snapshot();
             self.solutions.push(cells);
         }
@@ -470,7 +468,7 @@ where
                 self.board().cell(&point).variants().into_iter().collect();
 
             if !cell_colors.contains(&color) {
-                warn!(
+                info!(
                     "The color {:?} is already expired. Possible colors for {:?} are {:?}",
                     color, point, cell_colors
                 );
@@ -512,17 +510,17 @@ where
             full_path.push(direction);
 
             if self.is_explored(&full_path) {
-                warn!("The path {:?} already explored", full_path);
+                info!("The path {:?} already explored", full_path);
                 continue;
             }
 
             {
                 let rate = self.board().solution_rate();
-                warn!(
+                info!(
                     "Trying direction ({}/{}): {:?} (depth={}, rate={:.4})",
                     search_counter, total_number_of_directions, direction, depth, rate
                 );
-                info!("Previous path: {:?}", path);
+                debug!("Previous path: {:?}", path);
 
                 self.add_search_score(path, rate);
             }
@@ -563,7 +561,7 @@ where
                 board_changed = false;
                 if run_with_new_info.is_err() {
                     // the whole `path` branch of a search tree is a dead end
-                    warn!(
+                    info!(
                         "The last possible color {:?} for the {:?} lead to the contradiction. The whole branch (depth={}) is invalid.",
                         color, point, depth);
                     // self._add_search_result(path, False)
@@ -599,7 +597,7 @@ where
                     .collect();
 
                 // if all(self.is_explored(path + (direction,)) for direction in states_to_try) {
-                //     warn!("All other colors ({:?}) of {:?} already explored",
+                //     info!("All other colors ({:?}) of {:?} already explored",
                 //           states_to_try, cell)
                 //     return true;
                 // }
@@ -643,7 +641,7 @@ where
                 probe_jobs.extend(new_jobs);
             }
             Err(err) => {
-                warn!("Guess {:?} failed: {}", direction, err);
+                info!("Guess {:?} failed: {}", direction, err);
                 self.add_search_deadend(path);
                 return Ok(false);
             }
@@ -676,7 +674,7 @@ where
                 }
             }
             Err(err) => {
-                warn!("Guess {:?} failed on probing stage: {}", direction, err);
+                info!("Guess {:?} failed on probing stage: {}", direction, err);
                 self.add_search_deadend(path);
                 Ok(false)
             }
