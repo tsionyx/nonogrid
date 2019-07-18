@@ -554,7 +554,7 @@ mod tests_solve_color {
     #[test]
     fn same_color() {
         check_solve(
-            &vec![ColoredBlock::from_size_and_color(1, 4); 2],
+            &[ColoredBlock::from_size_and_color(1, 4); 2],
             &unsolved_line(3),
             &[4, w(), 4],
         );

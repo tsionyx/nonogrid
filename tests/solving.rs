@@ -3,6 +3,8 @@ use nonogrid::{block::binary::BinaryColor, render::ShellRenderer};
 
 #[cfg(feature = "ini")]
 mod ini {
+    use std::f64;
+
     use log::warn;
 
     use nonogrid::parser::{BoardParser, LocalReader, MyFormat};
@@ -49,7 +51,7 @@ mod ini {
         let board = board.read();
 
         assert!(board.is_solved_full());
-        assert_eq!(board.solution_rate(), 1.0);
+        assert!((board.solution_rate() - 1.0).abs() < f64::EPSILON);
 
         let b = BinaryColor::Black;
         let w = BinaryColor::White;
@@ -72,7 +74,7 @@ mod ini {
 
         {
             let board = board.read();
-            assert_eq!(board.solution_rate(), 0.0);
+            assert!(board.solution_rate() < f64::EPSILON);
             assert!(!board.is_solved_full());
         }
 
@@ -81,7 +83,7 @@ mod ini {
 
         {
             let board = board.read();
-            assert_eq!(board.solution_rate(), 1.0);
+            assert!((board.solution_rate() - 1.0).abs() < f64::EPSILON);
             assert!(board.is_solved_full());
         }
     }
@@ -100,12 +102,14 @@ mod ini {
 
         let board = board.read();
         assert!(board.is_solved_full());
-        assert_eq!(board.solution_rate(), 1.0);
+        assert!((board.solution_rate() - 1.0).abs() < f64::EPSILON);
     }
 }
 
 #[cfg(feature = "web")]
 mod web {
+    use std::f64;
+
     use log::warn;
 
     use nonogrid::parser::{BoardParser, NetworkReader, NonogramsOrg};
@@ -133,7 +137,7 @@ mod web {
 
         let board = board.read();
         assert!(board.is_solved_full());
-        assert_eq!(board.solution_rate(), 1.0);
+        assert!((board.solution_rate() - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -207,6 +211,6 @@ mod web {
 
         let board = board.read();
         assert!(board.is_solved_full());
-        assert_eq!(board.solution_rate(), 1.0);
+        assert!((board.solution_rate() - 1.0).abs() < f64::EPSILON);
     }
 }

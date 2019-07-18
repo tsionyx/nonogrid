@@ -18,5 +18,5 @@ before_script:
 
 script:
   - cargo fmt -- --check
+  - cargo clippy --verbose --all-targets --all-features --all -- -Dwarnings
   - cargo test --all-features --verbose --all
-  - cargo clippy --verbose -- -Dwarnings
