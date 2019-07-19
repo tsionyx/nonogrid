@@ -21,15 +21,15 @@ priority-queue = "0.6"
 ordered-float = "1.0"
 log = "0.4"
 
-toml = {version="0.4", optional=true}
+toml = {version="0.5", optional=true}
 serde_derive = {version="1.0", optional=true}
 serde = {version="1.0", optional=true}
 
 sxd-document = {version="0.3", optional=true}
 sxd-xpath = {version="0.4", optional=true}
 
-clap = {version="2.32", optional=true}
-colored = {version="1.7", optional=true}
+clap = {version="2.33", optional=true}
+colored = {version="1.8", optional=true}
 env_logger = {version="0.6", optional=true}
 reqwest = {version="0.9", optional=true}
 
