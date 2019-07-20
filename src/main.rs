@@ -30,7 +30,9 @@ pub(crate) mod utils;
 mod cli {
     use std::str::FromStr;
 
-    use clap::{crate_version, value_t, App, Arg, ArgMatches};
+    use clap::{
+        crate_authors, crate_description, crate_name, crate_version, value_t, App, Arg, ArgMatches,
+    };
 
     use super::*;
 
@@ -40,9 +42,10 @@ mod cli {
 
     impl<'a> Params<'a> {
         pub(super) fn new() -> Self {
-            let matches = App::new("nonogrid")
+            let matches = App::new(crate_name!())
                 .version(crate_version!())
-                .about("Efficient nonogram solver")
+                .about(crate_description!())
+                .author(crate_authors!())
                 .arg(
                     Arg::with_name("INPUT")
                         .help("The nonogram file or puzzle ID to solve. When no input is present, read from the stdin.")
