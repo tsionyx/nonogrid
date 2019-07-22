@@ -18,7 +18,27 @@ pub struct Point {
     y: usize,
 }
 
-type CacheKey<B> = (usize, ReadRc<Vec<<B as Block>::Color>>);
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct CacheKey<B>
+where
+    B: Block,
+{
+    line_index: usize,
+    source: ReadRc<Vec<B::Color>>,
+}
+
+impl<B> CacheKey<B>
+where
+    B: Block,
+{
+    pub fn with_index_and_line(index: usize, line: ReadRc<Vec<B::Color>>) -> Self {
+        Self {
+            line_index: index,
+            source: line,
+        }
+    }
+}
+
 type CacheValue<B> = Result<ReadRc<Vec<<B as Block>::Color>>, ()>;
 type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
 

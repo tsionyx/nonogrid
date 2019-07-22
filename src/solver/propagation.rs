@@ -1,8 +1,8 @@
 use hashbrown::HashSet;
 use log::Level;
 
-use crate::block::{Block, Description};
-use crate::board::{Board, Point};
+use crate::block::Block;
+use crate::board::{Board, CacheKey, Point};
 use crate::solver::line::{self, LineSolver};
 use crate::utils::rc::{MutRc, ReadRc};
 
@@ -205,54 +205,57 @@ where
     where
         S: LineSolver<BlockType = B>,
     {
-        //let start = Instant::now();
-        let (line_desc, line) = {
+        let (cache_key, line) = {
             let board = self.board.read();
-            if is_column {
-                (
-                    ReadRc::clone(&board.descriptions(false)[index]),
-                    board.get_column(index),
-                )
+            let line = ReadRc::new(if is_column {
+                board.get_column(index)
             } else {
-                (
-                    ReadRc::clone(&board.descriptions(true)[index]),
-                    board.get_row(index),
-                )
-            }
+                board.get_row(index)
+            });
+
+            let cache_index = if is_column {
+                board.column_cache_index(index)
+            } else {
+                board.row_cache_index(index)
+            };
+
+            let key = CacheKey::with_index_and_line(cache_index, ReadRc::clone(&line));
+            (key, line)
         };
 
-        //let pre_solution_rate = Board::<B>::line_solution_rate(&line);
-        //if pre_solution_rate == 1 {
-        //    // do not check solved lines in trusted mode
-        //    if ! contradiction_mode {
-        //        return vec![];
-        //     }
-        //}
+        let cached = self.board.write().cached_solution(is_column, &cache_key);
 
-        if log_enabled!(Level::Debug) {
-            let name = if is_column { "column" } else { "row" };
-            debug!(
-                "Solving {} {}: {:?}. Partial: {:?}",
-                index, name, line_desc, line
-            );
-        }
+        let solution = cached.unwrap_or_else(|| {
+            let line_desc = {
+                let board = self.board.read();
+                if is_column {
+                    ReadRc::clone(&board.descriptions(false)[index])
+                } else {
+                    ReadRc::clone(&board.descriptions(true)[index])
+                }
+            };
 
-        let line = ReadRc::new(line);
-        let solution = self.solve::<S>(index, is_column, line_desc, ReadRc::clone(&line))?;
+            if log_enabled!(Level::Debug) {
+                let name = if is_column { "column" } else { "row" };
+                debug!(
+                    "Solving {} {}: {:?}. Partial: {:?}",
+                    index, name, line_desc, line
+                );
+            }
+
+            let value = line::solve::<S, _>(line_desc, ReadRc::clone(&line)).map(ReadRc::new);
+
+            self.board
+                .write()
+                .set_cached_solution(is_column, cache_key, value.clone());
+            value
+        })?;
+
         let indexes = self.update_solved(index, is_column, &line, &solution);
 
-        if log_enabled!(Level::Debug) {
+        if log_enabled!(Level::Debug) && !indexes.is_empty() {
             let name = if is_column { "column" } else { "row" };
-            //let total_time = start.elapsed();
-            //debug!(
-            //    "{}s solution: {}.{:06} sec",
-            //    name,
-            //    total_time.as_secs(),
-            //    total_time.subsec_micros()
-            //);
-            if !indexes.is_empty() {
-                debug!("New info on {} {}: {:?}", name, index, indexes);
-            }
+            debug!("New info on {} {}: {:?}", name, index, indexes);
         }
 
         Ok(indexes)
@@ -296,37 +299,5 @@ where
                 }
             })
             .collect()
-    }
-
-    fn solve<S>(
-        &self,
-        index: usize,
-        is_column: bool,
-        line_desc: ReadRc<Description<B>>,
-        line: ReadRc<Vec<B::Color>>,
-    ) -> Result<ReadRc<Vec<B::Color>>, ()>
-    where
-        S: LineSolver<BlockType = B>,
-    {
-        let cache_index = if is_column {
-            self.board.read().column_cache_index(index)
-        } else {
-            self.board.read().row_cache_index(index)
-        };
-        let key = (cache_index, ReadRc::clone(&line));
-
-        let cached = self.board.write().cached_solution(is_column, &key);
-
-        if let Some(cached) = cached {
-            return cached;
-        }
-
-        let value = line::solve::<S, _>(line_desc, line);
-
-        let rc_value = value.map(ReadRc::new);
-        self.board
-            .write()
-            .set_cached_solution(is_column, key, rc_value.clone());
-        rc_value
     }
 }
