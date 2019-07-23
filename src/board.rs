@@ -19,7 +19,7 @@ pub struct Point {
 }
 
 type CacheKey<B> = (usize, ReadRc<Vec<<B as Block>::Color>>);
-type CacheValue<B> = Result<ReadRc<Vec<<B as Block>::Color>>, String>;
+type CacheValue<B> = Result<ReadRc<Vec<<B as Block>::Color>>, ()>;
 type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
 
 fn new_cache<B>(capacity: usize) -> LineSolverCache<B>

@@ -21,7 +21,10 @@ where
 {
     warn!("Solving with simple line propagation");
     let solver = propagation::Solver::new(MutRc::clone(&board));
-    let solved = solver.run::<S>()?;
+    let solved = solver
+        .run::<S>()
+        .map_err(|_| "Bad puzzle for sure: simple propagation failed".to_string())?;
+
     warn!("Solved {} points", solved.len());
 
     if !board.read().is_solved_full() {

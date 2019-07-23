@@ -116,7 +116,7 @@ where
         }
     }
 
-    pub fn run<S>(&self) -> Result<Vec<Point>, String>
+    pub fn run<S>(&self) -> Result<Vec<Point>, ()>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -141,7 +141,7 @@ where
         }
     }
 
-    fn run_jobs<S, Q>(&self, mut queue: Q) -> Result<Vec<Point>, String>
+    fn run_jobs<S, Q>(&self, mut queue: Q) -> Result<Vec<Point>, ()>
     where
         S: LineSolver<BlockType = B>,
         Q: JobQueue,
@@ -201,7 +201,7 @@ where
     /// If the line gets partially solved, put the crossed lines into queue.
     ///
     /// Return the list of indexes which was updated during this solution.
-    fn update_line<S>(&self, index: usize, is_column: bool) -> Result<Vec<usize>, String>
+    fn update_line<S>(&self, index: usize, is_column: bool) -> Result<Vec<usize>, ()>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -304,7 +304,7 @@ where
         is_column: bool,
         line_desc: ReadRc<Description<B>>,
         line: ReadRc<Vec<B::Color>>,
-    ) -> Result<ReadRc<Vec<B::Color>>, String>
+    ) -> Result<ReadRc<Vec<B::Color>>, ()>
     where
         S: LineSolver<BlockType = B>,
     {

@@ -641,7 +641,7 @@ where
                 probe_jobs.extend(new_jobs);
             }
             Err(err) => {
-                info!("Guess {:?} failed: {}", direction, err);
+                info!("{}", err);
                 self.add_search_deadend(path);
                 return Ok(false);
             }
@@ -692,7 +692,10 @@ where
         //let save = self.board().make_snapshot();
 
         Board::set_color_with_callback(MutRc::clone(&self.board), &point, &color);
-        let new_probes = self.probe_solver.propagate_point::<S>(&point)?;
+        let new_probes = self
+            .probe_solver
+            .propagate_point::<S>(&point)
+            .map_err(|_| format!("Error while propagating value {:?} in {:?}", &color, &point))?;
 
         if self.board().is_solved_full() {
             self.add_solution()?;

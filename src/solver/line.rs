@@ -10,21 +10,24 @@ pub trait LineSolver {
     type BlockType: Block;
 
     fn new(desc: ReadRc<Description<Self::BlockType>>, line: ReadRc<Vec<LineColor<Self>>>) -> Self;
-    fn solve(&mut self) -> Result<(), String>;
+    fn solve(&mut self) -> bool;
     fn get_solution(self) -> Vec<LineColor<Self>>;
 }
 
 pub fn solve<L, B>(
     desc: ReadRc<Description<B>>,
     line: ReadRc<Vec<B::Color>>,
-) -> Result<Vec<B::Color>, String>
+) -> Result<Vec<B::Color>, ()>
 where
     L: LineSolver<BlockType = B>,
     B: Block,
 {
     let mut solver = L::new(desc, line);
-    solver.solve()?;
-    Ok(solver.get_solution())
+    if solver.solve() {
+        Ok(solver.get_solution())
+    } else {
+        Err(())
+    }
 }
 
 pub trait DynamicColor: Color
@@ -84,22 +87,22 @@ where
         }
     }
 
-    fn solve(&mut self) -> Result<(), String> {
-        if self.try_solve() {
-            let solved = &mut self.solved_line;
-            if self.additional_space {
-                assert_eq!(solved.pop(), Some(B::Color::blank()));
-            }
-
-            let both = B::Color::both_colors();
-            if let Some(both) = both {
-                let init = B::Color::default();
-                utils::replace(solved, &both, &init);
-            }
-            Ok(())
-        } else {
-            Err("Bad line".to_string())
+    fn solve(&mut self) -> bool {
+        if !self.try_solve() {
+            return false;
         }
+
+        let solved = &mut self.solved_line;
+        if self.additional_space {
+            assert_eq!(solved.pop(), Some(B::Color::blank()));
+        }
+
+        let both = B::Color::both_colors();
+        if let Some(both) = both {
+            let init = B::Color::default();
+            utils::replace(solved, &both, &init);
+        }
+        true
     }
 
     fn get_solution(self) -> Vec<B::Color> {
@@ -467,7 +470,7 @@ mod tests {
             let original_line = line.clone();
 
             let mut ds = DynamicSolver::new(ReadRc::new(desc), ReadRc::new(line));
-            ds.solve().unwrap();
+            assert!(ds.solve());
             assert_eq!(*ds.line, original_line);
             assert_eq!(ds.get_solution(), expected);
         }
@@ -621,6 +624,6 @@ mod tests_solve_color {
         ]);
 
         let mut ds = DynamicSolver::new(desc, ReadRc::new(unsolved_line(4)));
-        assert_eq!(ds.solve(), Err("Bad line".to_string()));
+        assert_eq!(ds.solve(), false);
     }
 }

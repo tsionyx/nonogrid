@@ -61,7 +61,7 @@ pub trait ProbeSolver {
     fn with_board(board: MutRc<Board<Self::BlockType>>) -> Self;
 
     fn unsolved_cells(&self) -> OrderedPoints;
-    fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, Priority)>, String>
+    fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, Priority)>, ()>
     where
         S: LineSolver<BlockType = Self::BlockType>;
 
@@ -130,7 +130,7 @@ where
         queue
     }
 
-    fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, Priority)>, String>
+    fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, Priority)>, ()>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -219,14 +219,19 @@ where
                 if let Some((contradiction, colors)) = false_probes {
                     contradictions_number += 1;
 
-                    for color in colors {
+                    for color in &colors {
                         Board::unset_color_with_callback(
                             MutRc::clone(&self.board),
                             &contradiction,
-                            &color,
+                            color,
                         )?;
                     }
-                    let new_probes = self.propagate_point::<S>(&contradiction)?;
+                    let new_probes = self.propagate_point::<S>(&contradiction).map_err(|_| {
+                        format!(
+                            "Error while propagating contradicted values {:?} in {:?}",
+                            &colors, &contradiction
+                        )
+                    })?;
                     probes.extend(new_probes);
                 } else {
                     break impact;
@@ -277,7 +282,7 @@ where
         self.board.read()
     }
 
-    fn run_propagation<S>(&self, point: &Point) -> Result<Vec<Point>, String>
+    fn run_propagation<S>(&self, point: &Point) -> Result<Vec<Point>, ()>
     where
         S: LineSolver<BlockType = B>,
     {
