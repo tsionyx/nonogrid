@@ -286,8 +286,8 @@ where
     where
         S: LineSolver<BlockType = B>,
     {
-        let point_solver = propagation::Solver::with_point(MutRc::clone(&self.board), *point);
-        point_solver.run::<S>()
+        let point_solver = propagation::Solver::new(MutRc::clone(&self.board));
+        point_solver.run::<S>(Some(*point))
     }
 
     fn is_solved(&self) -> bool {

@@ -14,7 +14,6 @@ where
     B: Block,
 {
     board: MutRc<Board<B>>,
-    point: Option<Point>,
 }
 
 type Job = (bool, usize);
@@ -106,21 +105,14 @@ where
     B: Block,
 {
     pub fn new(board: MutRc<Board<B>>) -> Self {
-        Self { board, point: None }
+        Self { board }
     }
 
-    pub fn with_point(board: MutRc<Board<B>>, point: Point) -> Self {
-        Self {
-            board,
-            point: Some(point),
-        }
-    }
-
-    pub fn run<S>(&self) -> Result<Vec<Point>, ()>
+    pub fn run<S>(&self, point: Option<Point>) -> Result<Vec<Point>, ()>
     where
         S: LineSolver<BlockType = B>,
     {
-        if let Some(point) = self.point {
+        if let Some(point) = point {
             debug!("Solving {:?}", point);
             let queue = SmallJobQueue::with_point(point);
             self.run_jobs::<S, _>(queue)

@@ -46,7 +46,7 @@ mod ini {
 
         warn!("Solving with simple line propagation");
         let solver = propagation::Solver::new(MutRc::clone(&board));
-        solver.run::<line::DynamicSolver<_>>().unwrap();
+        solver.run::<line::DynamicSolver<_>>(None).unwrap();
 
         let board = board.read();
 
@@ -70,7 +70,7 @@ mod ini {
 
         warn!("Solving with simple line propagation");
         let solver = propagation::Solver::new(MutRc::clone(&board));
-        solver.run::<line::DynamicSolver<_>>().unwrap();
+        solver.run::<line::DynamicSolver<_>>(None).unwrap();
 
         {
             let board = board.read();
@@ -98,7 +98,7 @@ mod ini {
 
         warn!("Solving with simple line propagation");
         let solver = propagation::Solver::new(MutRc::clone(&board));
-        solver.run::<line::DynamicSolver<_>>().unwrap();
+        solver.run::<line::DynamicSolver<_>>(None).unwrap();
 
         let board = board.read();
         assert!(board.is_solved_full());
@@ -133,7 +133,7 @@ mod web {
 
         warn!("Solving with simple line propagation");
         let solver = propagation::Solver::new(MutRc::clone(&board));
-        solver.run::<line::DynamicSolver<_>>().unwrap();
+        solver.run::<line::DynamicSolver<_>>(None).unwrap();
 
         let board = board.read();
         assert!(board.is_solved_full());
@@ -207,7 +207,7 @@ mod web {
         let board = MutRc::new(board);
 
         let solver = propagation::Solver::new(MutRc::clone(&board));
-        solver.run::<line::DynamicSolver<_>>().unwrap();
+        solver.run::<line::DynamicSolver<_>>(None).unwrap();
 
         let board = board.read();
         assert!(board.is_solved_full());
