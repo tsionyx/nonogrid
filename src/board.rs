@@ -6,7 +6,6 @@ use crate::block::base::{
     color::{ColorDesc, ColorId, ColorPalette},
     Block, Color, Description,
 };
-use crate::cache::{cache_info, Cached, GrowableCache};
 use crate::utils::{
     dedup,
     rc::{mutate_ref, InteriorMutableRef, MutRc, ReadRc},
@@ -16,37 +15,6 @@ use crate::utils::{
 pub struct Point {
     x: usize,
     y: usize,
-}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub struct CacheKey<B>
-where
-    B: Block,
-{
-    line_index: usize,
-    source: ReadRc<Vec<B::Color>>,
-}
-
-impl<B> CacheKey<B>
-where
-    B: Block,
-{
-    pub fn with_index_and_line(index: usize, line: ReadRc<Vec<B::Color>>) -> Self {
-        Self {
-            line_index: index,
-            source: line,
-        }
-    }
-}
-
-type CacheValue<B> = Result<ReadRc<Vec<<B as Block>::Color>>, ()>;
-type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
-
-fn new_cache<B>(capacity: usize) -> LineSolverCache<B>
-where
-    B: Block,
-{
-    GrowableCache::with_capacity(capacity)
 }
 
 impl Point {
@@ -72,8 +40,6 @@ where
     desc_cols: Vec<ReadRc<Description<B>>>,
     palette: Option<ColorPalette>,
     all_colors: Vec<ColorId>,
-    cache_rows: Option<LineSolverCache<B>>,
-    cache_cols: Option<LineSolverCache<B>>,
     // use with caching duplicated clues
     // https://webpbn.com/survey/caching.html
     rows_cache_indexes: Vec<usize>,
@@ -172,8 +138,6 @@ where
             desc_cols,
             palette,
             all_colors,
-            cache_rows: None,
-            cache_cols: None,
             rows_cache_indexes,
             cols_cache_indexes,
             cell_rate_memo: InteriorMutableRef::new(HashMap::new()),
@@ -358,52 +322,6 @@ where
             .filter(move |n| !self.cell(n).is_solved())
     }
 
-    pub fn init_cache(&mut self) {
-        let width = self.width();
-        let height = self.height();
-
-        self.cache_rows = Some(new_cache::<B>(2_000 * height));
-        self.cache_cols = Some(new_cache::<B>(2_000 * width));
-    }
-
-    pub fn cached_solution(&mut self, is_column: bool, key: &CacheKey<B>) -> Option<CacheValue<B>> {
-        let cache = if is_column {
-            self.cache_cols.as_mut()
-        } else {
-            self.cache_rows.as_mut()
-        };
-
-        cache.and_then(|cache| cache.cache_get(key).cloned())
-    }
-
-    pub fn set_cached_solution(
-        &mut self,
-        is_column: bool,
-        key: CacheKey<B>,
-        solved: CacheValue<B>,
-    ) {
-        let cache = if is_column {
-            self.cache_cols.as_mut()
-        } else {
-            self.cache_rows.as_mut()
-        };
-
-        if let Some(cache) = cache {
-            cache.cache_set(key, solved)
-        }
-    }
-
-    pub fn print_cache_info(&self) {
-        if let Some(cache) = &self.cache_cols {
-            let (s, h, r) = cache_info(cache);
-            warn!("Cache columns: Size={}, hits={}, hit rate={}.", s, h, r);
-        }
-        if let Some(cache) = &self.cache_rows {
-            let (s, h, r) = cache_info(cache);
-            warn!("Cache rows: Size={}, hits={}, hit rate={}.", s, h, r);
-        }
-    }
-
     pub fn row_cache_index(&self, row_index: usize) -> usize {
         self.rows_cache_indexes[row_index]
     }
@@ -520,8 +438,6 @@ where
             palette: self.palette.clone(),
             all_colors: self.all_colors.clone(),
             // ignore caches while cloning
-            cache_rows: None,
-            cache_cols: None,
             rows_cache_indexes: self.rows_cache_indexes.clone(),
             cols_cache_indexes: self.cols_cache_indexes.clone(),
             cell_rate_memo: InteriorMutableRef::new(HashMap::new()),

@@ -222,7 +222,6 @@ where
             }
         }
 
-        board.read().print_cache_info();
         if log_enabled!(Level::Warn) {
             let search_tree = backtracking.search_tree.read();
             if !search_tree.is_empty() {

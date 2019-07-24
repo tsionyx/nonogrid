@@ -2,9 +2,10 @@ use hashbrown::HashSet;
 use log::Level;
 
 use crate::block::Block;
-use crate::board::{Board, CacheKey, Point};
+use crate::board::{Board, Point};
+use crate::cache::{cache_info, Cached, GrowableCache};
 use crate::solver::line::{self, LineSolver};
-use crate::utils::rc::{MutRc, ReadRc};
+use crate::utils::rc::{MutRc, ReadRc, ReadRef};
 
 //use std::time::Instant;
 
@@ -14,6 +15,8 @@ where
     B: Block,
 {
     board: MutRc<Board<B>>,
+    cache_rows: Option<LineSolverCache<B>>,
+    cache_cols: Option<LineSolverCache<B>>,
 }
 
 type Job = (bool, usize);
@@ -100,15 +103,90 @@ impl JobQueue for LongJobQueue {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Hash)]
+struct CacheKey<B>
+where
+    B: Block,
+{
+    pub line_index: usize,
+    pub source: ReadRc<Vec<B::Color>>,
+}
+
+type CacheValue<B> = Result<ReadRc<Vec<<B as Block>::Color>>, ()>;
+type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
+
+fn new_cache<B>(capacity: usize) -> LineSolverCache<B>
+where
+    B: Block,
+{
+    GrowableCache::with_capacity(capacity)
+}
+
 impl<B> Solver<B>
 where
     B: Block,
 {
     pub fn new(board: MutRc<Board<B>>) -> Self {
-        Self { board }
+        Self {
+            board,
+            cache_rows: None,
+            cache_cols: None,
+        }
     }
 
-    pub fn run<S>(&self, point: Option<Point>) -> Result<Vec<Point>, ()>
+    pub fn with_cache(board: MutRc<Board<B>>) -> Self {
+        let mut self_ = Self::new(board);
+
+        self_.init_cache();
+        self_
+    }
+
+    fn board(&self) -> ReadRef<Board<B>> {
+        self.board.read()
+    }
+
+    fn init_cache(&mut self) {
+        let width = self.board().width();
+        let height = self.board().height();
+
+        self.cache_rows = Some(new_cache::<B>(2_000 * height));
+        self.cache_cols = Some(new_cache::<B>(2_000 * width));
+    }
+
+    fn cached_solution(&mut self, is_column: bool, key: &CacheKey<B>) -> Option<CacheValue<B>> {
+        let cache = if is_column {
+            self.cache_cols.as_mut()
+        } else {
+            self.cache_rows.as_mut()
+        };
+
+        cache.and_then(|cache| cache.cache_get(key).cloned())
+    }
+
+    fn set_cached_solution(&mut self, is_column: bool, key: CacheKey<B>, solved: CacheValue<B>) {
+        let cache = if is_column {
+            self.cache_cols.as_mut()
+        } else {
+            self.cache_rows.as_mut()
+        };
+
+        if let Some(cache) = cache {
+            cache.cache_set(key, solved)
+        }
+    }
+
+    fn print_cache_info(&self) {
+        if let Some(cache) = &self.cache_cols {
+            let (s, h, r) = cache_info(cache);
+            warn!("Cache columns: Size={}, hits={}, hit rate={}.", s, h, r);
+        }
+        if let Some(cache) = &self.cache_rows {
+            let (s, h, r) = cache_info(cache);
+            warn!("Cache rows: Size={}, hits={}, hit rate={}.", s, h, r);
+        }
+    }
+
+    pub fn run<S>(&mut self, point: Option<Point>) -> Result<Vec<Point>, ()>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -118,7 +196,7 @@ where
             self.run_jobs::<S, _>(queue)
         } else {
             let queue = {
-                let board = self.board.read();
+                let board = self.board();
                 let rows: Vec<_> = (0..board.height()).rev().collect();
                 let cols: Vec<_> = (0..board.width()).rev().collect();
 
@@ -133,7 +211,7 @@ where
         }
     }
 
-    fn run_jobs<S, Q>(&self, mut queue: Q) -> Result<Vec<Point>, ()>
+    fn run_jobs<S, Q>(&mut self, mut queue: Q) -> Result<Vec<Point>, ()>
     where
         S: LineSolver<BlockType = B>,
         Q: JobQueue,
@@ -193,12 +271,12 @@ where
     /// If the line gets partially solved, put the crossed lines into queue.
     ///
     /// Return the list of indexes which was updated during this solution.
-    fn update_line<S>(&self, index: usize, is_column: bool) -> Result<Vec<usize>, ()>
+    fn update_line<S>(&mut self, index: usize, is_column: bool) -> Result<Vec<usize>, ()>
     where
         S: LineSolver<BlockType = B>,
     {
         let (cache_key, line) = {
-            let board = self.board.read();
+            let board = self.board();
             let line = ReadRc::new(if is_column {
                 board.get_column(index)
             } else {
@@ -211,15 +289,18 @@ where
                 board.row_cache_index(index)
             };
 
-            let key = CacheKey::with_index_and_line(cache_index, ReadRc::clone(&line));
+            let key = CacheKey {
+                line_index: cache_index,
+                source: ReadRc::clone(&line),
+            };
             (key, line)
         };
 
-        let cached = self.board.write().cached_solution(is_column, &cache_key);
+        let cached = self.cached_solution(is_column, &cache_key);
 
         let solution = cached.unwrap_or_else(|| {
             let line_desc = {
-                let board = self.board.read();
+                let board = self.board();
                 if is_column {
                     ReadRc::clone(&board.descriptions(false)[index])
                 } else {
@@ -237,9 +318,7 @@ where
 
             let value = line::solve::<S, _>(line_desc, ReadRc::clone(&line)).map(ReadRc::new);
 
-            self.board
-                .write()
-                .set_cached_solution(is_column, cache_key, value.clone());
+            self.set_cached_solution(is_column, cache_key, value.clone());
             value
         })?;
 
@@ -291,5 +370,14 @@ where
                 }
             })
             .collect()
+    }
+}
+
+impl<B> Drop for Solver<B>
+where
+    B: Block,
+{
+    fn drop(&mut self) {
+        self.print_cache_info()
     }
 }

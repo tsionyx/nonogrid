@@ -45,7 +45,7 @@ mod ini {
         });
 
         warn!("Solving with simple line propagation");
-        let solver = propagation::Solver::new(MutRc::clone(&board));
+        let mut solver = propagation::Solver::new(MutRc::clone(&board));
         solver.run::<line::DynamicSolver<_>>(None).unwrap();
 
         let board = board.read();
@@ -69,7 +69,7 @@ mod ini {
         let board = MutRc::new(board);
 
         warn!("Solving with simple line propagation");
-        let solver = propagation::Solver::new(MutRc::clone(&board));
+        let mut solver = propagation::Solver::new(MutRc::clone(&board));
         solver.run::<line::DynamicSolver<_>>(None).unwrap();
 
         {
@@ -78,7 +78,7 @@ mod ini {
             assert!(!board.is_solved_full());
         }
 
-        let solver = FullProbe1::with_board(MutRc::clone(&board));
+        let mut solver = FullProbe1::with_board(MutRc::clone(&board));
         solver.run_unsolved::<line::DynamicSolver<_>>().unwrap();
 
         {
@@ -97,7 +97,7 @@ mod ini {
         let board = MutRc::new(board);
 
         warn!("Solving with simple line propagation");
-        let solver = propagation::Solver::new(MutRc::clone(&board));
+        let mut solver = propagation::Solver::new(MutRc::clone(&board));
         solver.run::<line::DynamicSolver<_>>(None).unwrap();
 
         let board = board.read();
@@ -132,7 +132,7 @@ mod web {
         let board = MutRc::new(board);
 
         warn!("Solving with simple line propagation");
-        let solver = propagation::Solver::new(MutRc::clone(&board));
+        let mut solver = propagation::Solver::new(MutRc::clone(&board));
         solver.run::<line::DynamicSolver<_>>(None).unwrap();
 
         let board = board.read();
@@ -206,7 +206,7 @@ mod web {
         let board = p.parse::<BinaryBlock>();
         let board = MutRc::new(board);
 
-        let solver = propagation::Solver::new(MutRc::clone(&board));
+        let mut solver = propagation::Solver::new(MutRc::clone(&board));
         solver.run::<line::DynamicSolver<_>>(None).unwrap();
 
         let board = board.read();

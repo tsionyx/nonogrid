@@ -61,18 +61,18 @@ pub trait ProbeSolver {
     fn with_board(board: MutRc<Board<Self::BlockType>>) -> Self;
 
     fn unsolved_cells(&self) -> OrderedPoints;
-    fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, Priority)>, ()>
+    fn propagate_point<S>(&mut self, point: &Point) -> Result<Vec<(Point, Priority)>, ()>
     where
         S: LineSolver<BlockType = Self::BlockType>;
 
-    fn run_unsolved<S>(&self) -> Result<Impact<Self::BlockType>, String>
+    fn run_unsolved<S>(&mut self) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = Self::BlockType>,
     {
         self.run::<S>(&mut self.unsolved_cells())
     }
 
-    fn run<S>(&self, probes: &mut OrderedPoints) -> Result<Impact<Self::BlockType>, String>
+    fn run<S>(&mut self, probes: &mut OrderedPoints) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = Self::BlockType>;
 }
@@ -84,6 +84,7 @@ where
 {
     board: MutRc<Board<B>>,
     low_threshold: Priority,
+    propagation_solver: propagation::Solver<B>,
 }
 
 fn low_priority_threshold() -> Priority {
@@ -101,10 +102,11 @@ where
     type BlockType = B;
 
     fn with_board(board: MutRc<Board<B>>) -> Self {
-        board.write().init_cache();
+        let propagation_solver = propagation::Solver::with_cache(MutRc::clone(&board));
         Self {
             board,
             low_threshold: low_priority_threshold(),
+            propagation_solver,
         }
     }
 
@@ -130,7 +132,7 @@ where
         queue
     }
 
-    fn propagate_point<S>(&self, point: &Point) -> Result<Vec<(Point, Priority)>, ()>
+    fn propagate_point<S>(&mut self, point: &Point) -> Result<Vec<(Point, Priority)>, ()>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -153,7 +155,7 @@ where
             .collect())
     }
 
-    fn run<S>(&self, probes: &mut OrderedPoints) -> Result<Impact<Self::BlockType>, String>
+    fn run<S>(&mut self, probes: &mut OrderedPoints) -> Result<Impact<Self::BlockType>, String>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -282,12 +284,11 @@ where
         self.board.read()
     }
 
-    fn run_propagation<S>(&self, point: &Point) -> Result<Vec<Point>, ()>
+    fn run_propagation<S>(&mut self, point: &Point) -> Result<Vec<Point>, ()>
     where
         S: LineSolver<BlockType = B>,
     {
-        let point_solver = propagation::Solver::new(MutRc::clone(&self.board));
-        point_solver.run::<S>(Some(*point))
+        self.propagation_solver.run::<S>(Some(*point))
     }
 
     fn is_solved(&self) -> bool {
@@ -296,7 +297,7 @@ where
 
     /// Try every color for given cell
     /// and return the number of solved cells (Some) or contradiction (None)
-    fn probe<S>(&self, point: Point) -> Vec<(B::Color, ProbeResult<usize>)>
+    fn probe<S>(&mut self, point: Point) -> Vec<(B::Color, ProbeResult<usize>)>
     where
         S: LineSolver<BlockType = B>,
     {
