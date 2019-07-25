@@ -133,7 +133,7 @@ where
 }
 
 pub mod color {
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashMap;
 
     #[derive(Debug, PartialEq, Clone)]
     pub enum ColorValue {
@@ -376,8 +376,7 @@ pub mod color {
 
         #[allow(dead_code)]
         pub fn color_with_name_and_value(&mut self, name: &str, value: ColorValue) {
-            let occupied_symbols: HashSet<_> =
-                self.vec.values().map(|color| color.symbol).collect();
+            let occupied_symbols: Vec<_> = self.vec.values().map(|color| color.symbol).collect();
 
             let &next_symbol = self
                 .symbols

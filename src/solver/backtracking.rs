@@ -345,8 +345,8 @@ where
         let mut points_rate: Vec<_> = point_wise
             .iter()
             .map(|(point, color_to_impact)| {
-                let values: Vec<_> = color_to_impact.values().collect();
-                let priority: Priority = Self::rate_by_impact(&values).into();
+                let values = color_to_impact.values();
+                let priority: Priority = Self::rate_by_impact(values).into();
                 (point, priority)
             })
             .collect();
@@ -360,22 +360,17 @@ where
                     point_wise[point].iter().map(|(&k, &v)| (k, v)).collect();
                 // the most impacting color goes first
                 point_colors.sort_by_key(|(_color, (new_points, _priority))| Reverse(*new_points));
-                let point_order: Vec<_> = point_colors
-                    .iter()
-                    .map(|(color, _impact)| (*point, *color))
-                    .collect();
-                point_order
+                point_colors
+                    .into_iter()
+                    .map(move |(color, _impact)| (*point, color))
             })
             .collect()
     }
 
     const CHOOSE_STRATEGY: ChoosePixel = ChoosePixel::Sqrt;
 
-    fn rate_by_impact(impact: &[&(usize, Priority)]) -> f64 {
-        let sizes_only: Vec<_> = impact
-            .iter()
-            .map(|(new_points, _priority)| *new_points)
-            .collect();
+    fn rate_by_impact<'a>(impact: impl Iterator<Item = &'a (usize, Priority)>) -> f64 {
+        let sizes_only: Vec<_> = impact.map(|(new_points, _priority)| *new_points).collect();
 
         let min = sizes_only.iter().min().unwrap_or(&0);
         let max = sizes_only.iter().max().unwrap_or(&0);

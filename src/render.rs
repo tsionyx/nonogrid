@@ -48,14 +48,11 @@ where
             pad_with(row, "#".to_string(), full_width, false);
         }
 
-        let header: Vec<_> = header
-            .into_iter()
-            .map(|row| {
-                row.into_iter()
-                    .map(|s| ColoredString::from(s.as_str()))
-                    .collect()
-            })
-            .collect();
+        let header = header.into_iter().map(|row| {
+            row.into_iter()
+                .map(|s| ColoredString::from(s.as_str()))
+                .collect()
+        });
 
         let side = self.side_lines();
         let side: Vec<_> = side
@@ -69,16 +66,13 @@ where
 
         let grid = self.grid_lines();
         let grid = side
-            .iter()
+            .into_iter()
             .zip(grid)
             // https://users.rust-lang.org/t/how-to-concatenate-two-vectors/8324/4
-            .map(|(s, g): (&Vec<ColoredString>, _)| [&s[..], &g].concat())
-            .collect();
+            .map(|(s, g): (Vec<ColoredString>, _)| [&s[..], &g].concat());
 
-        let lines = vec![header, grid];
-        lines
-            .concat()
-            .iter()
+        header
+            .chain(grid)
             .map(|line| {
                 line.iter()
                     .map(|symbol| pad(symbol, 2, true))

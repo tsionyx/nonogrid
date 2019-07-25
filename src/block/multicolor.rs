@@ -38,9 +38,8 @@ impl Color for MultiColor {
     fn solution_rate(&self, all_colors: &[ColorId]) -> f64 {
         let all_colors: HashSet<_> = all_colors.iter().cloned().collect();
         let cell_colors = self.variants_as_ids();
-        let cell_colors: HashSet<_> = cell_colors.intersection(&all_colors).collect();
+        let current_size = cell_colors.intersection(&all_colors).count();
 
-        let current_size = cell_colors.len();
         if current_size == 0 {
             return 0.0;
         }

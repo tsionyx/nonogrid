@@ -214,9 +214,10 @@ mod ini {
             B: Block,
         {
             let descriptions = descriptions.trim();
-            let parts: Vec<&str> = descriptions.split(|c| c == '#' || c == ';').collect();
-
-            let non_comment = parts[0];
+            let non_comment: &str = descriptions
+                .split(|c| c == '#' || c == ';')
+                .next()
+                .expect("Split returned empty");
             // dbg!(&non_comment);
 
             if non_comment == "" {

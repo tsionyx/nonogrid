@@ -64,15 +64,16 @@ struct LongJobQueue {
 }
 
 impl LongJobQueue {
-    fn with_rows_and_columns(rows: Vec<usize>, columns: Vec<usize>) -> Self {
-        let mut jobs: Vec<_> = columns
-            .into_iter()
+    fn with_rows_and_columns(
+        rows: impl Iterator<Item = usize>,
+        columns: impl Iterator<Item = usize>,
+    ) -> Self {
+        let jobs = columns
             .map(|column_index| (true, column_index))
-            .collect();
-        jobs.extend(rows.into_iter().map(|row_index| (false, row_index)));
+            .chain(rows.map(|row_index| (false, row_index)));
 
         Self {
-            vec: jobs,
+            vec: jobs.collect(),
             visited: HashSet::new(),
         }
     }
@@ -197,8 +198,8 @@ where
         } else {
             let queue = {
                 let board = self.board();
-                let rows: Vec<_> = (0..board.height()).rev().collect();
-                let cols: Vec<_> = (0..board.width()).rev().collect();
+                let rows = (0..board.height()).rev();
+                let cols = (0..board.width()).rev();
 
                 // `is_solved_full` is expensive, so minimize calls to it.
                 // Do not call if only a handful of lines has to be solved

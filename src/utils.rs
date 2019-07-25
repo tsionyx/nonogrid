@@ -245,9 +245,9 @@ pub fn split_sections<'a, 'b>(
         .collect();
 
     let res = section_indexes
-        .iter()
-        .map(|(&section, start)| {
-            let mut range = ranges.remove(start).expect("Start of section not found");
+        .into_iter()
+        .map(|(section, start)| {
+            let mut range = ranges.remove(&start).expect("Start of section not found");
             if !include_header {
                 range.start += 1;
             }

@@ -1,3 +1,5 @@
+use std::iter::once;
+
 use crate::block::{
     base::color::ColorPalette, binary::BinaryColor, multicolor::MultiColor, Block, Color,
     Description,
@@ -116,12 +118,9 @@ where
     B::Color: DynamicColor,
 {
     fn calc_block_sum(desc: &Description<B>) -> Vec<usize> {
-        let mut min_indexes: Vec<_> = B::partial_sums(&desc.vec)
-            .iter()
-            .map(|size| size - 1)
-            .collect();
-        min_indexes.insert(0, 0);
-        min_indexes
+        once(0)
+            .chain(B::partial_sums(&desc.vec).into_iter().map(|size| size - 1))
+            .collect()
     }
 
     fn try_solve(&mut self) -> bool {
