@@ -1,4 +1,5 @@
 use std::fmt;
+use std::iter::once;
 
 use hashbrown::HashMap;
 
@@ -88,13 +89,8 @@ where
         warn!("Initializing board: height={}, width={}", height, width);
         let cells = vec![init; width * height];
 
-        let uniq_rows = dedup(&rows.iter().map(|desc| desc.vec.clone()).collect::<Vec<_>>());
-        let uniq_cols = dedup(
-            &columns
-                .iter()
-                .map(|desc| desc.vec.clone())
-                .collect::<Vec<_>>(),
-        );
+        let uniq_rows = dedup(rows.iter().map(|desc| desc.vec.clone()));
+        let uniq_cols = dedup(columns.iter().map(|desc| desc.vec.clone()));
 
         if uniq_rows.len() < height {
             warn!(
@@ -148,17 +144,16 @@ where
     }
 
     fn all_colors(descriptions: &[Description<B>]) -> Vec<ColorId> {
-        let mut colors: Vec<_> = descriptions
+        let colors = descriptions
             .iter()
             .flat_map(|row| {
                 row.vec
                     .iter()
                     .filter_map(|block| block.color().as_color_id())
             })
-            .collect();
+            .chain(once(ColorPalette::WHITE_ID));
 
-        colors.push(ColorPalette::WHITE_ID);
-        dedup(&colors)
+        dedup(colors)
     }
 
     pub fn desc_by_id(&self, id: ColorId) -> Option<ColorDesc> {

@@ -77,11 +77,11 @@ pub fn from_two_powers(numbers: &[u32]) -> u32 {
     numbers.iter().fold(0, |acc, &x| acc | x)
 }
 
-pub fn dedup<T>(vec: &[T]) -> Vec<T>
+pub fn dedup<T>(vec: impl Iterator<Item = T>) -> Vec<T>
 where
     T: Eq + Hash + Clone,
 {
-    let set: HashSet<_> = vec.iter().cloned().collect();
+    let set: HashSet<_> = vec.collect();
     set.into_iter().collect()
 }
 
