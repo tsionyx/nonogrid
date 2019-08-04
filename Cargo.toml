@@ -10,7 +10,10 @@ edition = "2018"
 
 [profile.release]
 lto = true
-# uncomment to use with profilers
+# get some speedup
+codegen-units = 1
+panic = 'abort'
+# uncomment to use with profilers (or compile with `RUSTFLAGS='-g' cargo build`)
 #debug = true
 
 
