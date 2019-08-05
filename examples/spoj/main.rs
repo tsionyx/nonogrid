@@ -1,3 +1,5 @@
+#![allow(clippy::redundant_field_names)]
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -872,6 +874,7 @@ mod propagation {
             self.vec.push(job)
         }
 
+        #[allow(clippy::question_mark)]
         fn pop(&mut self) -> Option<Job> {
             let top_job = self.vec.pop();
             if top_job.is_none() {
@@ -910,6 +913,7 @@ mod propagation {
             self.vec.push(job)
         }
 
+        #[allow(clippy::question_mark)]
         fn pop(&mut self) -> Option<Job> {
             let mut top_job;
             loop {
@@ -1672,6 +1676,7 @@ impl fmt::Display for Board {
             for cell in row.iter() {
                 write!(f, "{}", cell)?
             }
+            #[allow(clippy::writeln_empty_string)]
             writeln!(f, "")?
         }
         Ok(())
