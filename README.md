@@ -9,7 +9,7 @@
 nonogrid -w 5933
 ```
 
-### Solve locally saved puzzles from http://webpbn.com
+### Solve locally saved puzzles from http://webpbn.com (should be build with --features=xml)
 
 ```
 # solve puzzle http://webpbn.com/2992
@@ -20,10 +20,19 @@ nonogrid 2992.xml
 wget 'http://webpbn.com/XMLpuz.cgi?id=2992' -O- | nonogrid
 ```
 
-### Solve local puzzles (any supported format: TOML-based, webpbn XML, nonograms.org HTML page)
+### Solve local puzzles
+
+Can solve any supported format:
+- [TOML-based](examples) (`--features=ini`)
+- nonograms.org HTML page
+- webpbn [XML format](https://webpbn.com/pbn_fmt.html) (`--features=xml`)
+- variety of webpbn's [exportable formats](https://webpbn.com/export.cgi/)
 
 ```
 nonogrid examples/hello.toml
+
+wget -qO- https://webpbn.com/export.cgi --post-data "fmt=syro&go=1&id=2040" |
+cargo run --no-default-features
 ```
 
 
@@ -36,28 +45,28 @@ RUST_BACKTRACE=1 RUST_LOG=nonogrid=info cargo run -- examples/hello.toml
 
 ## Features
 
-By default the `--no-default-features --features="clap std_time env_logger"` are enabled but you can disable almost anything
+By default the `--features="clap std_time env_logger ini"` are enabled but you can disable almost anything
 to speed up and/or shrink the size of the application.
+
 
 ### Arguments parsing
 
 To support command-line arguments, the `clap` feature is enabled by default.
-To use the `nonogrid` binary you have to included it anyway, or binary crate will not compile.
-It can be disabled when using the solver as a library in another projects, [e.g.](https://github.com/tsionyx/nono/blob/8e2f8f27/Cargo.toml#L19)
+You can disable it, but then you will not able to set solving timeout or maximum number of solutions to find.
+It also can be disabled when using the solver as a library in another projects, [e.g.](https://github.com/tsionyx/nono/blob/8e2f8f27/Cargo.toml#L19)
+
 
 ### Timeout (std_time)
 
 By default you can provide the `--timeout` option to stop backtracking after reaching the specified time limit.
 You can disable this feature and the timeout will simply be ignored.
 
-```
-cargo run --no-default-features --features=clap -- puzzles/2040.xml
-```
 
 ### TOML puzzles parsing support
 
 [My custom TOML-based format](examples/hello.toml) is supported by default via feature `ini`.
 It can be disabled when using the solver as a library in another projects, [e.g.](https://github.com/tsionyx/nono/blob/8e2f8f27/Cargo.toml#L19)
+
 
 ### XML puzzles parsing support
 
@@ -70,8 +79,10 @@ You can enable it by building with the `--features=xml`.
 You can enable the feature `colored` to allow to print colored nonograms with real terminal colors:
 
 ```
-cargo run --no-default-features --features="clap colored" -- puzzles/2192.xml
+wget -qO- https://webpbn.com/export.cgi --post-data "fmt=olsak&go=1&id=2192" |
+cargo run --no-default-features --features=colored
 ```
+
 
 ### Logging
 
@@ -86,8 +97,9 @@ but it requires too many dependencies and increases compile time, so it's option
 Enable it as simple as:
 
 ```
-cargo run --features=web -- --webpbn 5933
+cargo run --features=web,xml -- --webpbn 5933
 ```
+
 
 ### Threading
 

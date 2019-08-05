@@ -19,10 +19,14 @@
 - [blotted puzzles](https://webpbn.com/19407)
 - other formats:
   - https://github.com/Izaron/Nonograms/raw/master/puzzles
+- docs.rs
+- SVG, XML, [cmd](https://docs.python.org/3/library/cmd.html)
 
 
 ## Optimizations
 - implement [these ideas](https://habr.com/ru/post/454586/#comment_20248388)
+- get rid of clones as much as possible https://llogiq.github.io/2017/06/01/perf-pitfalls.html
+- use Cow for rows and columns https://deterministic.space/secret-life-of-cows.html
 
 
 ## Refactoring
