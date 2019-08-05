@@ -1,7 +1,7 @@
 use hashbrown::HashSet;
 use log::Level;
 
-use crate::block::Block;
+use crate::block::{Block, Line};
 use crate::board::{Board, Point};
 use crate::cache::{cache_info, Cached, GrowableCache};
 use crate::solver::line::{self, LineSolver};
@@ -110,10 +110,10 @@ where
     B: Block,
 {
     pub line_index: usize,
-    pub source: ReadRc<Vec<B::Color>>,
+    pub source: ReadRc<Line<B::Color>>,
 }
 
-type CacheValue<B> = Result<ReadRc<Vec<<B as Block>::Color>>, ()>;
+type CacheValue<B> = Result<ReadRc<Line<<B as Block>::Color>>, ()>;
 type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
 
 fn new_cache<B>(capacity: usize) -> LineSolverCache<B>

@@ -50,7 +50,7 @@ pub fn transpose<T: Clone>(input: &[Vec<T>]) -> Result<Vec<Vec<T>>, String> {
         .collect())
 }
 
-pub fn replace<T>(vec: &mut Vec<T>, what: &T, with_what: &T)
+pub fn replace<T>(vec: &mut [T], what: &T, with_what: &T)
 where
     T: PartialEq + Clone,
 {

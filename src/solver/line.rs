@@ -2,7 +2,7 @@ use std::iter::once;
 
 use crate::block::{
     base::color::ColorPalette, binary::BinaryColor, multicolor::MultiColor, Block, Color,
-    Description,
+    Description, Line,
 };
 use crate::utils::{self, rc::ReadRc};
 
@@ -11,15 +11,16 @@ type LineColor<T> = <<T as LineSolver>::BlockType as Block>::Color;
 pub trait LineSolver {
     type BlockType: Block;
 
-    fn new(desc: ReadRc<Description<Self::BlockType>>, line: ReadRc<Vec<LineColor<Self>>>) -> Self;
+    fn new(desc: ReadRc<Description<Self::BlockType>>, line: ReadRc<Line<LineColor<Self>>>)
+        -> Self;
     fn solve(&mut self) -> bool;
-    fn get_solution(self) -> Vec<LineColor<Self>>;
+    fn get_solution(self) -> Line<LineColor<Self>>;
 }
 
 pub fn solve<L, B>(
     desc: ReadRc<Description<B>>,
-    line: ReadRc<Vec<B::Color>>,
-) -> Result<Vec<B::Color>, ()>
+    line: ReadRc<Line<B::Color>>,
+) -> Result<Line<B::Color>, ()>
 where
     L: LineSolver<BlockType = B>,
     B: Block,
@@ -39,7 +40,7 @@ where
     // it can be implemented very simple with generics specialization
     // https://github.com/aturon/rfcs/blob/impl-specialization/text/0000-impl-specialization.md
     // https://github.com/rust-lang/rfcs/issues/1053
-    fn set_additional_blank(line: ReadRc<Vec<Self>>) -> (ReadRc<Vec<Self>>, bool) {
+    fn set_additional_blank(line: ReadRc<Line<Self>>) -> (ReadRc<Line<Self>>, bool) {
         (line, false)
     }
     fn both_colors() -> Option<Self>;
@@ -53,12 +54,12 @@ where
 #[derive(Debug)]
 pub struct DynamicSolver<B: Block, S = <B as Block>::Color> {
     desc: ReadRc<Description<B>>,
-    line: ReadRc<Vec<S>>,
+    line: ReadRc<Line<S>>,
     additional_space: bool,
     block_sums: Vec<usize>,
     job_size: usize,
     solution_matrix: Vec<Option<bool>>,
-    solved_line: Vec<S>,
+    solved_line: Line<S>,
 }
 
 impl<B> LineSolver for DynamicSolver<B>
@@ -68,7 +69,7 @@ where
 {
     type BlockType = B;
 
-    fn new(desc: ReadRc<Description<B>>, line: ReadRc<Vec<B::Color>>) -> Self {
+    fn new(desc: ReadRc<Description<B>>, line: ReadRc<Line<B::Color>>) -> Self {
         let (line, additional_space) = B::Color::set_additional_blank(line);
 
         let block_sums = Self::calc_block_sum(&*desc);
@@ -107,7 +108,7 @@ where
         true
     }
 
-    fn get_solution(self) -> Vec<B::Color> {
+    fn get_solution(self) -> Line<B::Color> {
         self.solved_line
     }
 }
@@ -292,7 +293,7 @@ where
 }
 
 impl DynamicColor for BinaryColor {
-    //fn set_additional_blank(line: ReadRc<Vec<Self>>) -> (ReadRc<Vec<Self>>, bool) {
+    //fn set_additional_blank(line: ReadRc<Line<Self>>) -> (ReadRc<Line<Self>>, bool) {
     //    let space = BinaryColor::White;
     //
     //    if line.last().unwrap_or(&space) != &space {

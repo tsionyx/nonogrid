@@ -3,9 +3,9 @@ use std::iter::once;
 
 use hashbrown::HashMap;
 
-use crate::block::base::{
-    color::{ColorDesc, ColorId, ColorPalette},
-    Block, Color, Description,
+use crate::block::{
+    base::color::{ColorDesc, ColorId, ColorPalette},
+    Block, Color, Description, Line,
 };
 use crate::utils::{
     dedup,
@@ -195,15 +195,15 @@ where
         self.iter_rows().nth(index).expect("Invalid row index")
     }
 
-    pub fn get_row(&self, index: usize) -> Vec<B::Color> {
-        self.get_row_slice(index).to_vec()
+    pub fn get_row(&self, index: usize) -> Line<B::Color> {
+        self.get_row_slice(index).into()
     }
 
     fn get_column_iter(&self, index: usize) -> impl Iterator<Item = &B::Color> {
         self.cells.iter().skip(index).step_by(self.width())
     }
 
-    pub fn get_column(&self, index: usize) -> Vec<B::Color> {
+    pub fn get_column(&self, index: usize) -> Line<B::Color> {
         self.get_column_iter(index).cloned().collect()
     }
 
