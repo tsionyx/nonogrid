@@ -4,7 +4,7 @@
 Compile
 
 ```
-rustup run 1.14.0 rustc -C opt-level=3 -C lto <(grep -v clippy main.rs) -o main
+rustup run 1.33.0 rustc -C opt-level=3 -C lto main.rs
 ```
 
 Test

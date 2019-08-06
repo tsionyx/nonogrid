@@ -1,13 +1,9 @@
-#![allow(clippy::redundant_field_names)]
-
 use std::cell::RefCell;
 use std::fmt;
 use std::io;
 use std::ops::Sub;
 use std::rc::Rc;
 use std::slice::Chunks;
-
-use iter::StepByIter;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 pub enum BW {
@@ -139,7 +135,7 @@ impl Clues {
     fn new(mut vec: Vec<BB>) -> Self {
         let zero = BB::default();
         vec.retain(|x| *x != zero);
-        Clues { vec: vec }
+        Self { vec }
     }
 }
 
@@ -192,7 +188,7 @@ mod utils {
         impl Default for FxHasher {
             #[inline]
             fn default() -> Self {
-                FxHasher { hash: 0 }
+                Self { hash: 0 }
             }
         }
 
@@ -226,7 +222,7 @@ mod utils {
                     }};
                 }
 
-                let mut hash = FxHasher { hash: self.hash };
+                let mut hash = Self { hash: self.hash };
                 assert!(size_of::<usize>() <= 8);
                 while bytes.len() >= size_of::<usize>() {
                     hash.add_to_hash(read_bytes!(usize, bytes) as usize);
@@ -290,7 +286,7 @@ mod utils {
 
     impl<K: Hash + Eq, V> GrowableCache<K, V> {
         pub fn with_capacity(size: usize) -> Self {
-            GrowableCache::<K, V> {
+            Self {
                 store: HashMap::with_capacity_and_hasher(size, <_>::default()),
             }
         }
@@ -313,7 +309,7 @@ pub struct Point {
 
 impl Point {
     fn new(x: usize, y: usize) -> Self {
-        Point { x: x, y: y }
+        Self { x, y }
     }
 
     fn x(&self) -> usize {
@@ -331,53 +327,6 @@ pub struct Board {
     desc_cols: Vec<Rc<Clues>>,
     rows_cache_indexes: Vec<usize>,
     cols_cache_indexes: Vec<usize>,
-}
-
-/// The copy of `std::iter::StepBy`
-mod iter {
-    pub struct StepBy<I> {
-        iter: I,
-        step: usize,
-        first_take: bool,
-    }
-
-    impl<I> StepBy<I> {
-        fn new(iter: I, step: usize) -> Self {
-            StepBy {
-                iter: iter,
-                step: step - 1,
-                first_take: true,
-            }
-        }
-    }
-
-    impl<I> Iterator for StepBy<I>
-    where
-        I: Iterator,
-    {
-        type Item = I::Item;
-
-        #[inline]
-        fn next(&mut self) -> Option<Self::Item> {
-            if self.first_take {
-                self.first_take = false;
-                self.iter.next()
-            } else {
-                self.iter.nth(self.step)
-            }
-        }
-    }
-
-    pub trait StepByIter: Iterator {
-        fn stepby(self, step: usize) -> StepBy<Self>
-        where
-            Self: Sized,
-        {
-            StepBy::new(self, step)
-        }
-    }
-
-    impl<I: Iterator> StepByIter for I {}
 }
 
 impl Board {
@@ -412,12 +361,12 @@ impl Board {
 
         let desc_rows = rows.into_iter().map(Rc::new).collect();
         let desc_cols = columns.into_iter().map(Rc::new).collect();
-        Board {
-            cells: cells,
-            desc_rows: desc_rows,
-            desc_cols: desc_cols,
-            rows_cache_indexes: rows_cache_indexes,
-            cols_cache_indexes: cols_cache_indexes,
+        Self {
+            cells,
+            desc_rows,
+            desc_cols,
+            rows_cache_indexes,
+            cols_cache_indexes,
         }
     }
 
@@ -457,7 +406,7 @@ impl Board {
         self.cells
             .iter()
             .skip(index)
-            .stepby(self.width())
+            .step_by(self.width())
             .cloned()
             .collect()
     }
@@ -493,7 +442,7 @@ impl Board {
     }
 
     fn column_solution_rate(&self, index: usize) -> f64 {
-        let column = self.cells.iter().skip(index).stepby(self.width());
+        let column = self.cells.iter().skip(index).step_by(self.width());
 
         let solved: f64 = column.map(|cell| cell.solution_rate()).sum();
         solved / self.height() as f64
@@ -621,13 +570,13 @@ mod line {
 
             let solved_line = line.iter().cloned().collect();
 
-            DynamicSolver {
-                desc: desc,
-                line: line,
-                block_sums: block_sums,
-                job_size: job_size,
-                solution_matrix: solution_matrix,
-                solved_line: solved_line,
+            Self {
+                desc,
+                line,
+                block_sums,
+                job_size,
+                solution_matrix,
+                solved_line,
             }
         }
 
@@ -834,7 +783,7 @@ mod propagation {
 
     impl SmallJobQueue {
         fn with_point(point: Point) -> Self {
-            SmallJobQueue {
+            Self {
                 vec: vec![(true, point.x()), (false, point.y())],
             }
         }
@@ -845,14 +794,9 @@ mod propagation {
             self.vec.push(job)
         }
 
-        #[allow(clippy::question_mark)]
         fn pop(&mut self) -> Option<Job> {
-            let top_job = self.vec.pop();
-            if top_job.is_none() {
-                return None;
-            }
+            let top_job = self.vec.pop()?;
 
-            let top_job = top_job.unwrap();
             self.vec.retain(|&x| x != top_job);
             Some(top_job)
         }
@@ -871,7 +815,7 @@ mod propagation {
                 .chain(rows.into_iter().map(|row_index| (false, row_index)))
                 .collect();
 
-            LongJobQueue {
+            Self {
                 vec: jobs,
                 visited: HashSet::new(),
             }
@@ -884,20 +828,14 @@ mod propagation {
             self.vec.push(job)
         }
 
-        #[allow(clippy::question_mark)]
         fn pop(&mut self) -> Option<Job> {
-            let mut top_job;
-            loop {
-                let top = self.vec.pop();
-                if top.is_none() {
-                    return None;
-                }
-
-                top_job = top.unwrap();
+            let top_job = loop {
+                let top_job = self.vec.pop()?;
                 if !self.visited.contains(&top_job) {
-                    break;
+                    break top_job;
                 }
-            }
+            };
+            // mark the job as visited
             self.visited.insert(top_job);
             Some(top_job)
         }
@@ -905,8 +843,8 @@ mod propagation {
 
     impl Solver {
         pub fn new(board: Rc<RefCell<Board>>) -> Self {
-            Solver {
-                board: board,
+            Self {
+                board,
                 cache_rows: None,
                 cache_cols: None,
             }
@@ -1109,16 +1047,16 @@ mod probing {
 
     impl From<f64> for Priority {
         fn from(val: f64) -> Self {
-            Priority((val * f64::from(MULTIPLIER)) as u32)
+            Self((val * f64::from(MULTIPLIER)) as u32)
         }
     }
 
     impl FullProbe1 {
         pub fn with_board(board: Rc<RefCell<Board>>) -> Self {
             let propagation_solver = propagation::Solver::with_cache(Rc::clone(&board));
-            FullProbe1 {
-                board: board,
-                propagation_solver: propagation_solver,
+            Self {
+                board,
+                propagation_solver,
             }
         }
 
@@ -1171,12 +1109,11 @@ mod probing {
         }
 
         pub fn run(&mut self, probes: &mut OrderedPoints) -> Result<Impact, String> {
-            let mut impact;
-            loop {
-                impact = Impact::new();
+            let impact = loop {
+                let mut impact = Impact::new();
 
                 if self.is_solved() {
-                    break;
+                    break impact;
                 }
 
                 let mut false_probes = None;
@@ -1190,8 +1127,8 @@ mod probing {
 
                     if !contradictions.is_empty() {
                         let bad_colors: Vec<_> = contradictions
-                            .iter()
-                            .map(|&(color, _should_be_none)| color)
+                            .into_iter()
+                            .map(|(color, _should_be_none)| color)
                             .collect();
 
                         false_probes = Some((point, bad_colors));
@@ -1223,9 +1160,9 @@ mod probing {
 
                     probes.extend(new_probes);
                 } else {
-                    break;
+                    break impact;
                 }
-            }
+            };
 
             Ok(impact)
         }
@@ -1262,46 +1199,13 @@ mod probing {
     }
 }
 
-/// The copy of `std::cmp::Reverse`
-mod rev {
-    use std::cmp::Ordering;
-
-    #[derive(PartialEq, Eq)]
-    pub struct Reverse<T>(pub T);
-
-    impl<T: PartialOrd> PartialOrd for Reverse<T> {
-        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-            other.0.partial_cmp(&self.0)
-        }
-
-        fn lt(&self, other: &Self) -> bool {
-            other.0 < self.0
-        }
-        fn le(&self, other: &Self) -> bool {
-            other.0 <= self.0
-        }
-        fn gt(&self, other: &Self) -> bool {
-            other.0 > self.0
-        }
-        fn ge(&self, other: &Self) -> bool {
-            other.0 >= self.0
-        }
-    }
-
-    impl<T: Ord> Ord for Reverse<T> {
-        fn cmp(&self, other: &Self) -> Ordering {
-            other.0.cmp(&self.0)
-        }
-    }
-}
-
 mod backtracking {
     use std::cell::{Ref, RefCell};
+    use std::cmp::Reverse;
     use std::collections::{HashMap, HashSet};
     use std::rc::Rc;
 
     use super::probing::{FullProbe1, Impact, Priority};
-    use super::rev::Reverse;
     use super::{Board, Point, BW};
 
     type Solution = Vec<BW>;
@@ -1327,10 +1231,10 @@ mod backtracking {
     impl Solver {
         pub fn with_options(board: Rc<RefCell<Board>>, max_solutions: Option<usize>) -> Self {
             let probe_solver = FullProbe1::with_board(Rc::clone(&board));
-            Solver {
-                board: board,
-                probe_solver: probe_solver,
-                max_solutions: max_solutions,
+            Self {
+                board,
+                probe_solver,
+                max_solutions,
                 solutions: vec![],
             }
         }
@@ -1678,14 +1582,12 @@ fn read_description() -> Clues {
 }
 
 fn read() -> Vec<(Vec<Clues>, Vec<Clues>)> {
-    let n;
-    loop {
+    let n = loop {
         let first_line = read_next_line();
         if !first_line.is_empty() {
-            n = first_line[0];
-            break;
+            break first_line[0];
         }
-    }
+    };
 
     (0..n)
         .map(|_i| {
@@ -1706,8 +1608,7 @@ impl fmt::Display for Board {
             for cell in row.iter() {
                 write!(f, "{}", cell)?
             }
-            #[allow(clippy::writeln_empty_string)]
-            writeln!(f, "")?
+            writeln!(f)?
         }
         Ok(())
     }
