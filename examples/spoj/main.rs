@@ -1192,7 +1192,7 @@ mod probing {
 mod backtracking {
     use std::cell::{Ref, RefCell};
     use std::cmp::Reverse;
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashMap;
     use std::rc::Rc;
 
     use super::probing::{FullProbe1, Impact, Priority};
@@ -1385,7 +1385,7 @@ mod backtracking {
                 }
 
                 let (point, color) = direction;
-                let cell_colors: HashSet<BW> =
+                let cell_colors: Vec<BW> =
                     self.board().cell(&point).variants().into_iter().collect();
 
                 if !cell_colors.contains(&color) {
@@ -1441,8 +1441,8 @@ mod backtracking {
 
                 if !success || self.board().is_solved_full() {
                     let states_to_try: Vec<_> = cell_colors
-                        .iter()
-                        .filter_map(|&other_color| {
+                        .into_iter()
+                        .filter_map(|other_color| {
                             if other_color == color {
                                 None
                             } else {
