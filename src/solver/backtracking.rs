@@ -582,16 +582,13 @@ where
                 // if all of them goes to the dead end,
                 // then the parent path is a dead end
 
-                let states_to_try: Vec<_> = cell_colors
-                    .iter()
-                    .filter_map(|&other_color| {
-                        if other_color == color {
-                            None
-                        } else {
-                            Some((point, other_color))
-                        }
-                    })
-                    .collect();
+                let states_to_try = cell_colors.iter().filter_map(|&other_color| {
+                    if other_color == color {
+                        None
+                    } else {
+                        Some((point, other_color))
+                    }
+                });
 
                 // if all(self.is_explored(path + (direction,)) for direction in states_to_try) {
                 //     warn!("All other colors ({:?}) of {:?} already explored",

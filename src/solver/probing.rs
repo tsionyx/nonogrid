@@ -138,10 +138,9 @@ where
                     .partition(|(_color, size)| size.is_none());
 
                 if !contradictions.is_empty() {
-                    let bad_colors: Vec<_> = contradictions
-                        .iter()
-                        .map(|(color, _should_be_none)| *color)
-                        .collect();
+                    let bad_colors = contradictions
+                        .into_iter()
+                        .map(|(color, _should_be_none)| color);
 
                     false_probes = Some((point, bad_colors));
                     break;

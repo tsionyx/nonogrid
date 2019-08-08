@@ -1116,10 +1116,9 @@ mod probing {
                         .partition(|&(_color, size)| size.is_none());
 
                     if !contradictions.is_empty() {
-                        let bad_colors: Vec<_> = contradictions
+                        let bad_colors = contradictions
                             .into_iter()
-                            .map(|(color, _should_be_none)| color)
-                            .collect();
+                            .map(|(color, _should_be_none)| color);
 
                         false_probes = Some((point, bad_colors));
                         break;
@@ -1136,15 +1135,13 @@ mod probing {
                 }
 
                 if let Some((contradiction, colors)) = false_probes {
-                    for color in &colors {
-                        self.board
-                            .borrow_mut()
-                            .unset_color(&contradiction, *color)?;
+                    for color in colors {
+                        self.board.borrow_mut().unset_color(&contradiction, color)?;
                     }
                     let new_probes = self.propagate_point(&contradiction).map_err(|_| {
                         format!(
-                            "Error while propagating contradicted values {:?} in {:?}",
-                            &colors, &contradiction
+                            "Error while propagating contradicted values in {:?}",
+                            &contradiction
                         )
                     })?;
 
@@ -1440,16 +1437,13 @@ mod backtracking {
                 }
 
                 if !success || self.board().is_solved_full() {
-                    let states_to_try: Vec<_> = cell_colors
-                        .into_iter()
-                        .filter_map(|other_color| {
-                            if other_color == color {
-                                None
-                            } else {
-                                Some((point, other_color))
-                            }
-                        })
-                        .collect();
+                    let states_to_try = cell_colors.into_iter().filter_map(|other_color| {
+                        if other_color == color {
+                            None
+                        } else {
+                            Some((point, other_color))
+                        }
+                    });
 
                     for direction in states_to_try {
                         if !directions.contains(&direction) {
