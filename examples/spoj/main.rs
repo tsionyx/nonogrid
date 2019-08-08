@@ -448,19 +448,16 @@ impl Board {
         solved / self.height() as f64
     }
 
-    fn unsolved_cells(&self) -> Vec<Point> {
-        self.iter_rows()
-            .enumerate()
-            .flat_map(|(y, row)| {
-                row.iter().enumerate().filter_map(move |(x, cell)| {
-                    if cell.is_solved() {
-                        None
-                    } else {
-                        Some(Point::new(x, y))
-                    }
-                })
+    fn unsolved_cells(&self) -> impl Iterator<Item = Point> + '_ {
+        self.iter_rows().enumerate().flat_map(|(y, row)| {
+            row.iter().enumerate().filter_map(move |(x, cell)| {
+                if cell.is_solved() {
+                    None
+                } else {
+                    Some(Point::new(x, y))
+                }
             })
-            .collect()
+        })
     }
 
     fn cell(&self, point: &Point) -> BW {
@@ -486,18 +483,10 @@ impl Board {
         res
     }
 
-    fn unsolved_neighbours(&self, point: &Point) -> Vec<Point> {
+    fn unsolved_neighbours(&self, point: &Point) -> impl Iterator<Item = Point> + '_ {
         self.neighbours(&point)
             .into_iter()
             .filter(move |n| !self.cell(n).is_solved())
-            .collect()
-    }
-
-    fn unsolved_neighbours_count(&self, point: &Point) -> usize {
-        self.neighbours(&point)
-            .into_iter()
-            .filter(move |n| !self.cell(n).is_solved())
-            .count()
     }
 
     fn row_cache_index(&self, row_index: usize) -> usize {
@@ -808,11 +797,13 @@ mod propagation {
     }
 
     impl LongJobQueue {
-        fn with_rows_and_columns(rows: Vec<usize>, columns: Vec<usize>) -> Self {
+        fn with_rows_and_columns(
+            rows: impl Iterator<Item = usize>,
+            columns: impl Iterator<Item = usize>,
+        ) -> Self {
             let jobs = columns
-                .into_iter()
                 .map(|column_index| (true, column_index))
-                .chain(rows.into_iter().map(|row_index| (false, row_index)))
+                .chain(rows.map(|row_index| (false, row_index)))
                 .collect();
 
             Self {
@@ -898,8 +889,8 @@ mod propagation {
             } else {
                 let queue = {
                     let board = self.board.borrow();
-                    let rows: Vec<_> = (0..board.height()).rev().collect();
-                    let cols: Vec<_> = (0..board.width()).rev().collect();
+                    let rows = (0..board.height()).rev();
+                    let cols = (0..board.width()).rev();
                     LongJobQueue::with_rows_and_columns(rows, cols)
                 };
                 self.run_jobs(queue)
@@ -1068,8 +1059,8 @@ mod probing {
             let mut column_rate_cache = Vec::with_none(board.width());
 
             let mut queue = OrderedPoints::new();
-            queue.extend(unsolved.into_iter().map(|point| {
-                let no_solved = 4 - board.unsolved_neighbours_count(&point);
+            queue.extend(unsolved.map(|point| {
+                let no_solved = 4 - board.unsolved_neighbours(&point).count();
                 let row_rate = row_rate_cache
                     .unwrap_or_insert_with(point.y(), || board.row_solution_rate(point.y()));
                 let column_rate = column_rate_cache
@@ -1086,21 +1077,20 @@ mod probing {
 
             let board = self.board();
 
-            Ok(fixed_points
-                .into_iter()
+            let res = fixed_points
+                .iter()
                 .flat_map(|new_point| {
                     board
-                        .unsolved_neighbours(&new_point)
-                        .into_iter()
+                        .unsolved_neighbours(new_point)
                         .map(|neighbour| (PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED, neighbour))
                 })
                 .chain(
-                    self.board()
-                        .unsolved_neighbours(&point)
-                        .into_iter()
+                    board
+                        .unsolved_neighbours(point)
                         .map(|neighbour| (PRIORITY_NEIGHBOURS_OF_CONTRADICTION, neighbour)),
                 )
-                .collect())
+                .collect();
+            Ok(res)
         }
 
         pub fn run_unsolved(&mut self) -> Result<Impact, String> {
