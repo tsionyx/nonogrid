@@ -580,16 +580,13 @@ where
                 // then the parent path is a dead end
 
                 let cell_colors = self.board().cell(&point).variants();
-                let states_to_try: Vec<_> = cell_colors
-                    .into_iter()
-                    .filter_map(|other_color| {
-                        if other_color == color {
-                            None
-                        } else {
-                            Some((point, other_color))
-                        }
-                    })
-                    .collect();
+                let states_to_try = cell_colors.into_iter().filter_map(|other_color| {
+                    if other_color == color {
+                        None
+                    } else {
+                        Some((point, other_color))
+                    }
+                });
 
                 // if all(self.is_explored(path + (direction,)) for direction in states_to_try) {
                 //     info!("All other colors ({:?}) of {:?} already explored",

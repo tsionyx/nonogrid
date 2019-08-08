@@ -199,10 +199,9 @@ where
                         .partition(|(_color, res)| res.is_contradiction());
 
                     if !contradictions.is_empty() {
-                        let bad_colors: Vec<_> = contradictions
+                        let bad_colors = contradictions
                             .into_iter()
-                            .map(|(color, _should_be_none)| color)
-                            .collect();
+                            .map(|(color, _should_be_none)| color);
 
                         false_probes = Some((point, bad_colors));
                         break;
@@ -221,17 +220,17 @@ where
                 if let Some((contradiction, colors)) = false_probes {
                     contradictions_number += 1;
 
-                    for color in &colors {
+                    for color in colors {
                         Board::unset_color_with_callback(
                             MutRc::clone(&self.board),
                             &contradiction,
-                            color,
+                            &color,
                         )?;
                     }
                     let new_probes = self.propagate_point::<S>(&contradiction).map_err(|_| {
                         format!(
-                            "Error while propagating contradicted values {:?} in {:?}",
-                            &colors, &contradiction
+                            "Error while propagating contradicted values in {:?}",
+                            &contradiction
                         )
                     })?;
                     probes.extend(new_probes);
