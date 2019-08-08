@@ -2,6 +2,7 @@ use std::fmt;
 use std::iter::once;
 
 use hashbrown::HashMap;
+use smallvec::SmallVec;
 
 use crate::block::{
     base::color::{ColorDesc, ColorId, ColorPalette},
@@ -290,9 +291,9 @@ where
     /// the four possible neighbour cells.
     /// When the given cell is on a border,
     /// that number can reduce to three or two.
-    fn neighbours(&self, point: &Point) -> Vec<Point> {
+    fn neighbours(&self, point: &Point) -> SmallVec<[Point; 4]> {
         let Point { x, y } = *point;
-        let mut res = Vec::with_capacity(4);
+        let mut res = SmallVec::with_capacity(4);
         if x > 0 {
             res.push(Point::new(x - 1, y));
         }

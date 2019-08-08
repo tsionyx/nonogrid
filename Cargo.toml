@@ -23,6 +23,7 @@ lru = "0.1"
 priority-queue = "0.6"
 ordered-float = "1.0"
 log = "0.4"
+smallvec = "0.6"
 
 toml = {version="0.5", optional=true}
 serde_derive = {version="1.0", optional=true}
