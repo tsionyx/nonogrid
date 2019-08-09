@@ -88,49 +88,36 @@
 
 # http://www.nonograms.org puzzles
 
-23258 puzzles run. All the puzzles are line solvable and has single solution.
+25983 puzzles were run. All the puzzles are line solvable and has single solution.
 
 ## Distribution of solve times
 
 ```
 $ less batch-norg.log | grep 'Total' | awk '{print $2}' | sort -r | uniq -c
-      1 0.12
-      2 0.11
-      1 0.10
-      1 0.08
-      3 0.07
-      4 0.06
-      3 0.05
-     30 0.04
-     40 0.03
-    207 0.02
-    890 0.01
-  22222 0.00
+     2 0.09
+     2 0.08
+     2 0.06
+     3 0.05
+     9 0.04
+    31 0.03
+   138 0.02
+   591 0.01
+ 25205 0.00
 ```
 
-## Top times (more than 0.05 sec)
+## Top times (>=0.05 sec)
 
 | puzzle_id | solve time, sec | colors (w/o blank) |
 |-----------|----------------:|--------------------|
-| 2617      | 0.00            | 6
-| **4462**  | 0.07            | 3
-| **9596**  | 0.11            | 10
-| 9664      | 0.06            | 1 (black)
-| 10509     | 0.04            | 1 (black)
-| 10548     | 0.04            | 1 (black)
-| 18305     | 0.04            | 8
-| 18417     | 0.06            | 1 (black)
-| 19043     | 0.06            | 1 (black)
-| 20689     | 0.07            | 4
-| 21251     | 0.11            | 1 (black)
-| 21259     | 0.07            | 1 (black)
-| 21272     | 0.10            | 1 (black)
-| 21424     | 0.06            | 10
-| 21553     | 0.12            | 5
-| 21886     | 0.04            | 3
-| 22118     | 0.08            | 10
-| 22326     | 0.05            | 1 (black)
-| 23343     | 0.03            | 7
+| **4462**  | 0.06            | 3
+| **9596**  | 0.09            | 10
+| 18417     | 0.05            | 1 (black)
+| 20689     | 0.06            | 4
+| 21251     | 0.09            | 1 (black)
+| 21259     | 0.05            | 1 (black)
+| 21272     | 0.08            | 1 (black)
+| 21424     | 0.05            | 10
+| 21553     | 0.08            | 5
 
 
 **Bold** puzzles also found in [this C++ solver post](
