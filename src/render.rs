@@ -55,21 +55,17 @@ where
         });
 
         let side = self.side_lines();
-        let side: Vec<_> = side
-            .into_iter()
-            .map(|row| {
-                row.into_iter()
-                    .map(|s| ColoredString::from(s.as_str()))
-                    .collect()
-            })
-            .collect();
+        let side = side.into_iter().map(|row| {
+            row.into_iter()
+                .map(|s| ColoredString::from(s.as_str()))
+                .collect()
+        });
 
         let grid = self.grid_lines();
-        let grid = side
-            .into_iter()
-            .zip(grid)
-            // https://users.rust-lang.org/t/how-to-concatenate-two-vectors/8324/4
-            .map(|(s, g): (Vec<ColoredString>, _)| [&s[..], &g].concat());
+        let grid = side.zip(grid).map(|(mut s, g): (Vec<_>, _)| {
+            s.extend(g);
+            s
+        });
 
         header
             .chain(grid)

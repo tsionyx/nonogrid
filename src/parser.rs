@@ -610,13 +610,12 @@ impl NonogramsOrg {
     const CYPHER_PREFIX: &'static str = r"var d=";
     const CYPHER_SUFFIX: char = ';';
 
-    fn extract_encoded_json(html: &str) -> Option<String> {
+    fn extract_encoded_json(html: &str) -> Option<&str> {
         html.lines().find_map(|line| {
             if line.starts_with(Self::CYPHER_PREFIX) {
                 Some(
-                    line.replace(Self::CYPHER_PREFIX, "")
-                        .trim_end_matches(|c| c == Self::CYPHER_SUFFIX)
-                        .to_string(),
+                    line[Self::CYPHER_PREFIX.len()..]
+                        .trim_end_matches(|c| c == Self::CYPHER_SUFFIX),
                 )
             } else {
                 None
@@ -749,7 +748,7 @@ impl BoardParser for NonogramsOrg {
             .ok_or_else(|| ParseError("Not found cypher in HTML content".to_string()))?;
 
         Ok(Self {
-            encoded: Self::parse_json(&json),
+            encoded: Self::parse_json(json),
         })
     }
 
