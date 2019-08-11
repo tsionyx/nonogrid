@@ -31,17 +31,17 @@ function run_single_webpbn() {
     local path=puzzles/${puzzle_id}.${fmt}
     if [[ ! -f ${path} ]]; then
         echo "File not found locally. Download into $path"
-        wget --timeout=10 -qO- "https://webpbn.com/export.cgi" --post-data "id=$i&fmt=$fmt&go=1" > ${path}
+        wget --timeout=10 -qO- "https://webpbn.com/export.cgi" --post-data "id=$puzzle_id&fmt=$fmt&go=1" > ${path}
         if [[ $? -ne 0 ]]; then
-            echo "Failed to download puzzle #$i: timeout" >&2
+            echo "Failed to download puzzle #$puzzle_id: timeout" >&2
         fi
     fi
 
     if cat ${path} | grep -q ': rows'; then
-        echo "Solving WEBPBN's puzzle #$i (http://webpbn.com/$i) ..."
+        echo "Solving WEBPBN's puzzle #$puzzle_id (http://webpbn.com/$puzzle_id) ..."
         /usr/bin/time -f 'Total: %U' target/release/nonogrid ${path} --timeout=3600 --max-solutions=2 2>&1 1>solutions/${puzzle_id}
     else
-        echo "No valid file for puzzle #$i" >&2
+        echo "No valid file for puzzle #$puzzle_id" >&2
         local lines=$(cat ${path} | wc -l)
         if [[ ${lines} -lt 2 ]]; then
             echo "Removing empty file $path"
@@ -78,13 +78,13 @@ function run_single_nonogram() {
         echo "File not found locally. Download into $path"
         url=$(find_nonogram_url ${puzzle_id})
         if [[ ! ${url} ]]; then
-            echo "Not found URL for puzzle #$i" >&2
+            echo "Not found URL for puzzle #$puzzle_id" >&2
             return
         fi
 
         wget --timeout=10 -qO- ${url} > ${path}
         if [[ $? -ne 0 ]]; then
-            echo "Failed to download puzzle #$i: timeout" >&2
+            echo "Failed to download puzzle #$puzzle_id: timeout" >&2
         fi
     fi
 
@@ -94,7 +94,7 @@ function run_single_nonogram() {
         rm -f ${path}
     else
         sed -n '/^var d=.\+;/p' -i ${path}
-        echo "Solving NORG puzzle #$i ${url}..."
+        echo "Solving NORG puzzle #$puzzle_id ${url}..."
         /usr/bin/time -f 'Total: %U' target/release/nonogrid ${path} --timeout=3600 --max-solutions=2 2>&1 1>solutions-norg/${puzzle_id}
     fi
 }
@@ -113,10 +113,11 @@ function run_webpbn() {
     mkdir -p puzzles
     prepare
 
+    # https://unix.stackexchange.com/a/158569
+    export -f run_single_webpbn
     for i in "$@"; do
-        run_single_webpbn ${i}
-        echo
-    done
+        echo ${i}
+    done | xargs -n1 -P1 bash -c 'run_single_webpbn "$@"' _
 }
 
 
