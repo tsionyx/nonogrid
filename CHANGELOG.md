@@ -92,3 +92,31 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - correctly parse the colors starting with '#', e.g. _#FF00FF_
+
+
+## [0.5.1] - 2019-08-14
+
+### Added
+- [spoj example](examples/spoj/) with the algorithm adaptation for
+[this problem](https://www.spoj.com/problems/JCROSS/)
+- crate metadata to `--help` with help of `clap`'s macros.
+
+### Fixed
+- README examples
+- get rid of some allocations by preventing premature `collect`-ing
+- do not store `Err("Bad line")` in cache anymore
+- use iterators instead of `Vec`'s where possible
+- optimize `propagation::Solver::update_line`
+- clippy errors about `f64` comparison: use `f64::EPSILON`
+
+### Updated
+- move solutions cache from `Board` to `propagation::Solver`
+- make the `Priority` abstraction instead of `OrderedFloat<f64>`
+- make the `ProbeResult` abstraction instead of `Option`
+to represent NewInfo/Contradiction variants
+- benchmarks results (run some very long-solving puzzles)
+- use SmallVec for Point's neighbours
+- lower the logs level for some of `probing` and `backtracking` events
+- do not create the propagation solver `with_point` anymore, just run with (or without) a Point
+- dependencies
+- callback test as closure
