@@ -1,6 +1,3 @@
-#[cfg(feature = "threaded")]
-use nonogrid::{block::binary::BinaryColor, render::ShellRenderer};
-
 #[cfg(feature = "ini")]
 mod ini {
     use std::f64;
@@ -17,10 +14,11 @@ mod ini {
     };
 
     #[test]
-    #[cfg(feature = "threaded")]
     fn hello() {
-        use super::*;
-        use nonogrid::render::Renderer;
+        use nonogrid::{
+            block::binary::BinaryColor,
+            render::{Renderer, ShellRenderer},
+        };
 
         let f = MyFormat::read_local("examples/hello.toml").unwrap();
         let board = f.parse::<BinaryBlock>();

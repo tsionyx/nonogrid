@@ -4,6 +4,8 @@ use std::iter::once;
 use hashbrown::HashMap;
 use smallvec::SmallVec;
 
+pub use callbacks::{ChangeColorCallback, RestoreCallback, SetLineCallback};
+
 use crate::block::{
     base::color::{ColorDesc, ColorId, ColorPalette},
     Block, Color, Description, Line,
@@ -33,6 +35,40 @@ impl Point {
     }
 }
 
+#[cfg(not(feature = "threaded"))]
+mod callbacks {
+    use super::Point;
+
+    pub trait SetLineCallback: Fn(bool, usize) {}
+
+    impl<F> SetLineCallback for F where F: Fn(bool, usize) {}
+
+    pub trait RestoreCallback: Fn() {}
+
+    impl<F> RestoreCallback for F where F: Fn() {}
+
+    pub trait ChangeColorCallback: Fn(Point) {}
+
+    impl<F> ChangeColorCallback for F where F: Fn(Point) {}
+}
+
+#[cfg(feature = "threaded")]
+mod callbacks {
+    use super::Point;
+
+    pub trait SetLineCallback: Fn(bool, usize) + Send + Sync {}
+
+    impl<F> SetLineCallback for F where F: Fn(bool, usize) + Send + Sync {}
+
+    pub trait RestoreCallback: Fn() + Send + Sync {}
+
+    impl<F> RestoreCallback for F where F: Fn() + Send + Sync {}
+
+    pub trait ChangeColorCallback: Fn(Point) + Send + Sync {}
+
+    impl<F> ChangeColorCallback for F where F: Fn(Point) + Send + Sync {}
+}
+
 pub struct Board<B>
 where
     B: Block,
@@ -48,9 +84,9 @@ where
     cols_cache_indexes: Vec<usize>,
     cell_rate_memo: InteriorMutableRef<HashMap<B::Color, f64>>,
     // callbacks
-    on_set_line: Option<Box<dyn Fn(bool, usize) + Send + Sync>>,
-    on_restore: Option<Box<dyn Fn() + Send + Sync>>,
-    on_change_color: Option<Box<dyn Fn(Point) + Send + Sync>>,
+    on_set_line: Option<Box<dyn SetLineCallback>>,
+    on_restore: Option<Box<dyn RestoreCallback>>,
+    on_change_color: Option<Box<dyn ChangeColorCallback>>,
 }
 
 impl<B> fmt::Debug for Board<B>
@@ -369,15 +405,15 @@ impl<B> Board<B>
 where
     B: Block,
 {
-    pub fn set_callback_on_set_line<CB: 'static + Fn(bool, usize) + Send + Sync>(&mut self, f: CB) {
+    pub fn set_callback_on_set_line<CB: SetLineCallback + 'static>(&mut self, f: CB) {
         self.on_set_line = Some(Box::new(f));
     }
 
-    pub fn set_callback_on_restore<CB: 'static + Fn() + Send + Sync>(&mut self, f: CB) {
+    pub fn set_callback_on_restore<CB: RestoreCallback + 'static>(&mut self, f: CB) {
         self.on_restore = Some(Box::new(f));
     }
 
-    pub fn set_callback_on_change_color<CB: 'static + Fn(Point) + Send + Sync>(&mut self, f: CB) {
+    pub fn set_callback_on_change_color<CB: ChangeColorCallback + 'static>(&mut self, f: CB) {
         self.on_change_color = Some(Box::new(f));
     }
 
