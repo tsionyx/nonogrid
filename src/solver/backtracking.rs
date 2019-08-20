@@ -334,12 +334,12 @@ where
     fn choose_directions(&self, impact: Impact<B>) -> Vec<(Point, B::Color)> {
         let mut point_wise = HashMap::new();
 
-        for (point, color, new_points, priority) in impact.into_iter().map(|x| x.as_tuple()) {
+        for (point, color, new_points, priority) in impact.into_iter().map(|x| x.into_tuple()) {
             if self.board().cell(&point).is_solved() {
                 continue;
             }
             let point_colors = point_wise.entry(point).or_insert_with(HashMap::new);
-            let _ = point_colors.insert(color, (new_points, priority));
+            let _ = point_colors.insert(color, (new_points.len(), priority));
         }
 
         let mut points_rate: Vec<_> = point_wise

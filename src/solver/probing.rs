@@ -18,12 +18,12 @@ use crate::utils::{
 pub struct ProbeImpact<C: Color> {
     point: Point,
     color: C,
-    cells_solved: usize,
+    cells_solved: Vec<(Point, C)>,
     probe_priority: Priority,
 }
 
 impl<C: Color> ProbeImpact<C> {
-    pub fn as_tuple(&self) -> (Point, C, usize, Priority) {
+    pub fn into_tuple(self) -> (Point, C, Vec<(Point, C)>, Priority) {
         (
             self.point,
             self.color,
@@ -52,6 +52,7 @@ impl From<f64> for Priority {
     }
 }
 
+type PointImpact<C> = Vec<(C, ProbeResult<Vec<(Point, C)>>)>;
 pub type Impact<B> = Vec<ProbeImpact<<B as Block>::Color>>;
 type OrderedPoints = PQ<Point, Priority, DefaultHashBuilder>;
 
@@ -187,7 +188,7 @@ where
                                 point,
                                 color,
                                 probe_priority: priority,
-                                cells_solved: 0,
+                                cells_solved: Vec::new(),
                             },
                         ));
                         continue;
@@ -296,7 +297,7 @@ where
 
     /// Try every color for given cell
     /// and return the number of solved cells (Some) or contradiction (None)
-    fn probe<S>(&mut self, point: Point) -> Vec<(B::Color, ProbeResult<usize>)>
+    fn probe<S>(&mut self, point: Point) -> PointImpact<B::Color>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -320,13 +321,19 @@ where
                         ProbeResult::Contradiction
                     },
                     |new_cells| {
+                        // get the color of every changed cell before restoring
+                        let new_cells: Vec<_> = new_cells
+                            .into_iter()
+                            .map(|point| (point, self.board().cell(&point)))
+                            .collect();
+
                         if !new_cells.is_empty() {
                             debug!(
                                 "Probing {:?}: {:?} brings some new info: {:?}",
                                 point, assumption, new_cells
                             );
                         }
-                        ProbeResult::NewInfo(new_cells.len())
+                        ProbeResult::NewInfo(new_cells)
                     },
                 );
                 Board::restore_with_callback(MutRc::clone(&self.board), save);
