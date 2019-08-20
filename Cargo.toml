@@ -37,6 +37,8 @@ colored = {version="1.8", optional=true}
 env_logger = {version="0.6", optional=true}
 reqwest = {version="0.9", optional=true}
 
+varisat = {version="0.2", optional=true}
+
 
 [features]
 std_time = []
@@ -44,5 +46,6 @@ xml = ["sxd-document", "sxd-xpath"]
 ini = ["toml", "serde", "serde_derive"]
 default = ["clap", "std_time", "env_logger", "ini"]
 web = ["reqwest"]
+sat = ["varisat"]
 # slower, but allows to use with concurrency
 threaded = []

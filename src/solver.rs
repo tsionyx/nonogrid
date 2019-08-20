@@ -7,6 +7,8 @@ pub mod backtracking;
 pub mod line;
 pub mod probing;
 pub mod propagation;
+#[cfg(feature = "sat")]
+pub mod sat;
 
 pub fn run<B, S, P>(
     board: MutRc<Board<B>>,

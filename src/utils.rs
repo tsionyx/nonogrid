@@ -189,6 +189,48 @@ where
         .collect()
 }
 
+#[allow(dead_code)]
+pub fn pair_combinations<T>(s: &[T]) -> Vec<(T, T)>
+where
+    T: Clone,
+{
+    s.iter()
+        .enumerate()
+        .flat_map(|(i, x)| {
+            s.iter().enumerate().filter_map(move |(j, y)| {
+                if i >= j {
+                    None
+                } else {
+                    Some((x.clone(), y.clone()))
+                }
+            })
+        })
+        .collect()
+}
+
+#[allow(dead_code)]
+pub fn is_overlapping<T>(range1: Range<T>, range2: Range<T>) -> bool
+where
+    T: Ord,
+{
+    let begin = range1.start.max(range2.start);
+    let end = range1.end.min(range2.end);
+
+    begin < end
+}
+
+#[allow(dead_code)]
+pub fn is_touching<T>(range1: Range<T>, range2: Range<T>) -> bool
+where
+    T: Ord,
+{
+    let begin = range1.start.max(range2.start);
+    let end = range1.end.min(range2.end);
+
+    // at least one item in the overlapping range (< case) or touching (= case)
+    begin <= end
+}
+
 fn idx_to_ranges<T>(mut indexes: Vec<T>) -> Option<Vec<Range<T>>>
 where
     T: Ord + Clone,
