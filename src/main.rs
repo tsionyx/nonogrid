@@ -5,8 +5,6 @@ use std::fmt::Display;
 use std::fs;
 use std::io::{self, stdin, Read};
 
-use log::Level;
-
 use block::{binary::BinaryBlock, multicolor::ColoredBlock, Block};
 use board::Board;
 use cli::Params;
@@ -205,29 +203,50 @@ where
     let board = MutRc::new(board);
     let r = ShellRenderer::with_board(MutRc::clone(&board));
 
-    let backtracking = solver::run::<_, DynamicSolver<_>, FullProbe1<_>>(
-        MutRc::clone(&board),
-        search_options.0,
-        search_options.1,
-        search_options.2,
-    )
-    .unwrap();
-    println!("{}", r.render());
+    #[cfg(not(feature = "sat"))]
+    {
+        let backtracking = solver::run::<_, DynamicSolver<_>, FullProbe1<_>>(
+            MutRc::clone(&board),
+            search_options.0,
+            search_options.1,
+            search_options.2,
+        )
+        .unwrap();
+        println!("{}", r.render());
 
-    if let Some(backtracking) = backtracking {
-        let solutions = &backtracking.solutions;
-        if !solutions.is_empty() && (!board.read().is_solved_full() || solutions.len() > 1) {
-            println!("Backtracking found {} solutions:", solutions.len());
-            for solution in solutions.iter() {
-                Board::restore_with_callback(MutRc::clone(&board), solution.clone());
-                println!("{}", r.render_simple());
+        if let Some(backtracking) = backtracking {
+            let solutions = &backtracking.solutions;
+            if !solutions.is_empty() && (!board.read().is_solved_full() || solutions.len() > 1) {
+                println!("Backtracking found {} solutions:", solutions.len());
+                for solution in solutions.iter() {
+                    Board::restore_with_callback(MutRc::clone(&board), solution.clone());
+                    println!("{}", r.render_simple());
+                }
+            }
+
+            if log_enabled!(log::Level::Warn) {
+                let search_tree = backtracking.search_tree.read();
+                if !search_tree.is_empty() {
+                    println!("Searching progress: {:?}", search_tree);
+                }
             }
         }
+    }
 
-        if log_enabled!(Level::Warn) {
-            let search_tree = backtracking.search_tree.read();
-            if !search_tree.is_empty() {
-                println!("Searching progress: {:?}", search_tree);
+    #[cfg(feature = "sat")]
+    {
+        let sat_solutions = solver::run_with_sat::<_, DynamicSolver<_>, FullProbe1<_>>(
+            MutRc::clone(&board),
+            search_options.0,
+        )
+        .unwrap();
+        println!("{}", r.render());
+
+        if let Some(solutions) = sat_solutions {
+            for (i, solution) in solutions.enumerate() {
+                Board::restore_with_callback(MutRc::clone(&board), solution);
+                println!("{} solution:", i + 1);
+                println!("{}", r.render_simple());
             }
         }
     }

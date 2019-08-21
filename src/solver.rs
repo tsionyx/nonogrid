@@ -38,3 +38,56 @@ where
 
     Ok(None)
 }
+
+#[cfg(feature = "sat")]
+pub fn run_with_sat<B, S, P>(
+    board: MutRc<Board<B>>,
+    max_solutions: Option<usize>,
+) -> Result<Option<impl Iterator<Item = Vec<B::Color>>>, String>
+where
+    B: Block,
+    S: line::LineSolver<BlockType = B>,
+    P: ProbeSolver<BlockType = B>,
+{
+    use crate::block::Color;
+
+    warn!("Solving with simple line propagation");
+    let mut solver = propagation::Solver::new(MutRc::clone(&board));
+    let solved = solver
+        .run::<S>(None)
+        .map_err(|_| "Bad puzzle for sure: simple propagation failed".to_string())?;
+    warn!("Solved {} points", solved.len());
+
+    let impact = {
+        warn!("Solving with probing");
+        let mut probe_solver = P::with_board(MutRc::clone(&board));
+        probe_solver.run_unsolved::<S>()?
+    };
+
+    if !board.read().is_solved_full() {
+        warn!("Trying to solve with SAT");
+        let solver = sat::ClauseGenerator::with_clues(
+            board.read().descriptions(false),
+            board.read().descriptions(true),
+            &board.read().make_snapshot(),
+        );
+
+        let solutions_iter = solver.run(impact, max_solutions).map(|solution| {
+            solution
+                .into_iter()
+                .map(|is_color| {
+                    if is_color {
+                        // black
+                        B::Color::from_color_ids(&[])
+                    } else {
+                        B::Color::blank()
+                    }
+                })
+                .collect()
+        });
+
+        return Ok(Some(solutions_iter));
+    }
+
+    Ok(None)
+}
