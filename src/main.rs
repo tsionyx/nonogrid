@@ -220,7 +220,7 @@ where
             println!("Backtracking found {} solutions:", solutions.len());
             for solution in solutions.iter() {
                 Board::restore_with_callback(MutRc::clone(&board), solution.clone());
-                println!("{}", r.render());
+                println!("{}", r.render_simple());
             }
         }
 

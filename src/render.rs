@@ -21,6 +21,13 @@ where
 {
     fn with_board(board: MutRc<Board<B>>) -> Self;
     fn render(&self) -> String;
+    fn render_simple(&self) -> String;
+
+    fn concat(rows: impl Iterator<Item = Vec<String>>) -> String {
+        rows.map(|line| line.concat())
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
 }
 
 #[allow(missing_debug_implementations)]
@@ -67,16 +74,19 @@ where
             s
         });
 
-        header
-            .chain(grid)
-            .map(|line| {
-                line.iter()
-                    .map(|symbol| pad(symbol, 2, true))
-                    .collect::<Vec<_>>()
-                    .concat()
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
+        Self::concat(
+            header
+                .chain(grid)
+                .map(|line| line.iter().map(|symbol| pad(symbol, 2, true)).collect()),
+        )
+    }
+
+    fn render_simple(&self) -> String {
+        Self::concat(
+            self.grid_lines()
+                .into_iter()
+                .map(|row| row.into_iter().map(|cell| cell.to_string()).collect()),
+        )
     }
 }
 
