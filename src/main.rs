@@ -91,7 +91,9 @@ mod cli {
             }
 
             let content = if let Some(input_file) = input_id {
-                fs::read_to_string(input_file)?
+                let raw = fs::read(input_file)?;
+                // ignore non-unicode symbols
+                String::from_utf8_lossy(&raw).into()
             } else {
                 read_stdin()?
             };
