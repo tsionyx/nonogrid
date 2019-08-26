@@ -69,7 +69,7 @@ where
         let solver = sat::ClauseGenerator::with_clues(
             board.read().descriptions(false),
             board.read().descriptions(true),
-            &board.read().make_snapshot(),
+            board.read().make_snapshot(),
         );
 
         let solutions_iter = solver.run(impact, max_solutions).map(|solution| {

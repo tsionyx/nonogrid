@@ -70,7 +70,7 @@ where
     columns_vars: Vec<LinePositions>,
     rows_vars: Vec<LinePositions>,
     cell_vars: Vec<Vec<Var>>,
-    cells: Vec<Option<bool>>,
+    cells: Vec<B::Color>,
     width: usize,
     height: usize,
     formula: CnfFormula,
@@ -84,7 +84,7 @@ where
     pub fn with_clues(
         columns: &[ReadRc<Description<B>>],
         rows: &[ReadRc<Description<B>>],
-        cells: &[B::Color],
+        cells: Vec<B::Color>,
     ) -> Self {
         let width = columns.len();
         let height = rows.len();
@@ -96,16 +96,6 @@ where
 
         let cell_vars = (0..height)
             .map(|_| formula.new_var_iter(width).collect())
-            .collect();
-        let cells = cells
-            .iter()
-            .map(|&cell| {
-                if cell.is_solved() {
-                    Some(cell != B::Color::blank())
-                } else {
-                    None
-                }
-            })
             .collect();
 
         let vars_total = formula.var_count();
@@ -282,7 +272,14 @@ where
             .concat()
             .iter()
             .zip(&self.cells)
-            .filter_map(|(var, is_blank)| is_blank.map(|is_blank| var.lit(is_blank)))
+            .filter_map(|(var, &cell)| {
+                if cell.is_solved() {
+                    let is_color = cell != B::Color::blank();
+                    Some(var.lit(is_color))
+                } else {
+                    None
+                }
+            })
             .collect()
     }
 
