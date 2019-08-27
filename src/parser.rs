@@ -4,7 +4,7 @@ use std::fs;
 use std::io;
 use std::num::ParseIntError;
 
-use hashbrown::HashMap;
+use hashbrown::{HashMap, HashSet};
 #[cfg(feature = "web")]
 use reqwest;
 
@@ -22,6 +22,7 @@ use crate::block::{
         clues_from_solution,
         color::{ColorId, ColorPalette, ColorValue},
     },
+    binary::BinaryBlock,
     Block, Description,
 };
 use crate::board::Board;
@@ -1149,6 +1150,36 @@ impl BoardParser for SimpleParser {
     where
         Self: Sized,
     {
+        let symbols: HashSet<_> = content
+            .lines()
+            .flat_map(|line| line.trim().chars())
+            .collect();
+
+        // only '1' and '0' as the solution matrix
+        if symbols.len() == 2 {
+            let solution_matrix: Vec<_> = content
+                .lines()
+                .map(|line| {
+                    line.chars()
+                        .map(|ch| ch.to_digit(10).expect("not a decimal digit"))
+                        .collect()
+                })
+                .collect();
+            let (columns, rows) = clues_from_solution(&solution_matrix, 0);
+            return Ok(Self {
+                rows: rows
+                    .into_iter()
+                    .map(|d: Description<BinaryBlock>| {
+                        d.vec.into_iter().map(|b| b.to_string()).collect()
+                    })
+                    .collect(),
+                columns: columns
+                    .into_iter()
+                    .map(|d| d.vec.into_iter().map(|b| b.to_string()).collect())
+                    .collect(),
+            });
+        }
+
         let content = Self::remove_comments(&content);
 
         let (rows, columns) = {

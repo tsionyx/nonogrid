@@ -102,7 +102,27 @@ done
 ```
 
 
-### Export various formats
+## Test [random puzzles](https://webpbn.com/survey/#rand)
+
+```
+wget -q -O- https://webpbn.com/survey/rand30.tgz | tar -xz
+
+cargo build --release --features=sat
+
+for i in {1..5000}; do
+    echo "#$i"
+    RUST_LOG=nonogrid=warn /usr/bin/time -f 'Total: %U' target/release/nonogrid 30x30-2/rand$i --max-solutions=2 >/dev/null
+done 2>&1 | tee rand.log
+
+grep -oP 'Total: \K(.+)' rand.log | sort -n | nl -ba | less
+```
+
+| 0 - 0.09 | 0.10 - 0.19 | 0.20 - 0.49 | 0.50 - 0.99 | 1.00 - 3.99 | 4.00 - 9.99 | 10.00 - 29.99 | 30.00 - 59.99 | 60 - 120 | 120+ |
+|---------:|------------:|------------:|------------:|------------:|------------:|--------------:|--------------:|---------:|-----:|
+|     4230 |         283 |         300 |         112 |          61 |          10 |             4 |              0|         0|     0|
+
+
+## Export various formats
 
 ```
 for fmt in $(curl -s https://webpbn.com/export.cgi | grep -oP 'name="fmt" value="\K([^"]+)'); do
