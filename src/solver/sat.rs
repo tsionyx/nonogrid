@@ -117,6 +117,22 @@ where
         }
     }
 
+    fn clues_vars_count(&self) -> usize {
+        let col_vars: usize = self
+            .columns_vars
+            .iter()
+            .flat_map(|col| col.0.iter().map(|block| block.vec.len()))
+            .sum();
+
+        let row_vars: usize = self
+            .rows_vars
+            .iter()
+            .flat_map(|col| col.0.iter().map(|block| block.vec.len()))
+            .sum();
+
+        col_vars + row_vars
+    }
+
     fn clues_vars(
         clues: &[ReadRc<Description<B>>],
         line_length: usize,
@@ -383,7 +399,7 @@ where
             info!("{}. {:?}", i, clause);
         }
 
-        let area = self.width * self.height;
+        let block_vars = self.clues_vars_count();
 
         let mut solver = Solver::new();
         solver.add_formula(&formula);
@@ -400,7 +416,6 @@ where
             //assert_eq!(solution, true); // satisfiable
             solver.model().map(|model| {
                 found += 1;
-                let block_vars = model.len() - area;
 
                 let cells = &model[block_vars..];
                 let res = cells.iter().map(|cell| cell.is_positive()).collect();
