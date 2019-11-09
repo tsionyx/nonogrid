@@ -375,6 +375,7 @@ where
         })
     }
 
+    #[allow(clippy::suspicious_map)]
     pub fn run(
         &self,
         probing_impact: Impact<B>,

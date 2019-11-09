@@ -165,7 +165,8 @@ where
         id.and_then(|color_id| {
             self.board()
                 .desc_by_id(color_id)
-                .map(|color_desc| to_color_string(&color_desc))
+                .as_ref()
+                .map(to_color_string)
         })
         .unwrap_or_else(|| cell.to_string().as_str().into())
     }

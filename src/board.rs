@@ -183,22 +183,16 @@ where
     fn all_colors(descriptions: &[Description<B>]) -> Vec<ColorId> {
         let colors = descriptions
             .iter()
-            .flat_map(|row| {
-                row.vec
-                    .iter()
-                    .filter_map(|block| block.color().as_color_id())
-            })
+            .flat_map(|row| row.colors())
             .chain(once(ColorPalette::WHITE_ID));
 
         dedup(colors)
     }
 
     pub fn desc_by_id(&self, id: ColorId) -> Option<ColorDesc> {
-        if let Some(palette) = &self.palette {
-            palette.desc_by_id(id)
-        } else {
-            None
-        }
+        self.palette
+            .as_ref()
+            .and_then(|palette| palette.desc_by_id(id))
     }
 
     pub fn iter_rows(&self) -> impl Iterator<Item = &[B::Color]> {

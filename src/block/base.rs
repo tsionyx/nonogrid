@@ -69,6 +69,12 @@ where
         vec.retain(|x| *x != zero);
         Self { vec }
     }
+
+    pub fn colors(&self) -> impl Iterator<Item = ColorId> + '_ {
+        self.vec
+            .iter()
+            .filter_map(|block| block.color().as_color_id())
+    }
 }
 
 /// Generate clues for the given line of color codes
