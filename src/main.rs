@@ -249,6 +249,7 @@ where
         println!("{}", r.render());
 
         if let Some(solutions) = sat_solutions {
+            let mut found = false;
             for (i, solution) in solutions.enumerate() {
                 if i > 0 {
                     let diff = board.read().diff(&solution);
@@ -259,6 +260,10 @@ where
                 Board::restore_with_callback(MutRc::clone(&board), solution);
                 println!("{}-th solution:", i + 1);
                 println!("{}", r.render_simple());
+                found = true;
+            }
+            if !found {
+                panic!("Puzzle is unsatisfied");
             }
         }
     }
