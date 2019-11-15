@@ -49,8 +49,6 @@ where
     S: line::LineSolver<BlockType = B>,
     P: ProbeSolver<BlockType = B>,
 {
-    use crate::block::Color;
-
     warn!("Solving with simple line propagation");
     let mut solver = propagation::Solver::new(MutRc::clone(&board));
     let solved = solver
@@ -72,19 +70,7 @@ where
             board.read().make_snapshot(),
         );
 
-        let solutions_iter = solver.run(impact, max_solutions).map(|solution| {
-            solution
-                .into_iter()
-                .map(|is_color| {
-                    if is_color {
-                        // black
-                        B::Color::from_color_ids(&[])
-                    } else {
-                        B::Color::blank()
-                    }
-                })
-                .collect()
-        });
+        let solutions_iter = solver.run(impact, max_solutions);
 
         return Ok(Some(solutions_iter));
     }

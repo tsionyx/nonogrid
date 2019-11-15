@@ -17,7 +17,6 @@
 ## Features
 - SAT:
   - check solution is valid (generate descriptions and check they are matching the original ones)
-  - color puzzles support
   - ignore solved lines (reduce the number of block position variables)
 - initial clues validation (validate_descriptions_size, validate_colors)
 - port SvgRenderer from pynogram
