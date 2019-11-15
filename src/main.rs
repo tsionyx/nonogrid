@@ -218,8 +218,14 @@ where
             let solutions = &backtracking.solutions;
             if !solutions.is_empty() && (!board.read().is_solved_full() || solutions.len() > 1) {
                 println!("Backtracking found {} solutions:", solutions.len());
-                for solution in solutions.iter() {
+                for (i, solution) in solutions.iter().enumerate() {
+                    if i > 0 {
+                        let diff = board.read().diff(&solution);
+                        assert!(!diff.is_empty());
+                        println!("Diff with previous solution: {:?}", diff);
+                    }
                     Board::restore_with_callback(MutRc::clone(&board), solution.clone());
+                    println!("{}-th solution:", i + 1);
                     println!("{}", r.render_simple());
                 }
             }
@@ -244,8 +250,14 @@ where
 
         if let Some(solutions) = sat_solutions {
             for (i, solution) in solutions.enumerate() {
+                if i > 0 {
+                    let diff = board.read().diff(&solution);
+                    assert!(!diff.is_empty());
+                    println!("Diff with previous solution: {:?}", diff);
+                }
+
                 Board::restore_with_callback(MutRc::clone(&board), solution);
-                println!("{} solution:", i + 1);
+                println!("{}-th solution:", i + 1);
                 println!("{}", r.render_simple());
             }
         }

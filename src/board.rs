@@ -401,6 +401,24 @@ where
             assert_eq!(self.desc_rows, rows);
         }
     }
+
+    pub fn diff(&self, other: &[B::Color]) -> Vec<Point> {
+        let width = self.width();
+        self.cells
+            .iter()
+            .zip(other)
+            .enumerate()
+            .filter_map(|(i, (current, other))| {
+                if current != other {
+                    let x = i % width;
+                    let y = i / width;
+                    Some(Point::new(x, y))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
 }
 
 impl<B> Board<B>
