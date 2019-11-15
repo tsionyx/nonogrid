@@ -326,6 +326,17 @@ where
         color.as_color_id().or(Some(Self::BLACK_COLOR))
     }
 
+    fn point_once_clauses(&self, cell_point: Point) -> Vec<Vec<Lit>> {
+        let point_vars = self.get_vars(cell_point);
+
+        let values: Vec<_> = point_vars.values().collect();
+        let pairs = pair_combinations(&values);
+        pairs
+            .into_iter()
+            .map(|(f, s)| vec![f.negative(), s.negative()])
+            .collect()
+    }
+
     fn precomputed_cells_clauses(&self) -> Vec<Lit> {
         if self.cells.is_empty() {
             return Vec::new();
@@ -400,6 +411,10 @@ where
             .into_iter()
             .flat_map(move |(x, y)| self.cell_space_clauses(Point::new(x, y)));
 
+        let point_once_clauses = all_points
+            .into_iter()
+            .flat_map(move |(x, y)| self.point_once_clauses(Point::new(x, y)));
+
         let fixed_points = self
             .precomputed_cells_clauses()
             .into_iter()
@@ -413,6 +428,7 @@ where
             .chain(non_overlap_rows)
             .chain(box_clauses)
             .chain(space_clauses)
+            .chain(point_once_clauses)
             .chain(fixed_points)
     }
 
