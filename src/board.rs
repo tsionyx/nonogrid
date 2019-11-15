@@ -7,7 +7,10 @@ use smallvec::SmallVec;
 pub use callbacks::{ChangeColorCallback, RestoreCallback, SetLineCallback};
 
 use crate::block::{
-    base::color::{ColorDesc, ColorId, ColorPalette},
+    base::{
+        clues_from_solution,
+        color::{ColorDesc, ColorId, ColorPalette},
+    },
     Block, Color, Description, Line,
 };
 use crate::utils::{
@@ -371,6 +374,32 @@ where
 
     fn restore(&mut self, cells: Vec<B::Color>) {
         self.cells = cells;
+
+        if self.is_solved_full() {
+            // validate
+            let white = 0;
+            let black = 1;
+            let solution_matrix: Vec<_> = self
+                .iter_rows()
+                .map(|row| {
+                    row.iter()
+                        .map(|&cell| {
+                            if cell == B::Color::blank() {
+                                white
+                            } else {
+                                cell.as_color_id().unwrap_or(black)
+                            }
+                        })
+                        .collect()
+                })
+                .collect();
+
+            let (columns, rows) = clues_from_solution::<B>(&solution_matrix, white);
+            let columns: Vec<_> = columns.into_iter().map(ReadRc::new).collect();
+            let rows: Vec<_> = rows.into_iter().map(ReadRc::new).collect();
+            assert_eq!(self.desc_cols, columns);
+            assert_eq!(self.desc_rows, rows);
+        }
     }
 }
 
