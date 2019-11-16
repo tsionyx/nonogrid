@@ -449,22 +449,64 @@ where
             .expect("Cannot get vars for point")
     }
 
-    //fn generate_implications(
-    //    &self,
-    //    probe: Point,
-    //    probe_color: B::Color,
-    //    impact: Vec<(Point, B::Color)>,
-    //) -> impl Iterator<Item = (Vec<Lit>)> + '_ {
-    //    // (X -> Y) == (-X \/ Y)
-    //    let probe_vars = self.get_colors(probe);
-    //
-    //    let probe_id = Self::get_id(probe_color);
-    //    impact.into_iter().map(move |(point, color)| {
-    //        let var = self.get_colors(point);
-    //        let impact_id = Self::get_id(color);
-    //        vec![probe_vars.lit(is_white_probe), var.lit(!is_white_impact)]
-    //    })
-    //}
+    fn generate_implications(
+        &self,
+        probe: Point,
+        probe_color: B::Color,
+        impact: Vec<(Point, B::Color)>,
+    ) -> impl Iterator<Item = Vec<Lit>> + '_ {
+        // (X -> Y) == (-X \/ Y)
+        let probe_vars = self.get_vars(probe);
+        let probe_id = Self::get_id(probe_color);
+        let probe_stmt = if let Some(probe_id) = probe_id {
+            let probe_var = probe_vars.get(&probe_id).expect("Not found probe var");
+            vec![probe_var.negative()]
+        } else {
+            // 'not blank' equivalent to 'at least one color is set'
+            probe_vars.values().map(|var| var.positive()).collect()
+        };
+
+        impact.into_iter().flat_map(move |(point, color)| {
+            let impact_vars = self.get_vars(point);
+            let impact_id = Self::get_id(color);
+            if let Some(impact_id) = impact_id {
+                if let Some(impact_var) = impact_vars.get(&impact_id) {
+                    let res = probe_stmt
+                        .clone()
+                        .into_iter()
+                        .chain(once(impact_var.positive()))
+                        .collect();
+
+                    debug!(
+                        "Probe ({:?}, {:?}) -> ({:?}, {:?}):\n{:?}",
+                        probe, probe_color, point, color, res
+                    );
+
+                    vec![res]
+                } else {
+                    // TODO
+                    info!(
+                        "Not found impact var for color {:?} in point {:?}. Available vars: {:?}",
+                        color, point, impact_vars
+                    );
+                    vec![]
+                }
+            } else {
+                // 'blank impact' means
+                // (probe V -impact_color1) /\ (probe V -impact_color2) /\ ...
+                impact_vars
+                    .values()
+                    .map(|impact_var| {
+                        probe_stmt
+                            .clone()
+                            .into_iter()
+                            .chain(once(impact_var.negative()))
+                            .collect()
+                    })
+                    .collect()
+            }
+        })
+    }
 
     #[allow(clippy::suspicious_map)]
     pub fn run(
@@ -472,20 +514,20 @@ where
         probing_impact: Impact<B>,
         solutions_number: Option<usize>,
     ) -> impl Iterator<Item = Vec<B::Color>> {
-        let formula = self.get_formula();
-        //let total_impact_clauses: usize = probing_impact
-        //    .into_iter()
-        //    .map(|impact| {
-        //        let (probe, probe_color, impact, _) = impact.into_tuple();
-        //        self.generate_implications(probe, probe_color, impact)
-        //            .map(|clause| {
-        //                formula.add_clause(&clause);
-        //            })
-        //            .count()
-        //    })
-        //    .sum();
-        //
-        //warn!("Add {} impact clauses", total_impact_clauses);
+        let mut formula = self.get_formula();
+        let total_impact_clauses: usize = probing_impact
+            .into_iter()
+            .map(|impact| {
+                let (probe, probe_color, impact, _) = impact.into_tuple();
+                self.generate_implications(probe, probe_color, impact)
+                    .map(|clause| {
+                        formula.add_clause(&clause);
+                    })
+                    .count()
+            })
+            .sum();
+
+        warn!("Add {} impact clauses", total_impact_clauses);
         warn!("Total clauses: {}", formula.len());
         for (i, clause) in formula.iter().enumerate() {
             info!("{}. {:?}", i, clause);
