@@ -54,8 +54,7 @@ to speed up and/or shrink the size of the application.
 By default, the backtracking algorithm used for solving hard puzzles.
 The feature `sat` allows to use the [SAT](https://en.wikipedia.org/wiki/Boolean_satisfiability_problem)
 solver for such a job.
-The most of hard puzzles are solved significantly faster with this option,
-but it is still experimental and solves only black-and-white puzzles.
+The most of hard puzzles are solved significantly faster with this option.
 
 
 ### Arguments parsing

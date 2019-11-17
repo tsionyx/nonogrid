@@ -104,7 +104,7 @@ function prepare() {
     echo "Start at $(date)"
     export RUST_LOG=nonogrid=warn
     export RUST_BACKTRACE=1
-    cargo build --release --no-default-features --features="clap std_time env_logger"
+    cargo build --release --no-default-features --features="clap std_time env_logger sat"
 }
 
 
