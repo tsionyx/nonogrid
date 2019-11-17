@@ -1032,6 +1032,7 @@ mod probing {
 
     #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
     pub struct Priority(pub u32);
+
     const MULTIPLIER: u32 = 10000;
     pub const PRIORITY_NEIGHBOURS_OF_NEWLY_SOLVED: Priority = Priority(10 * MULTIPLIER);
     pub const PRIORITY_NEIGHBOURS_OF_CONTRADICTION: Priority = Priority(20 * MULTIPLIER);

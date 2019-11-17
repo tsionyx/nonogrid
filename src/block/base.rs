@@ -380,7 +380,6 @@ pub mod color {
             self.color_with_name_value_symbol_and_id(name, value, symbol, id)
         }
 
-        #[allow(dead_code)]
         pub fn color_with_name_and_value(&mut self, name: &str, value: ColorValue) {
             let occupied_symbols: Vec<_> = self.vec.values().map(|color| color.symbol).collect();
 

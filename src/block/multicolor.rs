@@ -132,7 +132,6 @@ pub struct ColoredBlock {
 }
 
 impl ColoredBlock {
-    #[allow(dead_code)]
     pub fn from_size_and_color(size: usize, color: ColorId) -> Self {
         Self { size, color }
     }

@@ -508,7 +508,6 @@ where
         })
     }
 
-    #[allow(clippy::suspicious_map)]
     pub fn run(
         &self,
         probing_impact: Impact<B>,
@@ -520,8 +519,8 @@ where
             .map(|impact| {
                 let (probe, probe_color, impact, _) = impact.into_tuple();
                 self.generate_implications(probe, probe_color, impact)
-                    .map(|clause| {
-                        formula.add_clause(&clause);
+                    .inspect(|clause| {
+                        formula.add_clause(clause);
                     })
                     .count()
             })
