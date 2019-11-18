@@ -44,7 +44,7 @@ impl<K: Hash + Eq, V> Cached<K, V> for GrowableCache<K, V> {
         }
     }
     fn cache_set(&mut self, key: K, val: V) {
-        self.store.put(key, val);
+        let _old_value = self.store.put(key, val);
     }
     fn cache_remove(&mut self, k: &K) -> Option<V> {
         self.store.pop(k)
