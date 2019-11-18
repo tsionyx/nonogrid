@@ -220,7 +220,7 @@ where
                 println!("Backtracking found {} solutions:", solutions.len());
                 for (i, solution) in solutions.iter().enumerate() {
                     if i > 0 {
-                        let diff = board.read().diff(&solution);
+                        let diff = board.read().diff(solution);
                         assert!(!diff.is_empty());
                         println!("Diff with previous solution: {:?}", diff);
                     }

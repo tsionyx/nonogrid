@@ -189,7 +189,7 @@ where
         .collect()
 }
 
-#[allow(dead_code)]
+#[cfg(feature = "sat")]
 pub fn pair_combinations<T>(s: &[T]) -> Vec<(T, T)>
 where
     T: Clone,
@@ -208,7 +208,7 @@ where
         .collect()
 }
 
-#[allow(dead_code)]
+#[cfg(feature = "sat")]
 pub fn is_overlapping<T>(range1: Range<T>, range2: Range<T>) -> bool
 where
     T: Ord,
@@ -219,7 +219,7 @@ where
     begin < end
 }
 
-#[allow(dead_code)]
+#[cfg(feature = "sat")]
 pub fn is_touching<T>(range1: Range<T>, range2: Range<T>) -> bool
 where
     T: Ord,

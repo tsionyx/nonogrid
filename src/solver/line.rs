@@ -305,11 +305,11 @@ impl DynamicColor for BinaryColor {
     //}
 
     fn both_colors() -> Option<Self> {
-        Some(BinaryColor::BlackOrWhite)
+        Some(Self::BlackOrWhite)
     }
 
     fn can_be_blank(&self) -> bool {
-        self != &BinaryColor::Black
+        self != &Self::Black
     }
 
     fn can_be(&self, _always_black: Self) -> bool {
@@ -318,12 +318,12 @@ impl DynamicColor for BinaryColor {
 
     fn add_color(&self, color: Self) -> Self {
         match self {
-            BinaryColor::Undefined => color,
+            Self::Undefined => color,
             &value => {
                 if value == color {
                     value
                 } else {
-                    BinaryColor::BlackOrWhite
+                    Self::BlackOrWhite
                 }
             }
         }
@@ -490,7 +490,7 @@ mod tests_solve_color {
 
     use super::{solve, DynamicSolver, LineSolver};
 
-    fn w() -> ColorId {
+    const fn w() -> ColorId {
         ColorPalette::WHITE_ID
     }
 

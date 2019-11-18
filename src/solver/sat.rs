@@ -286,13 +286,13 @@ where
 
                 let column_clause = column_vars
                     .into_iter()
-                    .map(|var| var.positive())
+                    .map(Var::positive)
                     .chain(once(point_var.negative()))
                     .collect();
 
                 let row_clause = row_vars
                     .into_iter()
-                    .map(|var| var.positive())
+                    .map(Var::positive)
                     .chain(once(point_var.negative()))
                     .collect();
 
@@ -364,10 +364,10 @@ where
                         .collect();
                     vars.iter()
                         .filter_map(|(color, var)| {
-                            if !colors.contains(color) {
-                                Some(var.negative())
-                            } else {
+                            if colors.contains(color) {
                                 None
+                            } else {
+                                Some(var.negative())
                             }
                         })
                         .collect()
@@ -576,16 +576,13 @@ where
                 .iter()
                 .flat_map(|row| row.iter())
                 .map(|cell_map| {
-                    let color_id = cell_map
-                        .iter()
-                        .filter_map(|(&color_id, var)| {
-                            if colored_vars.contains(&var) {
-                                Some(color_id)
-                            } else {
-                                None
-                            }
-                        })
-                        .next();
+                    let color_id = cell_map.iter().find_map(|(&color_id, var)| {
+                        if colored_vars.contains(var) {
+                            Some(color_id)
+                        } else {
+                            None
+                        }
+                    });
 
                     match color_id {
                         None => B::Color::blank(),

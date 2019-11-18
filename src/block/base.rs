@@ -176,14 +176,14 @@ pub mod color {
             if value.len() == 3 {
                 let hex3 = u16::from_str_radix(value, 16);
                 if let Ok(hex3) = hex3 {
-                    return ColorValue::HexValue3(hex3);
+                    return Self::HexValue3(hex3);
                 }
             }
 
             if value.len() == 6 {
                 let hex6 = u32::from_str_radix(value, 16);
                 if let Ok(hex6) = hex6 {
-                    return ColorValue::HexValue6(hex6);
+                    return Self::HexValue6(hex6);
                 }
             }
 
@@ -195,11 +195,11 @@ pub mod color {
                     .collect();
 
                 if rgb.len() == 3 {
-                    return ColorValue::RgbTriplet(rgb[0], rgb[1], rgb[2]);
+                    return Self::RgbTriplet(rgb[0], rgb[1], rgb[2]);
                 }
             }
 
-            ColorValue::CommonName(value.to_string())
+            Self::CommonName(value.to_string())
         }
 
         /// ```
@@ -217,21 +217,21 @@ pub mod color {
         /// ```
         pub fn to_rgb(&self) -> (u8, u8, u8) {
             match self {
-                ColorValue::RgbTriplet(r, g, b) => (*r, *g, *b),
-                ColorValue::HexValue3(hex3) => {
+                Self::RgbTriplet(r, g, b) => (*r, *g, *b),
+                Self::HexValue3(hex3) => {
                     let (r, gb) = (hex3 >> 8, *hex3 as u8);
                     let (g, b) = (gb >> 4, gb % (1 << 4));
 
                     (r as u8 * 17, g * 17, b * 17)
                 }
-                ColorValue::HexValue6(hex6) => {
+                Self::HexValue6(hex6) => {
                     let (r, gb) = (hex6 >> 16, *hex6 as u16);
                     let (g, b) = (gb >> 8, gb as u8);
 
                     (r as u8, g as u8, b)
                 }
                 // https://www.rapidtables.com/web/color/RGB_Color.html#color-table
-                ColorValue::CommonName(name) => match name.to_lowercase().as_str() {
+                Self::CommonName(name) => match name.to_lowercase().as_str() {
                     "black" => (0, 0, 0),
                     "white" => (255, 255, 255),
                     "red" => (255, 0, 0),
@@ -313,9 +313,14 @@ pub mod color {
         }
 
         fn with_colors(colors: HashMap<String, ColorDesc>) -> Self {
-            let symbols = (0..0xFF)
-                .filter(u8::is_ascii_punctuation)
-                .map(char::from)
+            let symbols = (0_u8..0xFF)
+                .filter_map(|ch| {
+                    if ch.is_ascii_punctuation() {
+                        Some(ch.into())
+                    } else {
+                        None
+                    }
+                })
                 .collect();
 
             Self {
@@ -386,7 +391,7 @@ pub mod color {
             let &next_symbol = self
                 .symbols
                 .iter()
-                .find(|available_symbol| !occupied_symbols.contains(&available_symbol))
+                .find(|available_symbol| !occupied_symbols.contains(available_symbol))
                 .expect("Cannot create color: No more symbols available.");
 
             self.color_with_name_value_and_symbol(name, value, next_symbol)

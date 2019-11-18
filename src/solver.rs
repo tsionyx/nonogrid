@@ -23,11 +23,11 @@ where
 {
     warn!("Solving with simple line propagation");
     let mut solver = propagation::Solver::new(MutRc::clone(&board));
-    let solved = solver
+    let solved_points = solver
         .run::<S>(None)
         .map_err(|_| "Bad puzzle for sure: simple propagation failed".to_string())?;
 
-    warn!("Solved {} points", solved.len());
+    warn!("Solved {} points", solved_points.len());
 
     if !board.read().is_solved_full() {
         warn!("Trying to solve with backtracking");
@@ -51,10 +51,10 @@ where
 {
     warn!("Solving with simple line propagation");
     let mut solver = propagation::Solver::new(MutRc::clone(&board));
-    let solved = solver
+    let solved_points = solver
         .run::<S>(None)
         .map_err(|_| "Bad puzzle for sure: simple propagation failed".to_string())?;
-    warn!("Solved {} points", solved.len());
+    warn!("Solved {} points", solved_points.len());
 
     let impact = {
         warn!("Solving with probing");

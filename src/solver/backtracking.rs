@@ -10,7 +10,7 @@ use crate::block::{Block, Color};
 use crate::board::{Board, Point};
 use crate::solver::{
     line::LineSolver,
-    probing::{Impact, Priority, ProbeSolver},
+    probing::{Impact, Priority, ProbeImpact, ProbeSolver},
 };
 use crate::utils::{
     rc::{MutRc, ReadRef},
@@ -334,7 +334,8 @@ where
     fn choose_directions(&self, impact: Impact<B>) -> Vec<(Point, B::Color)> {
         let mut point_wise = HashMap::new();
 
-        for (point, color, new_points, priority) in impact.into_iter().map(|x| x.into_tuple()) {
+        for (point, color, new_points, priority) in impact.into_iter().map(ProbeImpact::into_tuple)
+        {
             if self.board().cell(&point).is_solved() {
                 continue;
             }

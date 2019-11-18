@@ -85,7 +85,7 @@ where
         Self::concat(
             self.grid_lines()
                 .into_iter()
-                .map(|row| row.into_iter().map(|cell| cell.to_string()).collect()),
+                .map(|row| row.iter().map(|cell| cell.to_string()).collect()),
         )
     }
 }
@@ -99,7 +99,7 @@ where
     }
 
     fn side_width(&self) -> usize {
-        Self::descriptions_width(&self.board().descriptions(true))
+        Self::descriptions_width(self.board().descriptions(true))
     }
 
     fn descriptions_width(descriptions: &[ReadRc<Description<B>>]) -> usize {
@@ -126,12 +126,12 @@ where
     }
 
     fn side_lines(&self) -> Vec<Vec<String>> {
-        Self::descriptions_to_matrix(&self.board().descriptions(true))
+        Self::descriptions_to_matrix(self.board().descriptions(true))
     }
 
     fn header_lines(&self) -> Vec<Vec<String>> {
         transpose(&Self::descriptions_to_matrix(
-            &self.board().descriptions(false),
+            self.board().descriptions(false),
         ))
         .unwrap()
     }

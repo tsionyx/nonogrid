@@ -1,3 +1,5 @@
+#![allow(clippy::missing_const_for_fn)]
+
 use std::cell::RefCell;
 use std::fmt;
 use std::io;
@@ -484,7 +486,7 @@ impl Board {
     }
 
     fn unsolved_neighbours(&self, point: &Point) -> impl Iterator<Item = Point> + '_ {
-        self.neighbours(&point)
+        self.neighbours(point)
             .into_iter()
             .filter(move |n| !self.cell(n).is_solved())
     }

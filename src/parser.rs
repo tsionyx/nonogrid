@@ -303,7 +303,7 @@ mod dummy_ini {
     use super::*;
 
     #[derive(Debug, Clone, Copy)]
-    pub enum MyFormat {}
+    pub struct MyFormat;
 
     impl MyFormat {
         const NO_FEATURE_ENABLED_MSG: &'static str =
@@ -565,7 +565,7 @@ mod dummy_xml {
     use super::*;
 
     #[derive(Debug, Clone, Copy)]
-    pub enum WebPbn {}
+    pub struct WebPbn;
 
     impl WebPbn {
         const NO_FEATURE_ENABLED_MSG: &'static str =
@@ -693,7 +693,7 @@ impl NonogramsOrg {
         (colors, solution)
     }
 
-    pub fn encoded(&self) -> &Vec<Vec<EncodedInt>> {
+    pub const fn encoded(&self) -> &Vec<Vec<EncodedInt>> {
         &self.encoded
     }
 
@@ -1038,7 +1038,7 @@ impl OlsakParser {
             .and_then(|block_color| self.colors.get(&block_color))
             .map(|color| &color.name);
 
-        let color_id = color_name.and_then(|name| palette.id_by_name(&name));
+        let color_id = color_name.and_then(|name| palette.id_by_name(name));
         B::from_str_and_color(value, color_id)
     }
 
@@ -1116,12 +1116,17 @@ impl SimpleParser {
     fn split_into_blocks(lines: &[&str]) -> Vec<Vec<String>> {
         lines
             .iter()
-            .filter(|&line| !line.is_empty())
-            .map(|&line| {
-                // 'ish' and 'ss' has comma-separated blocks
-                line.split(&[' ', ','][..])
-                    .map(ToString::to_string)
-                    .collect()
+            .filter_map(|&line| {
+                if line.is_empty() {
+                    None
+                } else {
+                    Some(
+                        // 'ish' and 'ss' has comma-separated blocks
+                        line.split(&[' ', ','][..])
+                            .map(ToString::to_string)
+                            .collect(),
+                    )
+                }
             })
             .collect()
     }
@@ -1264,7 +1269,7 @@ mod tests {
 
     use super::{BoardParser, MyFormat, Paletted, PuzzleScheme};
 
-    fn block(n: usize) -> BinaryBlock {
+    const fn block(n: usize) -> BinaryBlock {
         BinaryBlock(n)
     }
 

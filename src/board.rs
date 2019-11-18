@@ -25,15 +25,15 @@ pub struct Point {
 }
 
 impl Point {
-    pub fn new(x: usize, y: usize) -> Self {
+    pub const fn new(x: usize, y: usize) -> Self {
         Self { x, y }
     }
 
-    pub fn x(&self) -> usize {
+    pub const fn x(&self) -> usize {
         self.x
     }
 
-    pub fn y(&self) -> usize {
+    pub const fn y(&self) -> usize {
         self.y
     }
 }
@@ -186,7 +186,7 @@ where
     fn all_colors(descriptions: &[Description<B>]) -> Vec<ColorId> {
         let colors = descriptions
             .iter()
-            .flat_map(|row| row.colors())
+            .flat_map(Description::colors)
             .chain(once(ColorPalette::WHITE_ID));
 
         dedup(colors)
@@ -346,7 +346,7 @@ where
     /// the neighbour cells
     /// that are not completely solved yet.
     pub fn unsolved_neighbours(&self, point: &Point) -> impl Iterator<Item = Point> + '_ {
-        self.neighbours(&point)
+        self.neighbours(point)
             .into_iter()
             .filter(move |n| !self.cell(n).is_solved())
     }
@@ -409,12 +409,12 @@ where
             .zip(other)
             .enumerate()
             .filter_map(|(i, (current, other))| {
-                if current != other {
+                if current == other {
+                    None
+                } else {
                     let x = i % width;
                     let y = i / width;
                     Some(Point::new(x, y))
-                } else {
-                    None
                 }
             })
             .collect()

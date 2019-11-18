@@ -132,7 +132,7 @@ pub struct ColoredBlock {
 }
 
 impl ColoredBlock {
-    pub fn from_size_and_color(size: usize, color: ColorId) -> Self {
+    pub const fn from_size_and_color(size: usize, color: ColorId) -> Self {
         Self { size, color }
     }
 }

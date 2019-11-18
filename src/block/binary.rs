@@ -17,17 +17,17 @@ pub enum BinaryColor {
 
 impl Default for BinaryColor {
     fn default() -> Self {
-        BinaryColor::Undefined
+        Self::Undefined
     }
 }
 
 impl Color for BinaryColor {
     fn blank() -> Self {
-        BinaryColor::White
+        Self::White
     }
 
     fn is_solved(&self) -> bool {
-        *self == BinaryColor::Black || *self == BinaryColor::White
+        *self == Self::Black || *self == Self::White
     }
 
     fn solution_rate(&self, _all_colors: &[ColorId]) -> f64 {
@@ -42,7 +42,7 @@ impl Color for BinaryColor {
         if self.is_solved() {
             vec![*self]
         } else {
-            vec![BinaryColor::White, BinaryColor::Black]
+            vec![Self::White, Self::Black]
         }
     }
 
@@ -52,9 +52,9 @@ impl Color for BinaryColor {
 
     fn from_color_ids(ids: &[ColorId]) -> Self {
         if ids == [ColorPalette::WHITE_ID] {
-            BinaryColor::Undefined
+            Self::Undefined
         } else {
-            BinaryColor::Black
+            Self::Black
         }
     }
 }
@@ -89,8 +89,8 @@ impl Sub for BinaryColor {
         }
 
         Ok(match rhs {
-            BinaryColor::Black => BinaryColor::White,
-            BinaryColor::White => BinaryColor::Black,
+            Self::Black => Self::White,
+            Self::White => Self::Black,
             _ => self,
         })
     }

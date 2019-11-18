@@ -150,7 +150,7 @@ where
             })
             .chain(
                 self.board()
-                    .unsolved_neighbours(&point)
+                    .unsolved_neighbours(point)
                     .map(|neighbour| (neighbour, Priority::NEIGHBOUR_OF_CONTRADICTION)),
             )
             .collect())
@@ -260,7 +260,7 @@ enum ProbeResult<PropagationResult> {
 
 impl<PropagationResult> ProbeResult<PropagationResult> {
     fn is_contradiction(&self) -> bool {
-        if let ProbeResult::Contradiction = self {
+        if let Self::Contradiction = self {
             true
         } else {
             false
@@ -268,7 +268,7 @@ impl<PropagationResult> ProbeResult<PropagationResult> {
     }
 
     fn unwrap(self) -> PropagationResult {
-        if let ProbeResult::NewInfo(res) = self {
+        if let Self::NewInfo(res) = self {
             return res;
         }
 
