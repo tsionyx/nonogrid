@@ -36,8 +36,8 @@ sxd-document = {version="0.3", optional=true}
 sxd-xpath = {version="0.4", optional=true}
 
 clap = {version="2.33", optional=true}
-colored = {version="1.8", optional=true}
-env_logger = {version="0.6", optional=true}
+colored = {version="1.9", optional=true}
+env_logger = {version="0.7", optional=true}
 reqwest = {version="0.9", optional=true}
 
 varisat = {version="0.2", optional=true}
