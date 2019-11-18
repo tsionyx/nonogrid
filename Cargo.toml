@@ -6,6 +6,9 @@ version = "0.5.2"
 authors = ["Ivan Ladelshchikov <tsionyx@gmail.com>"]
 license = "MIT"
 edition = "2018"
+readme = "README.md"
+keywords = ["nonogram", "solver", "sat"]
+categories = ["algorithms", "command-line-utilities", "games", "science", "visualization"]
 
 
 [profile.release]
