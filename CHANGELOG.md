@@ -5,6 +5,27 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
+## [0.6.0] - 2019-11-19
+
+### Fixed
+- non UTF-8 symbols into input files are ignored.
+
+### Added
+- SAT-solver, adapted for binary and multicolor puzzles:
+  huge speed improvement;
+- Random puzzles [comparison](https://webpbn.com/survey/#rand);
+- Allow to use callbacks in non-threaded environment;
+- Validation on `Board::restore` (to prevent showing bad results on completion);
+- `Renderer::render_simple` to print solution in compact;
+- `ProbeImpact` now stores the color of every cell that was changed during the probe.
+
+### Changed
+- some clippy warnings
+  (in `cargo clippy -- -W clippy::nursery` and `cargo clippy -- -W clippy::pedantic` modes);
+- show diff with previous solution when multiple ones are found.
+- updated and cleaned up benchmarks
+
+
 ## [0.5.2] - 2019-08-14
 
 ### Added
