@@ -4,62 +4,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - 2019-02-12
+
+## [0.5.2] - 2019-08-14
+
 ### Added
-- Initial release!
-- Parse board from custom TOML-based format
-- Store the board
-- Print out the board in the terminal
-- Solve a single black-and-white line
-
-
-## [0.2.0] - 2019-03-15
-### Added
-- Solve the black-and-white board with the line solving then probing then backtracking
-- Parse boards from https://webpbn.com
-
-
-## [0.3.0] - 2019-04-03
-### Added
-- Support for multi-colored boards
-- Parse boards from https://nonograms.org
-
-
-## [0.3.1] - 2019-04-12
-### Added
-- callbacks support
+- [spoj example](examples/spoj/) with the algorithm adaptation for
+[this problem](https://www.spoj.com/problems/JCROSS/)
+- crate metadata to `--help` with help of `clap`'s macros.
 
 ### Fixed
-- optimization of probing queue: use different strategies depending of queue size
-- optimize NonogramsOrg parsing and ShellRenderer with caching
+- README examples
+- get rid of some allocations by preventing premature `collect`-ing
+- do not store `Err("Bad line")` in cache anymore
+- use iterators instead of `Vec`'s where possible
+- optimize `propagation::Solver::update_line`
+- clippy errors about `f64` comparison: use `f64::EPSILON`
 
 ### Updated
-- replace `Option::unwrap` with `Option::expect("error message")`
-- many refactoring of references
-- refactoring with clippy
+- move solutions cache from `Board` to `propagation::Solver`
+- make the `Priority` abstraction instead of `OrderedFloat<f64>`
+- make the `ProbeResult` abstraction instead of `Option`
+to represent NewInfo/Contradiction variants
+- benchmarks results (run some very long-solving puzzles)
+- use SmallVec for Point's neighbours
+- lower the logs level for some of `probing` and `backtracking` events
+- do not create the propagation solver `with_point` anymore, just run with (or without) a Point
+- dependencies
+- callback test as closure
 
 
-## [0.4.0] - 2019-05-09
-### Added
-- ability to use Board in threaded environment (--features=threaded)
+## [0.5.1] - 2019-07-03
 
 ### Fixed
-- WASM runtime support: remove Instant::now() calls
-
-### Updated
-- fix imports to use `crate::` instead of `super::`
-- switch to upstream priority-queue (after merging https://github.com/garro95/priority-queue/pull/14)
-
-
-## [0.4.1] - 2019-05-19
-### Added
--  add `ColorDesc::rgb_value` to use in web renderer
-
-### Fixed
-- restore backtracking timeouts with `Instant::now()` by enabling `std_time` default feature
-
-### Updated
-- published on crates.io repository
+- correctly parse the colors starting with '#', e.g. _#FF00FF_
 
 
 ## [0.5.0] - 2019-07-03
@@ -88,35 +65,59 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - remove unnecessary `pub`
 
 
-## [0.5.1] - 2019-07-03
-
-### Fixed
-- correctly parse the colors starting with '#', e.g. _#FF00FF_
-
-
-## [0.5.1] - 2019-08-14
-
+## [0.4.1] - 2019-05-19
 ### Added
-- [spoj example](examples/spoj/) with the algorithm adaptation for
-[this problem](https://www.spoj.com/problems/JCROSS/)
-- crate metadata to `--help` with help of `clap`'s macros.
+-  add `ColorDesc::rgb_value` to use in web renderer
 
 ### Fixed
-- README examples
-- get rid of some allocations by preventing premature `collect`-ing
-- do not store `Err("Bad line")` in cache anymore
-- use iterators instead of `Vec`'s where possible
-- optimize `propagation::Solver::update_line`
-- clippy errors about `f64` comparison: use `f64::EPSILON`
+- restore backtracking timeouts with `Instant::now()` by enabling `std_time` default feature
 
 ### Updated
-- move solutions cache from `Board` to `propagation::Solver`
-- make the `Priority` abstraction instead of `OrderedFloat<f64>`
-- make the `ProbeResult` abstraction instead of `Option`
-to represent NewInfo/Contradiction variants
-- benchmarks results (run some very long-solving puzzles)
-- use SmallVec for Point's neighbours
-- lower the logs level for some of `probing` and `backtracking` events
-- do not create the propagation solver `with_point` anymore, just run with (or without) a Point
-- dependencies
-- callback test as closure
+- published on crates.io repository
+
+
+## [0.4.0] - 2019-05-09
+### Added
+- ability to use Board in threaded environment (--features=threaded)
+
+### Fixed
+- WASM runtime support: remove Instant::now() calls
+
+### Updated
+- fix imports to use `crate::` instead of `super::`
+- switch to upstream priority-queue (after merging https://github.com/garro95/priority-queue/pull/14)
+
+
+## [0.3.1] - 2019-04-12
+### Added
+- callbacks support
+
+### Fixed
+- optimization of probing queue: use different strategies depending of queue size
+- optimize NonogramsOrg parsing and ShellRenderer with caching
+
+### Updated
+- replace `Option::unwrap` with `Option::expect("error message")`
+- many refactoring of references
+- refactoring with clippy
+
+
+## [0.3.0] - 2019-04-03
+### Added
+- Support for multi-colored boards
+- Parse boards from https://nonograms.org
+
+
+## [0.2.0] - 2019-03-15
+### Added
+- Solve the black-and-white board with the line solving then probing then backtracking
+- Parse boards from https://webpbn.com
+
+
+## [0.1.0] - 2019-02-12
+### Added
+- Initial release!
+- Parse board from custom TOML-based format
+- Store the board
+- Print out the board in the terminal
+- Solve a single black-and-white line
