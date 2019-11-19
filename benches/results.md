@@ -77,36 +77,33 @@
 
 # http://www.nonograms.org puzzles
 
-25983 puzzles were run. All the puzzles are line solvable and has single solution.
+28075 puzzles were run. All the puzzles are line solvable and has single solution.
 
 ## Distribution of solve times
 
 ```
 $ less batch-norg.log | grep 'Total' | awk '{print $2}' | sort -r | uniq -c
-     2 0.09
-     2 0.08
+     1 0.09
+     1 0.08
      2 0.06
-     3 0.05
-     9 0.04
-    31 0.03
-   138 0.02
-   591 0.01
- 25205 0.00
+     2 0.05
+     8 0.04
+    18 0.03
+    83 0.02
+   412 0.01
+ 27548 0.00
 ```
 
-## Top times (>=0.05 sec)
+## Top 6 (>=0.05 sec)
 
 | puzzle_id | solve time, sec | colors (w/o blank) |
 |-----------|----------------:|--------------------|
-| **4462**  | 0.06            | 3
-| **9596**  | 0.09            | 10
-| 18417     | 0.05            | 1 (black)
-| 20689     | 0.06            | 4
-| 21251     | 0.09            | 1 (black)
-| 21259     | 0.05            | 1 (black)
-| 21272     | 0.08            | 1 (black)
-| 21424     | 0.05            | 10
-| 21553     | 0.08            | 5
+| **4462**  | 0.05 +          | 3
+| **9596**  | 0.09 +          | 10
+| 20689     | 0.05 +          | 4
+| 21251     | 0.06 +          | 1 (black)
+| 21272     | 0.06 +          | 1 (black)
+| 21553     | 0.08 +          | 5
 
 
 **Bold** puzzles also found in [this C++ solver post](

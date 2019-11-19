@@ -13,9 +13,9 @@ for i in "$@"; do
         echo "  (you can find maximum available puzzle ID with the command"
         echo "    $ curl -s https://webpbn.com/find.cgi --data 'order=1&perpage=5&search=1' | grep -oP 'play.cgi\?id=\d+'"
         echo
-        echo "  Run all http://nonograms.org puzzles till id=24000"
+        echo "  Run all http://nonograms.org puzzles till id=28200"
         echo "  (you can find maximum available puzzle ID with http://www.nonograms.org/search/p/10000?sort=6)"
-        echo "    $ nohup bash batch.sh $MODE_NONOGRAMS {1..24000} 2>&1 > batch.log &"
+        echo "    $ nohup bash batch.sh $MODE_NONOGRAMS {1..28200} 2>&1 > batch.log &"
         echo
         echo "  Run statistic on collected log file"
         echo "    $ bash batch.sh stat batch.log 0.1 --details"
