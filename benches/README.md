@@ -6,12 +6,14 @@ To better understand my own solver's ability I have used the same techniques and
 to prepare a report. To adjust my own machine's performance, I ran several solvers
 from the survey on the same puzzles - they marked with the prefix `_my` in the report.
 
-My solver for all the tests was build with `cargo build --release --no-default-features --features=clap`.
+My solver for all the tests was build with `cargo build --release --no-default-features --features=clap,sat`.
 
 
-## [Black-and-white](perf.csv)
+## https://webpbn.com puzzles
 
-### How did I run the puzzles
+### [Black-and-white](perf.csv)
+
+#### How did I run the puzzles
 
 Puzzles were exported from the [export page](https://webpbn.com/export.cgi)
 
@@ -72,7 +74,7 @@ done
 ```
 
 
-## [Colored](perf-color.csv)
+### [Colored](perf-color.csv)
 
 ##### Comparison was made with Wolter's solver only
 
@@ -86,7 +88,7 @@ done
 ```
 
 
-## [Memory consumption (MiB)](memory.csv)
+### [Memory consumption (MiB)](memory.csv)
 
 Use this script to automatize runs.
 
@@ -102,7 +104,7 @@ done
 ```
 
 
-## Test [random puzzles](https://webpbn.com/survey/#rand)
+### Test [random puzzles](https://webpbn.com/survey/#rand)
 
 ```
 wget -q -O- https://webpbn.com/survey/rand30.tgz | tar -xz
@@ -122,7 +124,58 @@ grep -oP 'Total: \K(.+)' rand.log | sort -n | nl -ba | less
 |     4230 |         283 |         300 |         112 |          61 |          10 |             4 |              0|         0|     0|
 
 
-## Export various formats
+### Hardest backtracking puzzles
+
+```
+nohup bash benches/batch.sh webpbn {1..34000} >batch.log 2>&1 &
+bash benches/batch.sh stat batch.log 10
+```
+
+#### black-and-white (with SAT solver, >=10 seconds)
+
+| puzzle_id | solve time |
+|-----------|------------|
+| **9892**  | 26         |
+| **12548** | 136        |
+| 16900     | 12         |
+| 19080     | 367        |
+| **22336** | 263        |
+| 25385     | 278        |
+| 25588     | 185        |
+| 25820     | 119271 (43412 for 1-st solution)
+| 26520     | 47628      |
+| 30532     | 12         |
+| 30654     | 1148       |
+| 32013     | 12         |
+| 32291     | 58         |
+
+#### colored (with SAT solver, >=10 seconds)
+
+| puzzle_id | solve time, sec | colors (w/o blank) |
+|-----------|----------------:|--------------------|
+| **672**   | 44              | 3                  |
+| **2498**  | 57              | 4                  |
+| 3114      | 32              | 3                  |
+| **4445**  | 24              | 3                  |
+| 7541      | 55              | 4                  |
+| 7778      | 14              | 2                  |
+| 8337      | 33              | 4                  |
+| 8880      | 17              | 4                  |
+| 9786      | 53              | 2                  |
+| 10585     | 435             | 4                  |
+| 16838     | 695             | 2                  |
+| 22027     | 160             | 4                  |
+| 25158     | 41              | 4                  |
+| 26810     | 73              | 4                  |
+| 27097     | 77              | 4                  |
+| 29469     | 15              | 2                  |
+| 29826     | 24              | 3                  |
+| 31812     | 39              | 3                  |
+
+**Bold** puzzles are from http://webpbn.com/survey/.
+
+
+## Export puzzle $ID in every supported format
 
 ```
 for fmt in $(curl -s https://webpbn.com/export.cgi | grep -oP 'name="fmt" value="\K([^"]+)'); do
@@ -130,3 +183,40 @@ for fmt in $(curl -s https://webpbn.com/export.cgi | grep -oP 'name="fmt" value=
     curl -s https://webpbn.com/export.cgi --data "id=$ID&fmt=$fmt&go=1" > ${ID}.${fmt}
 done
 ```
+
+
+
+## http://www.nonograms.org puzzles
+
+28075 puzzles were run. All the puzzles are line solvable and has single solution.
+
+### Distribution of solve times
+
+```
+$ nohup bash benches/batch.sh nonograms.org {1..28200} 2>&1 > batch-norg.log &
+$ less batch-norg.log | grep 'Total' | awk '{print $2}' | sort -r | uniq -c
+     1 0.09
+     1 0.08
+     2 0.06
+     2 0.05
+     8 0.04
+    18 0.03
+    83 0.02
+   412 0.01
+ 27548 0.00
+```
+
+### Top 6 (>=0.05 sec)
+
+| puzzle_id | solve time, sec | colors (w/o blank) |
+|-----------|----------------:|--------------------|
+| **4462**  | 0.05 +          | 3
+| **9596**  | 0.09 +          | 10
+| 20689     | 0.05 +          | 4
+| 21251     | 0.06 +          | 1 (black)
+| 21272     | 0.06 +          | 1 (black)
+| 21553     | 0.08 +          | 5
+
+
+**Bold** puzzles also found in [this C++ solver post](
+https://izaron.github.io/post/solving-colored-japanese-crosswords-with-the-speed-of-light/#what-decreases-the-execution-time).
