@@ -1,9 +1,8 @@
 //! The algorithm based on the ideas
 //! from the [article](https://habr.com/ru/post/433330/)
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     iter::{from_fn, once},
-    marker::PhantomData,
     ops::Range,
 };
 
@@ -75,8 +74,6 @@ where
     cells: Vec<B::Color>,
     width: usize,
     height: usize,
-    formula: CnfFormula,
-    _phantom: PhantomData<B>,
 }
 
 impl<B> ClauseGenerator<B>
@@ -90,9 +87,9 @@ where
         rows: &[ReadRc<Description<B>>],
         cells: Vec<B::Color>,
     ) -> Self {
-        let mut block_colors: Vec<_> = rows.iter().flat_map(|row| row.colors()).collect();
+        let mut block_colors: HashSet<_> = rows.iter().flat_map(|row| row.colors()).collect();
         if block_colors.is_empty() {
-            block_colors = vec![Self::BLACK_COLOR];
+            let _ = block_colors.insert(Self::BLACK_COLOR);
         }
 
         let width = columns.len();
@@ -131,8 +128,6 @@ where
             cells,
             width,
             height,
-            formula,
-            _phantom: PhantomData,
         }
     }
 
