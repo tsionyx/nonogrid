@@ -6,19 +6,20 @@ MODE_STAT="stat"
 
 for i in "$@"; do
     if [[ ${i} == "--help" ]] || [[ ${i} == "-h" ]]; then
+        EXAMPLE_LOG_FILE="batch.log"
         echo "Batch mode for nonogram solver"
         echo "Examples: "
         echo "  Run all http://webpbn.com puzzles till id=35000"
-        echo "    $ nohup bash batch.sh $MODE_WEBPBN {1..35000} 2>&1 > batch.log &"
+        echo "    $ nohup bash $0 $MODE_WEBPBN {1..35000} 2>&1 > $EXAMPLE_LOG_FILE &"
         echo "  (you can find maximum available puzzle ID with the command"
         echo "    $ curl -s https://webpbn.com/find.cgi --data 'order=1&perpage=5&search=1' | grep -oP 'play.cgi\?id=\d+'"
         echo
         echo "  Run all http://nonograms.org puzzles till id=28200"
         echo "  (you can find maximum available puzzle ID with http://www.nonograms.org/search/p/10000?sort=6)"
-        echo "    $ nohup bash batch.sh $MODE_NONOGRAMS {1..28200} 2>&1 > batch.log &"
+        echo "    $ nohup bash $0 $MODE_NONOGRAMS {1..28200} 2>&1 > $EXAMPLE_LOG_FILE &"
         echo
         echo "  Run statistic on collected log file"
-        echo "    $ bash batch.sh stat batch.log 0.1 --details"
+        echo "    $ bash $0 $MODE_STAT $EXAMPLE_LOG_FILE 0.1 --details"
         exit
     fi
 done
@@ -164,7 +165,7 @@ function long_solvers() {
         fi
 
         # https://stackoverflow.com/a/12451419
-        local id=$(cat ${log_file} | grep -m1 -F "Total: ${t}" -B4 -A3 | tee >(cat - >&5) | grep -oP '#\K(\d+)' | awk '{print $1-1}')
+        local id=$(cat ${log_file} | grep -m1 -F "Total: ${t}" -B4 -A3 | tee >(cat - >&5) | grep -oP '#\K(\d+)' | awk '{print $1-1}' | sort -u)
         echo "$id: $t"
 
         if [[ ${details} ]]; then
