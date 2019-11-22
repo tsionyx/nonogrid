@@ -241,7 +241,7 @@ where
 
     #[cfg(feature = "sat")]
     {
-        let sat_solutions = solver::run_with_sat::<_, DynamicSolver<_>, FullProbe1<_>>(
+        let sat_solutions = solver::run::<_, DynamicSolver<_>, FullProbe1<_>>(
             MutRc::clone(&board),
             search_options.0,
         )

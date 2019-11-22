@@ -300,6 +300,7 @@ pub fn split_sections<'a, 'b>(
     Ok(res)
 }
 
+#[cfg(not(feature = "sat"))]
 pub mod time {
     use std::time::Instant;
 

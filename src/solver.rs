@@ -1,8 +1,9 @@
 use crate::block::Block;
 use crate::board::Board;
-use crate::solver::{backtracking::Solver, probing::ProbeSolver};
+use crate::solver::probing::ProbeSolver;
 use crate::utils::rc::MutRc;
 
+#[cfg(not(feature = "sat"))]
 pub mod backtracking;
 pub mod line;
 pub mod probing;
@@ -10,12 +11,13 @@ pub mod propagation;
 #[cfg(feature = "sat")]
 pub mod sat;
 
+#[cfg(not(feature = "sat"))]
 pub fn run<B, S, P>(
     board: MutRc<Board<B>>,
     max_solutions: Option<usize>,
     timeout: Option<u32>,
     max_depth: Option<usize>,
-) -> Result<Option<Solver<B, P, S>>, String>
+) -> Result<Option<backtracking::Solver<B, P, S>>, String>
 where
     B: Block,
     S: line::LineSolver<BlockType = B>,
@@ -31,7 +33,8 @@ where
 
     if !board.read().is_solved_full() {
         warn!("Trying to solve with backtracking");
-        let mut solver = Solver::<_, P, S>::with_options(board, max_solutions, timeout, max_depth);
+        let mut solver =
+            backtracking::Solver::<_, P, S>::with_options(board, max_solutions, timeout, max_depth);
         solver.run()?;
         return Ok(Some(solver));
     }
@@ -40,7 +43,7 @@ where
 }
 
 #[cfg(feature = "sat")]
-pub fn run_with_sat<B, S, P>(
+pub fn run<B, S, P>(
     board: MutRc<Board<B>>,
     max_solutions: Option<usize>,
 ) -> Result<Option<impl Iterator<Item = Vec<B::Color>>>, String>
@@ -55,6 +58,10 @@ where
         .run::<S>(None)
         .map_err(|_| "Bad puzzle for sure: simple propagation failed".to_string())?;
     warn!("Solved {} points", solved_points.len());
+
+    if board.read().is_solved_full() {
+        return Ok(None);
+    }
 
     let impact = {
         warn!("Solving with probing");
