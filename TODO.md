@@ -17,23 +17,22 @@
 ## Features
 - SAT:
   - ignore solved lines (reduce the number of block position variables)
+  - review and rustdoc
 - initial clues validation (validate_descriptions_size, validate_colors)
 - port SvgRenderer from pynogram
 - [blotted puzzles](https://webpbn.com/19407)
 - other formats:
   - https://github.com/Izaron/Nonograms/raw/master/puzzles
-- docs.rs
+- docs.rs (+from README)
 - SVG, XML, [cmd](https://docs.python.org/3/library/cmd.html)
 
 
 ## Optimizations
 - for colored: exclude colors by cross-section rows and columns (_line_color_ranges, _reduce_colors)
-- implement [these ideas](https://habr.com/ru/post/454586/#comment_20248388)
-- get rid of clones as much as possible https://llogiq.github.io/2017/06/01/perf-pitfalls.html
-- use Cow for rows and columns https://deterministic.space/secret-life-of-cows.html
 
 
 ## Refactoring
+- `solver::run_with_default`
 - replace Color with ColorScheme, move Block inside ColorScheme
 - rewrite backtracking `search` with Result
 - remove probing and propagation structures: make it `impl Probe for Board`
