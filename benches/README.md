@@ -6,7 +6,7 @@ To better understand my own solver's ability I have used the same techniques and
 to prepare a report. To adjust my own machine's performance, I ran several solvers
 from the survey on the same puzzles - they marked with the prefix `_my` in the report.
 
-My solver for all the tests was build with `cargo build --release --no-default-features --features=clap,sat`.
+My solver for all the tests was build with `cargo build --release --no-default-features --features=args,sat`.
 
 
 ## https://webpbn.com puzzles

@@ -28,13 +28,13 @@ $ wget -qO- https://webpbn.com/export.cgi --post-data "id=32480&fmt=nin&go=1" | 
   explore the solution space.
 
 
-By default the `--features="clap std_time env_logger ini"` are enabled but you can disable almost anything
+By default the `--features="args std_time logger ini"` are enabled but you can disable almost anything
 to speed up and/or shrink the size of the binary.
 
 
 ### Arguments parsing
 
-To support command-line arguments, the `clap` feature is enabled by default.
+To support command-line arguments, the `args` feature is enabled by default.
 You can disable it, but then you will not able to set solving timeout or maximum number of solutions to find.
 It also can be disabled when using the solver as a library in another projects,
 [e.g.](https://github.com/tsionyx/nono/blob/8e2f8f27/Cargo.toml#L19)
@@ -48,10 +48,12 @@ You can disable this feature (`std_time`) and the timeout option will simply be 
 
 ### Logging support
 
-Logging is possible if you provide environment variable `RUST_LOG=nonogrid=<log_level>`.
-For example, in the [benchmarks script](benches/batch.sh), the `RUST_LOG=nonogrid=warn` used
-to inspect the intermediate results of solving. You can disable the option by **not** providing
-the `--features=env_logger` while building.
+To support pretty formatted logs the `env_logger` crate is enabled by default.
+The simplest way to view them is to provide environment variable `RUST_LOG=nonogrid=<log_level>`.
+For example, in the [benchmarks script](benches/batch.sh), the `RUST_LOG=nonogrid=warn`
+is used to inspect the intermediate results of solving.
+As always, you can disable the option by **skipping**
+the `--features=logger` while building.
 
 
 ### TOML puzzles parsing support
@@ -82,18 +84,12 @@ You can enable it by building with the `--features=xml`.
 
 ### Colored nonograms
 
-You can enable the feature `colored` to allow to print colored nonograms with real terminal colors:
+You can enable the feature `colors` to allow to print colored nonograms with real terminal colors:
 
 ```
 wget -qO- https://webpbn.com/export.cgi --post-data "fmt=olsak&go=1&id=2192" |
-cargo run --no-default-features --features=colored
+cargo run --no-default-features --features=colors
 ```
-
-
-### Logging
-
-To support pretty formatted logs the `env_logger` crate is enabled by default.
-As alwasys, you can disable it by skipping one in the list of features.
 
 
 ### HTTP client

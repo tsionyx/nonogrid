@@ -105,7 +105,7 @@ function prepare() {
     echo "Start at $(date)"
     export RUST_LOG=nonogrid=warn
     export RUST_BACKTRACE=1
-    cargo build --release --no-default-features --features="clap std_time env_logger sat"
+    cargo build --release --no-default-features --features="args std_time logger sat"
 }
 
 
@@ -182,10 +182,12 @@ case ${mode} in
     ${MODE_WEBPBN})
     shift
     run_webpbn $@
+    echo "End at $(date)"
     ;;
     ${MODE_NONOGRAMS})
     shift
     run_nonograms $@
+    echo "End at $(date)"
     ;;
     ${MODE_STAT})
     shift
@@ -196,4 +198,3 @@ case ${mode} in
     exit 1
     ;;
 esac
-echo "End at $(date)"
