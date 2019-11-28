@@ -1,5 +1,10 @@
 # Ultimate nonograms solver written in Rust language.
 
+[![Crates.io](https://img.shields.io/crates/v/nonogrid)](https://crates.io/crates/nonogrid)
+[![Build Status](https://travis-ci.org/tsionyx/nonogrid.svg?branch=master)](https://travis-ci.org/tsionyx/nonogrid)
+[![codecov](https://codecov.io/gh/tsionyx/nonogrid/branch/master/graph/badge.svg)](https://codecov.io/gh/tsionyx/nonogrid)
+
+
 ```
 $ wget -qO- https://webpbn.com/export.cgi --post-data "id=32480&fmt=nin&go=1" | cargo run
 ```
