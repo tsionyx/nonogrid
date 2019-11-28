@@ -190,6 +190,8 @@ where
 }
 
 #[cfg(feature = "sat")]
+/// Produce Vec of unique ordered pairs (x, y)
+/// where idx(x) < idx(y)
 pub fn pair_combinations<T>(s: &[T]) -> Vec<(T, T)>
 where
     T: Clone,
@@ -198,37 +200,14 @@ where
         .enumerate()
         .flat_map(|(i, x)| {
             s.iter().enumerate().filter_map(move |(j, y)| {
-                if i >= j {
-                    None
-                } else {
+                if i < j {
                     Some((x.clone(), y.clone()))
+                } else {
+                    None
                 }
             })
         })
         .collect()
-}
-
-#[cfg(feature = "sat")]
-pub fn is_overlapping<T>(range1: Range<T>, range2: Range<T>) -> bool
-where
-    T: Ord,
-{
-    let begin = range1.start.max(range2.start);
-    let end = range1.end.min(range2.end);
-
-    begin < end
-}
-
-#[cfg(feature = "sat")]
-pub fn is_touching<T>(range1: Range<T>, range2: Range<T>) -> bool
-where
-    T: Ord,
-{
-    let begin = range1.start.max(range2.start);
-    let end = range1.end.min(range2.end);
-
-    // at least one item in the overlapping range (< case) or touching (= case)
-    begin <= end
 }
 
 fn idx_to_ranges<T>(mut indexes: Vec<T>) -> Option<Vec<Range<T>>>
@@ -568,6 +547,40 @@ mod tests {
         assert_eq!(
             idx_to_ranges(vec),
             Some(vec![0..5, 5..7, 7..9, 9..42, 42..84, 84..111])
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "sat")]
+    fn pairs_empty() {
+        let a = Vec::<u32>::new();
+        assert_eq!(pair_combinations(&a), vec![]);
+    }
+
+    #[test]
+    #[cfg(feature = "sat")]
+    fn pairs_single() {
+        let a = vec![42];
+
+        assert_eq!(pair_combinations(&a), vec![]);
+    }
+
+    #[test]
+    #[cfg(feature = "sat")]
+    fn pairs_duple() {
+        let a = vec![4, 8];
+
+        assert_eq!(pair_combinations(&a), vec![(4, 8)]);
+    }
+
+    #[test]
+    #[cfg(feature = "sat")]
+    fn pairs_simple() {
+        let a = vec![4, 5, 2, 0];
+
+        assert_eq!(
+            pair_combinations(&a),
+            vec![(4, 5), (4, 2), (4, 0), (5, 2), (5, 0), (2, 0)]
         );
     }
 }

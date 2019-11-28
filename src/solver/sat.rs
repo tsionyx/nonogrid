@@ -12,7 +12,7 @@ use crate::{
     block::{base::color::ColorId, Block, Color, Description},
     board::Point,
     solver::probing::Impact,
-    utils::{is_overlapping, is_touching, pair_combinations, product, rc::ReadRc},
+    utils::{pair_combinations, product, rc::ReadRc},
 };
 
 trait BlockPosition {
@@ -200,8 +200,13 @@ where
         // 3. Правильный порядок блоков. Поскольку необходимо поддерживать правильный порядок расположения блоков,
         // а также исключить их пересечение, необходимо добавить клозы, вида (not Xi) V (not Xj),
         // где Xi, Xj — переменные, соответствующие позициям разных блоков, которые имеют неправильный порядок или пересекаются.
+        assert!(!positions.0.is_empty());
+
+        //let pairs = positions.0.iter().zip(&positions.0[1..]);
         let pairs = pair_combinations(&positions.0);
+
         pairs.into_iter().flat_map(|(block1, block2)| {
+            assert!(block1.index < block2.index);
             let pairs = product(&block1.vec, &block2.vec);
             pairs.into_iter().filter_map(
                 move |(
@@ -215,13 +220,12 @@ where
                     },
                 )| {
                     let conflict = if block1.color == block2.color {
-                        is_touching(range1.clone(), range2.clone())
+                        range1.end >= range2.start
                     } else {
-                        is_overlapping(range1.clone(), range2.clone())
+                        range1.end > range2.start
                     };
 
-                    if conflict || ((block1.index < block2.index) && (range1.start > range2.start))
-                    {
+                    if conflict {
                         Some(vec![var1.negative(), var2.negative()])
                     } else {
                         None
@@ -390,8 +394,16 @@ where
             .iter()
             .flat_map(|line_positions| line_positions.0.iter().flat_map(Self::block_once_clauses));
 
-        let non_overlap_columns = self.columns_vars.iter().flat_map(Self::non_overlap_clauses);
-        let non_overlap_rows = self.rows_vars.iter().flat_map(Self::non_overlap_clauses);
+        let non_overlap_columns = self
+            .columns_vars
+            .iter()
+            .filter(|line_pos| line_pos.0.len() > 1)
+            .flat_map(Self::non_overlap_clauses);
+        let non_overlap_rows = self
+            .rows_vars
+            .iter()
+            .filter(|line_pos| line_pos.0.len() > 1)
+            .flat_map(Self::non_overlap_clauses);
 
         let all_points = product(
             &(0..self.width).collect::<Vec<_>>(),
