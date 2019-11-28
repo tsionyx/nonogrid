@@ -128,42 +128,48 @@ grep -oP 'Total: \K(.+)' rand.log | sort -n | nl -ba | less
 
 ```
 nohup bash benches/batch.sh webpbn {1..34000} >batch.log 2>&1 &
-bash benches/batch.sh stat batch.log 10
+bash benches/batch.sh stat batch.log 10 --details
 ```
 
 #### black-and-white (with SAT solver, >=10 seconds)
 
-| puzzle_id | solve time |
-|-----------|------------|
-| **9892**  | 38         |
-| **10088** | 11         |
-| **12548** | 138        |
-| 16900     | 12         |
-| 19080     | 412        |
-| **22336** | 271        |
-| 25385     | 287        |
-| 25588     | 192        |
-| 25820     | 119271 (43412 for 1-st solution)
-| 26520     | 47628      |
-| 30532     | 12         |
-| 30654     | 1207       |
-| 32013     | 12         |
-| 32291     | 59         |
+| puzzle_id | solve time | SAT variables | SAT clauses |
+|-----------|-----------:|--------------:|------------:|
+| 9892*     | 39         |        13_887 |     425_270 |
+| 10088*    | 11         |        23_483 |   1_025_585 |
+| 12548*    | 194        |        13_685 |     503_999 |
+| 16900     | 14         |        32_295 |   1_751_050 |
+| 18297*    | 14         |         9_708 |     275_166 |
+| 19080     | 508        |        24_673 |   1_272_743 |
+| 22336*    | 365        |        67_137 |   5_461_726 |
+| 25385     | 415        |        21_334 |     923_394 |
+| 25588     | 267        |        21_017 |     993_331 |
+| 25820     | 119271 (43412 for 1-st solution) | 43_668 | 2_948_833 |
+| 26520     | 47628      |        29_223 |   1_696_163 |
+| 30532     | 13         |        15_212 |     444_144 |
+| 30654     | 1336       |        33_384 |   1_138_340 |
+| 32013     | 14         |         9_468 |     297_855 |
+| 32291     | 70         |        14_421 |     543_978 |
+| [Knotty**](https://webpbn.com/survey/puzzles/) | + | 11_076 |   230_271 |
+| [Meow**](https://webpbn.com/survey/puzzles/)   | + | 35_036 | 1_872_216 |
+| [Faase**](https://webpbn.com/survey/puzzles/)  | + | 89_918 | 9_968_433 |
 
 #### colored (with SAT solver, >=10 seconds)
 
-| puzzle_id | solve time, sec | colors (w/o blank) |
-|-----------|----------------:|--------------------|
-| **672**   | 16              | 3                  |
-| **2498**  | 53              | 4                  |
-| 3114      | 43              | 3                  |
-| 9786      | 52              | 2                  |
-| 10585     | 391             | 4                  |
-| 16838     | 245             | 2                  |
-| 25158     | 35              | 4                  |
-| 26810     | 34              | 4                  |
+| puzzle_id | solve time, sec | SAT variables | SAT clauses | colors (w/o blank) |
+|-----------|----------------:|--------------:|------------:|-------------------:|
+| 672*      | 38              |        32_027 |   1_483_859 | 3                  |
+| 2498*     | 53              |        42_352 |   2_259_671 | 4                  |
+| 3114      | 32              |        28_886 |     995_422 | 3                  |
+| 9786      | 31              |        16_094 |     581_210 | 2                  |
+| 10585     | 386             |        28_224 |     829_213 | 4                  |
+| 16838     | 530             |        70_240 |   6_752_766 | 2                  |
+| 25158     | 52              |        20_433 |     660_340 | 4                  |
+| 26810     | 42              |        45_695 |   2_351_897 | 4                  |
 
-**Bold** puzzles are from http://webpbn.com/survey/.
+&ast; - puzzles from http://webpbn.com/survey/.
+
+** - puzzles are not in public access but can be downloaded at https://webpbn.com/survey/puzzles/
 
 
 ## Export puzzle $ID in every supported format
