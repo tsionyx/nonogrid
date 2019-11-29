@@ -1,7 +1,11 @@
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::Sized;
-use std::ops::{Add, Sub};
+use std::ops::{Add, Range, Sub};
+
+use hashbrown::HashMap;
+
+use crate::utils::dedup;
 
 use self::color::ColorId;
 
@@ -163,10 +167,44 @@ where
         assert!(line_length >= min_space);
         line_length - min_space + 1
     }
+
+    /// For every color in the given description produce a valid position range
+    pub fn color_ranges(&self, line_length: usize) -> HashMap<ColorId, Range<usize>> {
+        let start_indexes = self.block_starts();
+        let sums = B::partial_sums(&self.vec);
+        let slack_space = self.positions_number(line_length) - 1;
+
+        let line_colors: Vec<_> = dedup(self.colors());
+        line_colors
+            .into_iter()
+            .map(|color| {
+                let mut first_index = None;
+                let mut last_index = None;
+                for (block_index, block) in self.vec.iter().enumerate() {
+                    if block.color().as_color_id() == Some(color) {
+                        if first_index == None {
+                            first_index = Some(block_index);
+                        }
+                        last_index = Some(block_index)
+                    }
+                }
+
+                let first_index = first_index.expect("First position not found");
+                let last_index = last_index.expect("First position not found");
+
+                // start position of the first block of particular color
+                let first_pos = start_indexes[first_index];
+                // end position of the last block plus what's left
+                let last_pos = sums[last_index] + slack_space;
+
+                (color, first_pos..last_pos)
+            })
+            .collect()
+    }
 }
 
 pub mod color {
-    use std::collections::HashMap;
+    use super::HashMap;
 
     #[derive(Debug, PartialEq, Clone)]
     pub enum ColorValue {
@@ -428,8 +466,9 @@ pub mod color {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::block::{binary::BinaryBlock, multicolor::ColoredBlock};
+
+    use super::*;
 
     #[test]
     fn block_starts_empty_binary() {
@@ -469,5 +508,34 @@ mod tests {
             ColoredBlock::from_size_and_color(3, 2),
         ]);
         assert_eq!(d.block_starts(), vec![0, 6, 7])
+    }
+
+    #[test]
+    fn color_ranges_binary() {
+        let d = Description::new(vec![BinaryBlock(5), BinaryBlock(2), BinaryBlock(3)]);
+        let ranges = d.color_ranges(12);
+        assert!(ranges.is_empty())
+    }
+
+    #[test]
+    fn color_ranges_colored() {
+        let d = Description::new(vec![
+            ColoredBlock::from_size_and_color(5, 1),
+            ColoredBlock::from_size_and_color(1, 4),
+            ColoredBlock::from_size_and_color(3, 2),
+            ColoredBlock::from_size_and_color(2, 1),
+        ]);
+
+        let mut ranges: Vec<_> = d.color_ranges(13).into_iter().collect();
+        ranges.sort_by_key(|(k, _v)| *k);
+
+        //         0 1 2 3 4 5 6 7 8 9 101112
+        // <<<     1 1 1 1 1 4 2 2 2 1 1 - -
+        // >>>     - - 1 1 1 1 1 4 2 2 2 1 1
+        //
+        //         1 . . . . . . . . . . . 1
+        //                     2 . . . 2
+        //                   4 . 4
+        assert_eq!(ranges, vec![(1, 0..13), (2, 6..11), (4, 5..8)])
     }
 }

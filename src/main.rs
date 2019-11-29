@@ -199,7 +199,11 @@ where
     B::Color: DynamicColor + Display,
     P: BoardParser,
 {
-    let board = board_parser.parse::<B>();
+    let board = {
+        let mut board = board_parser.parse::<B>();
+        board.reduce_colors();
+        board
+    };
     let board = MutRc::new(board);
     let r = ShellRenderer::with_board(MutRc::clone(&board));
 

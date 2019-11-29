@@ -27,10 +27,6 @@
 - SVG, XML, [cmd](https://docs.python.org/3/library/cmd.html)
 
 
-## Optimizations
-- for colored: exclude colors by cross-section rows and columns (_line_color_ranges, _reduce_colors)
-
-
 ## Refactoring
 - `solver::run_with_default`
 - replace Color with ColorScheme, move Block inside ColorScheme

@@ -1,7 +1,7 @@
 use std::fmt;
 use std::iter::once;
 
-use hashbrown::HashMap;
+use hashbrown::{HashMap, HashSet};
 use smallvec::SmallVec;
 
 pub use callbacks::{ChangeColorCallback, RestoreCallback, SetLineCallback};
@@ -183,6 +183,8 @@ where
         }
     }
 
+    /// Clue colors describing the board more precisely than the palette
+    /// (as the latter can contain excess colors like 'white').
     fn all_colors(descriptions: &[Description<B>]) -> Vec<ColorId> {
         let colors = descriptions
             .iter()
@@ -439,6 +441,95 @@ where
         self.cells[index] = (old_value - *color)?;
 
         Ok(())
+    }
+
+    pub fn reduce_colors(&mut self) {
+        // ignore [WHITE] and [WHITE, SINGLE_COLOR] cases
+        if self.all_colors.len() <= 2 {
+            return;
+        }
+
+        let width = self.width();
+        let rows_ranges: Vec<_> = self
+            .desc_rows
+            .iter()
+            .enumerate()
+            .map(|(row_idx, desc)| {
+                let color_ranges = desc.color_ranges(width);
+                info!(
+                    "First and last block indexes for every color in {}-th row: {:?}",
+                    row_idx, color_ranges
+                );
+                color_ranges
+            })
+            .collect();
+
+        let height = self.height();
+        let columns_ranges: Vec<_> = self
+            .desc_cols
+            .iter()
+            .enumerate()
+            .map(|(col_idx, desc)| {
+                let color_ranges = desc.color_ranges(height);
+                info!(
+                    "First and last block indexes for every color in {}-th column: {:?}",
+                    col_idx, color_ranges
+                );
+                color_ranges
+            })
+            .collect();
+
+        let updated_cells: Vec<Vec<_>> = rows_ranges
+            .iter()
+            .enumerate()
+            .map(|(y, row_colors)| {
+                columns_ranges
+                    .iter()
+                    .enumerate()
+                    .map(|(x, col_colors)| {
+                        let point = Point::new(x, y);
+                        debug!("Checking cell at {:?}", point);
+                        let new_cell_colors: HashSet<_> = self
+                            .all_colors
+                            .iter()
+                            .filter_map(|&color| {
+                                let row_range = row_colors.get(&color);
+                                let col_range = col_colors.get(&color);
+                                if let (Some(row_range), Some(col_range)) = (row_range, col_range) {
+                                    debug!(
+                                        "Checking color {} in ranges {:?} and {:?}",
+                                        color, row_range, col_range
+                                    );
+                                    if row_range.contains(&x) && col_range.contains(&y) {
+                                        return Some(color);
+                                    }
+                                }
+                                None
+                            })
+                            .chain(once(ColorPalette::WHITE_ID))
+                            .collect();
+
+                        let new_cell_colors: Vec<_> = new_cell_colors.into_iter().collect();
+                        B::Color::from_color_ids(&new_cell_colors)
+                    })
+                    .collect()
+            })
+            .collect();
+
+        for (y, new_row) in updated_cells.iter().enumerate() {
+            for (x, &new_color) in new_row.iter().enumerate() {
+                let point = Point::new(x, y);
+                let current_color = self.cell(&point);
+
+                if new_color != current_color {
+                    info!(
+                        "Update cell at {:?}: {:?} --> {:?}",
+                        point, current_color, new_color
+                    );
+                    self.set_color(&point, &new_color);
+                }
+            }
+        }
     }
 }
 
