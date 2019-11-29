@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::marker::Sized;
 use std::ops::{Add, Sub};
 
-use crate::block::base::color::ColorId;
+use self::color::ColorId;
 
 pub trait Color
 where
@@ -70,39 +70,36 @@ where
         Self { vec }
     }
 
+    /// Generate clues for the given line of color codes
+    fn from_line(line: &[ColorId], blank_code: ColorId) -> Self {
+        let size = line.len();
+
+        let mut description = vec![];
+
+        let mut index = 0;
+        while index < size {
+            let block_begin = index;
+            let color_number = line[index];
+
+            index += line[index..]
+                .iter()
+                .take_while(|&&x| x == color_number)
+                .count();
+
+            let block_size = index - block_begin;
+            if (block_size > 0) && (color_number != blank_code) {
+                let block = T::from_size_and_color(block_size, Some(color_number));
+                description.push(block);
+            }
+        }
+        Self::new(description)
+    }
+
     pub fn colors(&self) -> impl Iterator<Item = ColorId> + '_ {
         self.vec
             .iter()
             .filter_map(|block| block.color().as_color_id())
     }
-}
-
-/// Generate clues for the given line of color codes
-fn line_clues<B>(line: &[ColorId], blank_code: ColorId) -> Description<B>
-where
-    B: Block,
-{
-    let size = line.len();
-
-    let mut description = vec![];
-
-    let mut index = 0;
-    while index < size {
-        let block_begin = index;
-        let color_number = line[index];
-
-        index += line[index..]
-            .iter()
-            .take_while(|&&x| x == color_number)
-            .count();
-
-        let block_size = index - block_begin;
-        if (block_size > 0) && (color_number != blank_code) {
-            let block = B::from_size_and_color(block_size, Some(color_number));
-            description.push(block);
-        }
-    }
-    Description::new(description)
 }
 
 /// Generate nonogram description (columns and rows) from a solution matrix.
@@ -128,14 +125,44 @@ where
             let column: Vec<_> = (0..height)
                 .map(|row_index| solution_matrix[row_index][col_index])
                 .collect();
-            line_clues(&column, blank_code)
+            Description::from_line(&column, blank_code)
         })
         .collect();
     let rows = solution_matrix
         .iter()
-        .map(|row| line_clues(row, blank_code))
+        .map(|row| Description::from_line(row, blank_code))
         .collect();
     (columns, rows)
+}
+
+impl<B> Description<B>
+where
+    B: Block,
+{
+    pub fn block_starts(&self) -> Vec<usize> {
+        self.vec
+            .iter()
+            .zip(Block::partial_sums(&self.vec))
+            .map(|(block, end)| end - block.size())
+            .collect()
+    }
+
+    /// How long should be the minimal line to contain given description?
+    fn min_space(&self) -> usize {
+        if self.vec.is_empty() {
+            return 0;
+        }
+        *Block::partial_sums(&self.vec)
+            .last()
+            .expect("Partial sums should be non-empty")
+    }
+
+    /// The number of potential block positions for given line size.
+    pub fn positions_number(&self, line_length: usize) -> usize {
+        let min_space = self.min_space();
+        assert!(line_length >= min_space);
+        line_length - min_space + 1
+    }
 }
 
 pub mod color {
@@ -396,5 +423,51 @@ pub mod color {
 
             self.color_with_name_value_and_symbol(name, value, next_symbol)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::block::{binary::BinaryBlock, multicolor::ColoredBlock};
+
+    #[test]
+    fn block_starts_empty_binary() {
+        let d = Description::new(Vec::<BinaryBlock>::new());
+        assert!(d.block_starts().is_empty())
+    }
+
+    #[test]
+    fn block_starts_empty_colored() {
+        let d = Description::new(Vec::<ColoredBlock>::new());
+        assert!(d.block_starts().is_empty())
+    }
+
+    #[test]
+    fn block_starts_single_binary() {
+        let d = Description::new(vec![BinaryBlock(5)]);
+        assert_eq!(d.block_starts(), vec![0])
+    }
+
+    #[test]
+    fn block_starts_sinlge_colored() {
+        let d = Description::new(vec![ColoredBlock::from_size_and_color(5, 1)]);
+        assert_eq!(d.block_starts(), vec![0])
+    }
+
+    #[test]
+    fn block_starts_binary() {
+        let d = Description::new(vec![BinaryBlock(5), BinaryBlock(2), BinaryBlock(3)]);
+        assert_eq!(d.block_starts(), vec![0, 6, 9])
+    }
+
+    #[test]
+    fn block_starts_colored() {
+        let d = Description::new(vec![
+            ColoredBlock::from_size_and_color(5, 1),
+            ColoredBlock::from_size_and_color(1, 1),
+            ColoredBlock::from_size_and_color(3, 2),
+        ]);
+        assert_eq!(d.block_starts(), vec![0, 6, 7])
     }
 }

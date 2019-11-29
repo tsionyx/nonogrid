@@ -15,38 +15,6 @@ use crate::{
     utils::{pair_combinations, product, rc::ReadRc},
 };
 
-trait BlockPosition {
-    fn block_starts(&self) -> Vec<usize>;
-    fn min_space(&self) -> usize;
-    fn positions_number(&self, line_length: usize) -> usize {
-        let min_space = self.min_space();
-        assert!(line_length >= min_space);
-        line_length - min_space + 1
-    }
-}
-
-impl<B> BlockPosition for Description<B>
-where
-    B: Block,
-{
-    fn block_starts(&self) -> Vec<usize> {
-        self.vec
-            .iter()
-            .zip(Block::partial_sums(&self.vec))
-            .map(|(block, end)| end - block.size())
-            .collect()
-    }
-
-    fn min_space(&self) -> usize {
-        if self.vec.is_empty() {
-            return 0;
-        }
-        *Block::partial_sums(&self.vec)
-            .last()
-            .expect("Partial sums should be non-empty")
-    }
-}
-
 #[derive(Debug, Clone)]
 struct Position {
     var: Var,
