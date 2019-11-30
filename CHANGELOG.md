@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2019-11-30
+
+### Added
+- optimization for colored puzzles: exclusion of colors based on the extreme clues positions;
+- Rust logo as solved nonogram image in [README](README.md);
+- coverage with [codecov.io](https://codecov.io/gh/tsionyx/nonogrid);
+- add some badges in [README](README.md);
+- SAT variables and clauses number in the report ot the hardest puzzles;
+- [cargo-every.py](cargo-every.py) script for doing a cargo command
+  for every combination of features.
+
+### Changed
+- simplify generation of SAT clauses for overlapping blocks;
+- move some methods of `Description` closer to its definition and add some tests;
+- clarified features names and usage;
+- updated `--help` message for [batch.sh](benches/batch.sh).
+
 
 ## [0.6.0] - 2019-11-19
 
