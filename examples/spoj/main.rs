@@ -1,4 +1,5 @@
 #![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::use_self)]
 
 use std::cell::RefCell;
 use std::fmt;
