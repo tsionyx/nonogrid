@@ -3,7 +3,7 @@
 use std::{
     collections::{HashMap, HashSet},
     iter::{from_fn, once},
-    ops::Range,
+    ops::{Deref, Range},
 };
 
 use varisat::{solver::Solver, CnfFormula, ExtendFormula, Lit, Var};
@@ -21,6 +21,16 @@ struct Position {
     range: Range<usize>,
 }
 
+impl Position {
+    fn var_if_included(&self, point: usize) -> Option<Var> {
+        if self.range.contains(&point) {
+            Some(self.var)
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 struct BlockPositions {
     index: usize,
@@ -28,8 +38,43 @@ struct BlockPositions {
     vec: Vec<Position>,
 }
 
+impl Deref for BlockPositions {
+    type Target = [Position];
+
+    fn deref(&self) -> &Self::Target {
+        &self.vec
+    }
+}
+
+impl BlockPositions {
+    fn vars_iter(&self) -> impl Iterator<Item = Var> + '_ {
+        self.iter().map(|pos| pos.var)
+    }
+}
+
 #[derive(Debug)]
 struct LinePositions(Vec<BlockPositions>);
+
+impl Deref for LinePositions {
+    type Target = [BlockPositions];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl LinePositions {
+    fn covering_vars(&self, color: ColorId, point: usize) -> Vec<Var> {
+        self.iter()
+            .filter(|block_pos| block_pos.color == color)
+            .flat_map(move |block_pos| {
+                block_pos
+                    .iter()
+                    .filter_map(move |pos| pos.var_if_included(point))
+            })
+            .collect()
+    }
+}
 
 #[derive(Debug)]
 pub struct ClauseGenerator<B>
@@ -42,6 +87,17 @@ where
     cells: Vec<B::Color>,
     width: usize,
     height: usize,
+}
+
+fn at_least_one(vars: impl Iterator<Item = Var>) -> Vec<Lit> {
+    vars.map(|var| var.positive()).collect()
+}
+
+fn at_most_one(vars: Vec<Var>) -> impl Iterator<Item = Vec<Lit>> + 'static {
+    let pairs = pair_combinations(&vars);
+    pairs
+        .into_iter()
+        .map(|(f, s)| vec![f.negative(), s.negative()])
 }
 
 impl<B> ClauseGenerator<B>
@@ -103,13 +159,13 @@ where
         let col_vars: usize = self
             .columns_vars
             .iter()
-            .flat_map(|col| col.0.iter().map(|block| block.vec.len()))
+            .flat_map(|col| col.iter().map(|block| block.len()))
             .sum();
 
         let row_vars: usize = self
             .rows_vars
             .iter()
-            .flat_map(|col| col.0.iter().map(|block| block.vec.len()))
+            .flat_map(|col| col.iter().map(|block| block.len()))
             .sum();
 
         col_vars + row_vars
@@ -151,31 +207,29 @@ where
         // 1. Каждый блок, объявленный в строке или столбце обязан появиться хотя-бы в одной позиции.
         // Этому соответствует клоз вида (X1 V X2 V… XN),
         // где X1, X2… XN — все возможные позиции данного блока в строке или столбце.
-        positions.vec.iter().map(|pos| pos.var.positive()).collect()
+        at_least_one(positions.vars_iter())
     }
 
     fn block_once_clauses(positions: &BlockPositions) -> impl Iterator<Item = Vec<Lit>> {
         // 2. Каждый блок в строке или столбце должен появиться не более одного раза.
         // Этому соответствует множество клозов вида (not Xi) V (not Xj),
         // где Xi, Xj (i != j) — все возможные позиции данного блока в строке или столбце.
-        let pairs = pair_combinations(&positions.vec);
-        pairs
-            .into_iter()
-            .map(|(f, s)| vec![f.var.negative(), s.var.negative()])
+        let vars: Vec<_> = positions.vars_iter().collect();
+        at_most_one(vars)
     }
 
     fn non_overlap_clauses(positions: &LinePositions) -> impl Iterator<Item = Vec<Lit>> {
         // 3. Правильный порядок блоков. Поскольку необходимо поддерживать правильный порядок расположения блоков,
         // а также исключить их пересечение, необходимо добавить клозы, вида (not Xi) V (not Xj),
         // где Xi, Xj — переменные, соответствующие позициям разных блоков, которые имеют неправильный порядок или пересекаются.
-        assert!(!positions.0.is_empty());
+        assert!(!positions.is_empty());
 
-        //let pairs = positions.0.iter().zip(&positions.0[1..]);
-        let pairs = pair_combinations(&positions.0);
+        //let pairs = positions.iter().zip(&positions[1..]);
+        let pairs = pair_combinations(positions);
 
         pairs.into_iter().flat_map(|(block1, block2)| {
             assert!(block1.index < block2.index);
-            let pairs = product(&block1.vec, &block2.vec);
+            let pairs = product(&block1, &block2);
             pairs.into_iter().filter_map(
                 move |(
                     Position {
@@ -194,6 +248,7 @@ where
                     };
 
                     if conflict {
+                        // conflict encoding (!block1_position V !block2_position)
                         Some(vec![var1.negative(), var2.negative()])
                     } else {
                         None
@@ -208,34 +263,8 @@ where
         let column = &self.columns_vars[x];
         let row = &self.rows_vars[y];
 
-        let column_vars = column
-            .0
-            .iter()
-            .filter(|block_pos| block_pos.color == color_id)
-            .flat_map(move |block_pos| {
-                block_pos.vec.iter().filter_map(move |pos| {
-                    if pos.range.contains(&y) {
-                        Some(pos.var)
-                    } else {
-                        None
-                    }
-                })
-            })
-            .collect();
-        let row_vars = row
-            .0
-            .iter()
-            .filter(|block_pos| block_pos.color == color_id)
-            .flat_map(move |block_pos| {
-                block_pos.vec.iter().filter_map(move |pos| {
-                    if pos.range.contains(&x) {
-                        Some(pos.var)
-                    } else {
-                        None
-                    }
-                })
-            })
-            .collect();
+        let column_vars = column.covering_vars(color_id, y);
+        let row_vars = row.covering_vars(color_id, x);
 
         (column_vars, row_vars)
     }
@@ -248,19 +277,20 @@ where
 
         point_vars
             .iter()
-            .flat_map(|(&color_id, point_var)| {
+            .flat_map(|(&color_id, color_var)| {
                 let (column_vars, row_vars) = self.covering_positions(cell_point, color_id);
 
+                // support encoding (!color_var V position1 V position2 V ...)
                 let column_clause = column_vars
                     .into_iter()
                     .map(Var::positive)
-                    .chain(once(point_var.negative()))
+                    .chain(once(color_var.negative()))
                     .collect();
 
                 let row_clause = row_vars
                     .into_iter()
                     .map(Var::positive)
-                    .chain(once(point_var.negative()))
+                    .chain(once(color_var.negative()))
                     .collect();
 
                 once(column_clause).chain(once(row_clause))
@@ -275,13 +305,16 @@ where
         let point_vars = self.get_vars(cell_point);
         point_vars
             .iter()
-            .flat_map(|(&color_id, point_var)| {
+            .flat_map(|(&color_id, color_var)| {
                 let (column_vars, row_vars) = self.covering_positions(cell_point, color_id);
 
                 column_vars
                     .into_iter()
                     .chain(row_vars)
-                    .map(move |var| vec![var.negative(), point_var.positive()])
+                    // conflict encoding (!white V !block_position === color V !block_position)
+                    .map(move |block_position_var| {
+                        vec![block_position_var.negative(), color_var.positive()]
+                    })
             })
             .collect()
     }
@@ -293,15 +326,11 @@ where
         color.as_color_id().or(Some(Self::BLACK_COLOR))
     }
 
-    fn point_once_clauses(&self, cell_point: Point) -> Vec<Vec<Lit>> {
+    fn point_once_clauses(&self, cell_point: Point) -> impl Iterator<Item = Vec<Lit>> {
         let point_vars = self.get_vars(cell_point);
 
-        let values: Vec<_> = point_vars.values().collect();
-        let pairs = pair_combinations(&values);
-        pairs
-            .into_iter()
-            .map(|(f, s)| vec![f.negative(), s.negative()])
-            .collect()
+        let values: Vec<_> = point_vars.values().cloned().collect();
+        at_most_one(values)
     }
 
     fn precomputed_cells_clauses(&self) -> Vec<Lit> {
@@ -347,37 +376,37 @@ where
         let columns_positions = self
             .columns_vars
             .iter()
-            .flat_map(|line_positions| line_positions.0.iter().map(Self::block_positions_clause));
+            .flat_map(|line_positions| line_positions.iter().map(Self::block_positions_clause));
         let rows_positions = self
             .rows_vars
             .iter()
-            .flat_map(|line_positions| line_positions.0.iter().map(Self::block_positions_clause));
+            .flat_map(|line_positions| line_positions.iter().map(Self::block_positions_clause));
 
         let columns_once_positions = self
             .columns_vars
             .iter()
-            .flat_map(|line_positions| line_positions.0.iter().flat_map(Self::block_once_clauses));
+            .flat_map(|line_positions| line_positions.iter().flat_map(Self::block_once_clauses));
         let rows_once_positions = self
             .rows_vars
             .iter()
-            .flat_map(|line_positions| line_positions.0.iter().flat_map(Self::block_once_clauses));
+            .flat_map(|line_positions| line_positions.iter().flat_map(Self::block_once_clauses));
 
         let non_overlap_columns = self
             .columns_vars
             .iter()
-            .filter(|line_pos| line_pos.0.len() > 1)
+            .filter(|line_pos| line_pos.len() > 1)
             .flat_map(Self::non_overlap_clauses);
         let non_overlap_rows = self
             .rows_vars
             .iter()
-            .filter(|line_pos| line_pos.0.len() > 1)
+            .filter(|line_pos| line_pos.len() > 1)
             .flat_map(Self::non_overlap_clauses);
 
         let all_points = product(
             &(0..self.width).collect::<Vec<_>>(),
             &(0..self.height).collect::<Vec<_>>(),
         );
-        let box_clauses = all_points
+        let color_clauses = all_points
             .clone()
             .into_iter()
             .flat_map(move |(x, y)| self.cell_color_clauses(Point::new(x, y)));
@@ -401,7 +430,7 @@ where
             .chain(rows_once_positions)
             .chain(non_overlap_columns)
             .chain(non_overlap_rows)
-            .chain(box_clauses)
+            .chain(color_clauses)
             .chain(space_clauses)
             .chain(point_once_clauses)
             .chain(fixed_points)
