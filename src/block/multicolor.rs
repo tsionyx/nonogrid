@@ -24,6 +24,7 @@ impl Color for MultiColor {
     fn memoize_rate() -> bool {
         true
     }
+
     /// Calculate the rate of the given cell.
     /// The formula is like that:
     ///   `rate = (N - n) / (N - 1)`, where

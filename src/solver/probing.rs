@@ -12,8 +12,6 @@ use crate::utils::{
     rc::{MutRc, ReadRef},
 };
 
-//use std::time::Instant;
-
 #[derive(Debug)]
 pub struct ProbeImpact<C: Color> {
     point: Point,
@@ -160,9 +158,7 @@ where
     where
         S: LineSolver<BlockType = B>,
     {
-        //let start = Instant::now();
         let mut contradictions_number = 0;
-        //let mut iteration_probes = HashSet::new();
 
         let impact =
             loop {
@@ -241,12 +237,6 @@ where
             };
 
         if contradictions_number > 0 {
-            //let total_time = start.elapsed();
-            //info!(
-            //    "Full solution: {}.{:06} sec",
-            //    total_time.as_secs(),
-            //    total_time.subsec_micros()
-            //);
             info!("Contradictions found: {}", contradictions_number);
         }
         Ok(impact)

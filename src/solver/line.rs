@@ -293,17 +293,6 @@ where
 }
 
 impl DynamicColor for BinaryColor {
-    //fn set_additional_blank(line: ReadRc<Line<Self>>) -> (ReadRc<Line<Self>>, bool) {
-    //    let space = BinaryColor::White;
-    //
-    //    if line.last().unwrap_or(&space) != &space {
-    //        let mut with_space = line.to_vec();
-    //        with_space.push(space);
-    //        return (ReadRc::new(with_space), true);
-    //    }
-    //    (line, false)
-    //}
-
     fn both_colors() -> Option<Self> {
         Some(Self::BlackOrWhite)
     }

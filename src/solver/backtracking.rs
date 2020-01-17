@@ -271,7 +271,6 @@ where
         );
 
         if let Some(start_time) = self.start_time {
-            //.expect("Start time should be set in current function")
             let total_time = start_time.elapsed();
 
             warn!(

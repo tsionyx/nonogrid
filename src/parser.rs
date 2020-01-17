@@ -145,7 +145,6 @@ mod ini {
     #[derive(Debug)]
     pub struct MyFormat {
         structure: NonoToml,
-        //board_str: String,
     }
 
     impl LocalReader for MyFormat {}
@@ -160,10 +159,7 @@ mod ini {
         fn with_content(content: String) -> Result<Self, ParseError> {
             let nono = toml::from_str(&content)?;
 
-            Ok(Self {
-                structure: nono,
-                //board_str: content,
-            })
+            Ok(Self { structure: nono })
         }
 
         fn parse<B>(&self) -> Board<B>
@@ -219,7 +215,6 @@ mod ini {
                 .split(|c| c == '#' || c == ';')
                 .next()
                 .expect("Split returned empty");
-            // dbg!(&non_comment);
 
             if non_comment == "" {
                 return None;

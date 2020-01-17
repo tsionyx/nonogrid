@@ -225,9 +225,6 @@ where
     }
 
     fn get_row_slice(&self, index: usize) -> &[B::Color] {
-        //let width = self.width();
-        //let start_index = width * index;
-        //self.cells.iter().skip(start_index).take(width)
         self.iter_rows().nth(index).expect("Invalid row index")
     }
 

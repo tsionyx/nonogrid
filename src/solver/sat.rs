@@ -224,7 +224,6 @@ where
         // где Xi, Xj — переменные, соответствующие позициям разных блоков, которые имеют неправильный порядок или пересекаются.
         assert!(!positions.is_empty());
 
-        //let pairs = positions.iter().zip(&positions[1..]);
         let pairs = pair_combinations(positions);
 
         pairs.into_iter().flat_map(|(block1, block2)| {
@@ -551,7 +550,6 @@ where
             }
 
             let _ = solver.solve().unwrap();
-            //assert_eq!(solution, true); // satisfiable
             solver.model().map(|model| {
                 found += 1;
 

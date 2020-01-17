@@ -141,7 +141,6 @@ where
 fn to_color_string(color_desc: &ColorDesc) -> ColoredString {
     let color_res: Result<colored::Color, _> = color_desc.name().parse();
     if let Ok(color) = color_res {
-        //symbol.color(color)
         " ".on_color(color)
     } else {
         let symbol = color_desc.symbol();

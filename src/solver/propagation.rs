@@ -7,8 +7,6 @@ use crate::cache::{cache_info, Cached, GrowableCache};
 use crate::solver::line::{self, LineSolver};
 use crate::utils::rc::{MutRc, ReadRc, ReadRef};
 
-//use std::time::Instant;
-
 #[allow(missing_debug_implementations)]
 pub struct Solver<B>
 where
@@ -45,7 +43,6 @@ impl JobQueue for SmallJobQueue {
 
     fn pop(&mut self) -> Option<Job> {
         let top_job = self.vec.pop()?;
-        //let before_retain_size = pq.len();
         // remove all the previous occurrences of the new job
         self.vec.retain(|&x| x != top_job);
 
@@ -200,12 +197,6 @@ where
                 let board = self.board();
                 let rows = (0..board.height()).rev();
                 let cols = (0..board.width()).rev();
-
-                // `is_solved_full` is expensive, so minimize calls to it.
-                // Do not call if only a handful of lines has to be solved
-                if board.is_solved_full() {
-                    //return 0, ()
-                }
                 LongJobQueue::with_rows_and_columns(rows, cols)
             };
             self.run_jobs::<S, _>(queue)
@@ -217,7 +208,6 @@ where
         S: LineSolver<BlockType = B>,
         Q: JobQueue,
     {
-        //let start = Instant::now();
         let mut lines_solved = 0_u32;
         let mut solved_cells = vec![];
 
@@ -244,25 +234,8 @@ where
             lines_solved += 1;
         }
 
-        // all the following actions applied only to verified solving
-        //if !self.contradiction_mode
-        {
-            //let board = board.borrow();
-            //board.solution_round_completed()
-            //let rate = board.solution_rate();
-            //if rate != 1 {
-            //    info!("The nonogram is not solved full: {:.4}", rate)
-            //}
-
-            if log_enabled!(Level::Debug) {
-                //let total_time = start.elapsed();
-                //debug!(
-                //    "Full solution: {}.{:06} sec",
-                //    total_time.as_secs(),
-                //    total_time.subsec_micros()
-                //);
-                debug!("Lines solved: {}", lines_solved);
-            }
+        if log_enabled!(Level::Debug) {
+            debug!("Lines solved: {}", lines_solved);
         }
 
         Ok(solved_cells)
@@ -340,9 +313,6 @@ where
         old: &[B::Color],
         new: &[B::Color],
     ) -> Vec<usize> {
-        // let new_solution_rate = Board::<B>::line_solution_rate(&updated);
-        // if new_solution_rate > pre_solution_rate
-
         if old == new {
             return vec![];
         }
