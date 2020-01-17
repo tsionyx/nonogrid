@@ -37,12 +37,6 @@ pub trait DynamicColor: Color
 where
     Self: Sized,
 {
-    // it can be implemented very simple with generics specialization
-    // https://github.com/aturon/rfcs/blob/impl-specialization/text/0000-impl-specialization.md
-    // https://github.com/rust-lang/rfcs/issues/1053
-    fn set_additional_blank(line: ReadRc<Line<Self>>) -> (ReadRc<Line<Self>>, bool) {
-        (line, false)
-    }
     fn both_colors() -> Option<Self>;
 
     fn can_be_blank(&self) -> bool;
@@ -55,7 +49,6 @@ where
 pub struct DynamicSolver<B: Block, S = <B as Block>::Color> {
     desc: ReadRc<Description<B>>,
     line: ReadRc<Line<S>>,
-    additional_space: bool,
     block_sums: Vec<usize>,
     job_size: usize,
     solution_matrix: Vec<Option<bool>>,
@@ -70,8 +63,6 @@ where
     type BlockType = B;
 
     fn new(desc: ReadRc<Description<B>>, line: ReadRc<Line<B::Color>>) -> Self {
-        let (line, additional_space) = B::Color::set_additional_blank(line);
-
         let block_sums = Self::calc_block_sum(&*desc);
 
         let job_size = desc.vec.len() + 1;
@@ -82,7 +73,6 @@ where
         Self {
             desc,
             line,
-            additional_space,
             block_sums,
             job_size,
             solution_matrix,
@@ -96,9 +86,6 @@ where
         }
 
         let solved = &mut self.solved_line;
-        if self.additional_space {
-            assert_eq!(solved.pop(), Some(B::Color::blank()));
-        }
 
         let both = B::Color::both_colors();
         if let Some(both) = both {

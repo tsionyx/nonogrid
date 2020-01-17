@@ -8,7 +8,7 @@ use std::ops::Sub;
 use std::rc::Rc;
 use std::slice::Chunks;
 
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum BW {
     Undefined,
     White,
@@ -1624,7 +1624,7 @@ fn main() {
     }
 }
 
-pub trait PartialEntry {
+trait PartialEntry {
     type Output: Copy;
 
     fn unwrap_or_insert_with<F>(&mut self, index: usize, default: F) -> Self::Output

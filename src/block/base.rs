@@ -18,7 +18,6 @@ where
         + Copy
         + Send
         + Sync
-        + Ord
         + Add<Output = Self>
         + Sub<Output = Result<Self, String>>,
 {

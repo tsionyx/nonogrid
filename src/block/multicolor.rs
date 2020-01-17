@@ -9,7 +9,7 @@ use crate::block::base::{
 };
 use crate::utils::{from_two_powers, two_powers};
 
-#[derive(Debug, PartialEq, Eq, Hash, Default, Copy, Clone, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, Hash, Default, Copy, Clone)]
 pub struct MultiColor(pub ColorId);
 
 impl Color for MultiColor {

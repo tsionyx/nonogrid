@@ -4,7 +4,7 @@ use std::iter::once;
 use hashbrown::{HashMap, HashSet};
 use smallvec::SmallVec;
 
-pub use callbacks::{ChangeColorCallback, RestoreCallback, SetLineCallback};
+use callbacks::{ChangeColorCallback, RestoreCallback, SetLineCallback};
 
 use crate::block::{
     base::{
@@ -112,7 +112,7 @@ where
     B: Block,
 {
     #[allow(dead_code)]
-    pub fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Self {
+    fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Self {
         Self::with_descriptions_and_palette(rows, columns, None)
     }
 

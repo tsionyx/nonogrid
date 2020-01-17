@@ -6,7 +6,7 @@ use crate::block::base::{
     Block, Color,
 };
 
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum BinaryColor {
     Undefined,
     White,
