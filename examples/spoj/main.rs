@@ -314,14 +314,6 @@ impl Point {
     fn new(x: usize, y: usize) -> Self {
         Self { x, y }
     }
-
-    fn x(&self) -> usize {
-        self.x
-    }
-
-    fn y(&self) -> usize {
-        self.y
-    }
 }
 
 pub struct Board {
@@ -776,7 +768,7 @@ mod propagation {
     impl SmallJobQueue {
         fn with_point(point: Point) -> Self {
             Self {
-                vec: vec![(true, point.x()), (false, point.y())],
+                vec: vec![(true, point.x), (false, point.y)],
             }
         }
     }
@@ -1066,9 +1058,9 @@ mod probing {
             queue.extend(unsolved.map(|point| {
                 let no_solved = 4 - board.unsolved_neighbours(&point).count();
                 let row_rate = row_rate_cache
-                    .unwrap_or_insert_with(point.y(), || board.row_solution_rate(point.y()));
+                    .unwrap_or_insert_with(point.y, || board.row_solution_rate(point.y));
                 let column_rate = column_rate_cache
-                    .unwrap_or_insert_with(point.x(), || board.column_solution_rate(point.x()));
+                    .unwrap_or_insert_with(point.x, || board.column_solution_rate(point.x));
                 let priority = no_solved as f64 + row_rate + column_rate;
                 (priority.into(), point)
             }));
@@ -1386,8 +1378,7 @@ mod backtracking {
                 }
 
                 let (point, color) = direction;
-                let cell_colors: Vec<BW> =
-                    self.board().cell(&point).variants().into_iter().collect();
+                let cell_colors = self.board().cell(&point).variants();
 
                 if !cell_colors.contains(&color) {
                     continue;

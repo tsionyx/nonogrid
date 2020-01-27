@@ -31,7 +31,7 @@ struct SmallJobQueue {
 impl SmallJobQueue {
     fn with_point(point: Point) -> Self {
         Self {
-            vec: vec![(true, point.x()), (false, point.y())],
+            vec: vec![(true, point.x), (false, point.y)],
         }
     }
 }

@@ -258,7 +258,7 @@ where
     }
 
     fn covering_positions(&self, cell_point: Point, color_id: ColorId) -> (Vec<Var>, Vec<Var>) {
-        let (x, y) = (cell_point.x(), cell_point.y());
+        let (x, y) = (cell_point.x, cell_point.y);
         let column = &self.columns_vars[x];
         let row = &self.rows_vars[y];
 
@@ -447,8 +447,8 @@ where
 
     fn get_vars(&self, point: Point) -> &HashMap<ColorId, Var> {
         self.cell_vars
-            .get(point.y())
-            .and_then(|row| row.get(point.x()))
+            .get(point.y)
+            .and_then(|row| row.get(point.x))
             .expect("Cannot get vars for point")
     }
 

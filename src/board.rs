@@ -20,21 +20,13 @@ use crate::utils::{
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 pub struct Point {
-    x: usize,
-    y: usize,
+    pub x: usize,
+    pub y: usize,
 }
 
 impl Point {
     pub const fn new(x: usize, y: usize) -> Self {
         Self { x, y }
-    }
-
-    pub const fn x(&self) -> usize {
-        self.x
-    }
-
-    pub const fn y(&self) -> usize {
-        self.y
     }
 }
 
