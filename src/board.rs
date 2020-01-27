@@ -102,6 +102,8 @@ where
 impl<B> Board<B>
 where
     B: Block,
+    // to suppress IDEA warning
+    B::Color: Copy,
 {
     #[allow(dead_code)]
     fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Self {
@@ -411,6 +413,8 @@ where
 impl<B> Board<B>
 where
     B: Block,
+    // to suppress IDEA warning
+    B::Color: Copy,
 {
     fn set_color(&mut self, point: &Point, color: &B::Color) {
         let old_value = self.cell(point);
@@ -440,7 +444,7 @@ where
             .iter()
             .enumerate()
             .map(|(row_idx, desc)| {
-                let color_ranges = desc.color_ranges(width);
+                let color_ranges: HashMap<_, _> = desc.color_ranges(width);
                 info!(
                     "First and last block indexes for every color in {}-th row: {:?}",
                     row_idx, color_ranges
@@ -455,7 +459,7 @@ where
             .iter()
             .enumerate()
             .map(|(col_idx, desc)| {
-                let color_ranges = desc.color_ranges(height);
+                let color_ranges: HashMap<_, _> = desc.color_ranges(height);
                 info!(
                     "First and last block indexes for every color in {}-th column: {:?}",
                     col_idx, color_ranges

@@ -212,6 +212,8 @@ where
 impl<B, P, S> Solver<B, P, S>
 where
     B: Block,
+    // to suppress IDEA warning
+    B::Color: Copy,
     P: ProbeSolver<BlockType = B>,
     S: LineSolver<BlockType = B>,
 {

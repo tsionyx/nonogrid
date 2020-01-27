@@ -527,7 +527,7 @@ mod xml {
 
     impl Paletted for WebPbn {
         fn get_colors(&self) -> Vec<(String, char, String)> {
-            if let Some(ref colors) = *read_ref(&self.cached_colors) {
+            if let Some(colors) = read_ref(&self.cached_colors).as_ref() {
                 return colors.clone();
             }
 
@@ -538,7 +538,7 @@ mod xml {
         }
 
         fn get_palette(&self) -> ColorPalette {
-            if let Some(ref palette) = *read_ref(&self.cached_palette) {
+            if let Some(palette) = read_ref(&self.cached_palette).as_ref() {
                 return palette.clone();
             }
 

@@ -488,7 +488,7 @@ mod tests {
     }
 
     #[test]
-    fn block_starts_sinlge_colored() {
+    fn block_starts_single_colored() {
         let d = Description::new(vec![ColoredBlock::from_size_and_color(5, 1)]);
         assert_eq!(d.block_starts(), vec![0])
     }

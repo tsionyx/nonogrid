@@ -77,7 +77,7 @@ where
         Self::concat(
             header
                 .chain(grid)
-                .map(|line| line.iter().map(|symbol| pad(symbol, 2, true)).collect()),
+                .map(|line| line.iter().map(|symbol| pad(&symbol, 2, true)).collect()),
         )
     }
 

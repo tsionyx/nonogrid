@@ -195,7 +195,7 @@ case ${mode} in
     long_solvers $@
     ;;
     *)    # unknown option
-    echo "error: Unkknown mode $mode" >&2
+    echo "error: Unknown mode $mode" >&2
     exit 1
     ;;
 esac

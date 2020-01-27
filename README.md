@@ -111,8 +111,8 @@ cargo run --features=web,xml -- --webpbn 5933
 ### Threading
 
 By default, the solver and all the algorithms are single-threaded. To use the solver's structures
-in multi-threaded environment, provide the `threaded` feature. In essense, this feature
-replaces every occurence of `Rc/RefCell` with `Arc/RwLock`.
+in multi-threaded environment, provide the `threaded` feature. In essence, this feature
+replaces every occurrence of `Rc/RefCell` with `Arc/RwLock`.
 
 
 ### Probing tweaking

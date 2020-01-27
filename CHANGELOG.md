@@ -56,7 +56,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.5.2] - 2019-08-14
 
 ### Added
-- [spoj example](examples/spoj/) with the algorithm adaptation for
+- [spoj example](examples/spoj) with the algorithm adaptation for
 [this problem](https://www.spoj.com/problems/JCROSS/)
 - crate metadata to `--help` with help of `clap`'s macros.
 
@@ -97,7 +97,7 @@ to represent NewInfo/Contradiction variants
 - [travis](https://travis-ci.org/tsionyx/nonogrid) tests support
 - 'stat' mode for [batch.sh](benches/batch.sh) script
 - performance comparison [results as csv](benches)
-- [article](doc/README.md) on [habr.com]((https://habr.com/ru/post/454586/))
+- article on [habr.com]((https://habr.com/ru/post/454586/))
 
 ### Fixed
 - remove `Color::is_updated_with` and `Board::diff` to improve performance
@@ -108,7 +108,7 @@ to represent NewInfo/Contradiction variants
 ### Updated
 - move all but the core dependencies into optional features (clap, env_logger, ini, xml, colored)
 - iterators refactoring
-- [bench results](benches/results.md)
+- [bench results](benches/README.md)
 - merge 'benches/batch-nonograms.org.sh' and 'benches/batch-webpbn.sh' into [single script](benches/batch.sh)
 - remove unnecessary `pub`
 

@@ -6,6 +6,7 @@
 # IDEA
 /.idea/workspace.xml
 /.idea/misc.xml
+/.idea/dictionaries/
 
 # profiles and benchmarks
 *.log

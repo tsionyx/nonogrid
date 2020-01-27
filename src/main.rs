@@ -22,7 +22,7 @@ pub(crate) mod cache;
 pub mod parser;
 pub mod render;
 pub mod solver;
-pub(crate) mod utils;
+pub mod utils;
 
 #[cfg(feature = "clap")]
 mod cli {
