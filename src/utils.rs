@@ -211,25 +211,20 @@ pub fn split_sections<'a, 'b>(
     include_header: bool,
     first_section: Option<&'b str>,
 ) -> Result<HashMap<&'b str, Vec<&'a str>>, String> {
+    let first_section = first_section.unwrap_or("");
+    let mut section_indexes: HashMap<_, _> = once((first_section, 0)).collect();
+
     let lines: Vec<_> = text.lines().map(str::trim).collect();
+    for &section in section_names {
+        let start_position = lines
+            .iter()
+            .position(|&r| r == section)
+            .ok_or_else(|| format!("Section {:?} not found", section))?;
 
-    let first_section_name = first_section.unwrap_or("");
-
-    let section_indexes: Result<HashMap<_, _>, String> = section_names
-        .iter()
-        .map(|&section| {
-            Ok((
-                section,
-                lines
-                    .iter()
-                    .position(|&r| r == section)
-                    .ok_or_else(|| format!("{:?} section not found", section))?,
-            ))
-        })
-        .chain(once(Ok((first_section_name, 0))))
-        .collect();
-
-    let section_indexes = section_indexes?;
+        if section_indexes.insert(section, start_position).is_some() {
+            return Err(format!("Section {:?} repeated", section));
+        }
+    }
 
     let eof = lines.len();
     let indexes_with_eof: Vec<_> = section_indexes.values().cloned().chain(once(eof)).collect();

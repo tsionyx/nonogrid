@@ -936,12 +936,6 @@ struct OlsakParser {
     colors: HashMap<String, OlsakColor>,
 }
 
-impl From<&str> for ParseError {
-    fn from(err: &str) -> Self {
-        Self(err.to_string())
-    }
-}
-
 impl From<String> for ParseError {
     fn from(err: String) -> Self {
         Self(err)
@@ -1189,29 +1183,35 @@ impl BoardParser for SimpleParser {
                     sections.remove(names[1]).expect("Cannot find rows"),
                 )
             } else {
-                let mut sections = split_sections(&content, &[""], true, Some(names[0]));
+                // try to find two blocks separated by empty line
+                // 'ish', 'keen', 'makhorin', 'syro' formats
+                let rows_section = "rows go first";
+                let columns_section = [""];
+                let mut sections =
+                    split_sections(&content, &columns_section, true, Some(rows_section));
 
                 if let Ok(sections) = sections.as_mut() {
-                    let columns = sections.remove("").expect("Cannot find empty section");
                     (
-                        sections.remove(names[0]).expect("Cannot find rows"),
-                        columns,
+                        sections.remove(rows_section).expect("Cannot find rows"),
+                        sections
+                            .remove(columns_section[0])
+                            .expect("Cannot find columns"),
                     )
                 } else {
                     // no empty lines, 'nin' format
                     let mut content_iter = content.lines();
-                    let dimensions: Result<Vec<_>, ParseIntError> = content_iter
+                    let dimensions: Result<Vec<usize>, _> = content_iter
                         .next()
                         .expect("Empty content")
                         .split_whitespace()
-                        .map(str::parse::<usize>)
+                        .map(str::parse)
                         .collect();
 
                     let dimensions = dimensions?;
                     if dimensions.len() == 2 {
                         let (width, height) = (dimensions[0], dimensions[1]);
-                        let rows = content_iter.clone().take(height).collect();
-                        let columns = content_iter.skip(height).take(width).collect();
+                        let rows = content_iter.by_ref().take(height).collect();
+                        let columns = content_iter.take(width).collect();
                         (rows, columns)
                     } else {
                         unimplemented!("This puzzle format is not supported")
