@@ -329,7 +329,7 @@ pub mod color {
     }
 
     impl ColorDesc {
-        /// used in ShellRenderer
+        /// used in `ShellRenderer`
         pub fn symbol(&self) -> String {
             self.symbol.to_string()
         }

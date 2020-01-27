@@ -206,7 +206,7 @@ mod ini {
         {
             let descriptions = descriptions.trim();
             let non_comment: &str = descriptions
-                .split(|c| c == '#' || c == ';')
+                .split(&['#', ';'][..])
                 .next()
                 .expect("Split returned empty");
 
@@ -634,7 +634,7 @@ impl NonogramsOrg {
     }
 
     /// Reverse engineered version of the part of the script
-    /// http://www.nonograms.org/js/nonogram.min.059.js
+    /// <http://www.nonograms.org/js/nonogram.min.059.js>
     /// that produces a nonogram solution for the given cyphered solution
     /// (it can be found in puzzle HTML in the form 'var d=[...]').
     #[allow(clippy::shadow_unrelated)]

@@ -139,7 +139,7 @@ mod web {
     }
 
     #[test]
-    /// http://www.nonograms.org/nonograms/i/4353
+    /// <http://www.nonograms.org/nonograms/i/4353>
     fn nonograms_org_extract() {
         let nop = NonogramsOrg::read_remote("4353").unwrap();
         assert_eq!(nop.infer_scheme(), PuzzleScheme::BlackAndWhite);
@@ -161,7 +161,7 @@ mod web {
     }
 
     #[test]
-    /// http://www.nonograms.org/nonograms2/i/4374
+    /// <http://www.nonograms.org/nonograms2/i/4374>
     fn nonograms_org_extract_colored() {
         let nop = NonogramsOrg::read_remote("4374").unwrap();
         assert_eq!(nop.infer_scheme(), PuzzleScheme::MultiColor);
@@ -182,7 +182,7 @@ mod web {
     }
 
     #[test]
-    /// http://www.nonograms.ru/nonograms/i/23342
+    /// <http://www.nonograms.ru/nonograms/i/23342>
     fn nonograms_org_not_found_on_org_but_found_on_ru() {
         let nop = NonogramsOrg::read_remote("23342").unwrap();
         assert_eq!(nop.infer_scheme(), PuzzleScheme::BlackAndWhite);
@@ -196,7 +196,7 @@ mod web {
     }
 
     #[test]
-    /// http://www.nonograms.org/nonograms/i/6
+    /// <http://www.nonograms.org/nonograms/i/6>
     fn nonograms_org_solve() {
         let p = NonogramsOrg::read_remote("6").unwrap();
         assert_eq!(p.infer_scheme(), PuzzleScheme::BlackAndWhite);

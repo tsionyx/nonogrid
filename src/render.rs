@@ -85,7 +85,7 @@ where
         Self::concat(
             self.grid_lines()
                 .into_iter()
-                .map(|row| row.iter().map(|cell| cell.to_string()).collect()),
+                .map(|row| row.iter().map(ToString::to_string).collect()),
         )
     }
 }
