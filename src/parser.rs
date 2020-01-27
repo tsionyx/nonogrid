@@ -8,13 +8,7 @@ use hashbrown::{HashMap, HashSet};
 #[cfg(feature = "web")]
 use reqwest;
 
-#[cfg(not(feature = "ini"))]
-pub use dummy_ini::MyFormat;
-#[cfg(not(feature = "xml"))]
-pub use dummy_xml::WebPbn;
-#[cfg(feature = "ini")]
 pub use ini::MyFormat;
-#[cfg(feature = "xml")]
 pub use xml::WebPbn;
 
 use crate::block::{
@@ -294,7 +288,8 @@ mod ini {
 }
 
 #[cfg(not(feature = "ini"))]
-mod dummy_ini {
+mod ini {
+    //! dummy definitions
     use super::*;
 
     #[derive(Debug, Clone, Copy)]
@@ -556,7 +551,8 @@ mod xml {
 }
 
 #[cfg(not(feature = "xml"))]
-mod dummy_xml {
+mod xml {
+    //! dummy definitions
     use super::*;
 
     #[derive(Debug, Clone, Copy)]

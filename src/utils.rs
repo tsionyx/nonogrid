@@ -86,32 +86,7 @@ where
 }
 
 pub mod iter {
-    #[cfg(feature = "try_trait")]
-    use std::ops::Try;
-
     pub trait FindOk: Iterator {
-        #[cfg(feature = "try_trait")]
-        /// Generalization of `find_map` for any `Try` types
-        /// If the iterator is exhausted, return `on_empty_error`.
-        fn first_ok_with_error<B, E, F, R>(&mut self, on_empty_error: E, mut f: F) -> R
-        where
-            Self: Sized,
-            F: FnMut(Self::Item) -> R,
-            R: Try<Ok = B, Error = E>,
-        {
-            let mut return_err = on_empty_error;
-
-            for x in self {
-                match f(x).into_result() {
-                    Ok(res) => return Try::from_ok(res),
-                    Err(e) => return_err = e,
-                }
-            }
-
-            Try::from_error(return_err)
-        }
-
-        #[cfg(not(feature = "try_trait"))]
         /// Generalization of `find_map` for `Result` type.
         /// If the iterator is exhausted, return `on_empty_error`.
         fn first_ok_with_error<B, E, F>(&mut self, on_empty_error: E, mut f: F) -> Result<B, E>
@@ -289,19 +264,56 @@ pub mod time {
     }
 
     #[cfg(not(feature = "std_time"))]
-    pub fn now() -> Option<Instant> {
+    pub const fn now() -> Option<Instant> {
         None
     }
 }
 
 pub mod rc {
+    pub use inner::{mutate_ref, read_ref, InteriorMutableRef, MutRef, ReadRc, ReadRef};
+
     #[cfg(feature = "threaded")]
-    use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+    mod inner {
+        use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+
+        pub type ReadRc<T> = Arc<T>;
+        pub type InteriorMutableRef<T> = RwLock<T>;
+        pub type ReadRef<'a, T> = RwLockReadGuard<'a, T>;
+        pub type MutRef<'a, T> = RwLockWriteGuard<'a, T>;
+
+        pub fn read_ref<T>(cell_value: &InteriorMutableRef<T>) -> ReadRef<T> {
+            cell_value.read().expect(
+                "Cannot read the value under mutable reference: already locked for writing.",
+            )
+        }
+
+        pub fn mutate_ref<T>(cell_value: &InteriorMutableRef<T>) -> MutRef<T> {
+            cell_value
+                .write()
+                .expect("Cannot write the value under mutable reference: already locked.")
+        }
+    }
+
     #[cfg(not(feature = "threaded"))]
-    use std::{
-        cell::{Ref, RefCell, RefMut},
-        rc::Rc,
-    };
+    mod inner {
+        use std::{
+            cell::{Ref, RefCell, RefMut},
+            rc::Rc,
+        };
+
+        pub type ReadRc<T> = Rc<T>;
+        pub type InteriorMutableRef<T> = RefCell<T>;
+        pub type ReadRef<'a, T> = Ref<'a, T>;
+        pub type MutRef<'a, T> = RefMut<'a, T>;
+
+        pub fn read_ref<T>(cell_value: &InteriorMutableRef<T>) -> ReadRef<T> {
+            cell_value.borrow()
+        }
+
+        pub fn mutate_ref<T>(cell_value: &InteriorMutableRef<T>) -> MutRef<T> {
+            cell_value.borrow_mut()
+        }
+    }
 
     #[derive(Debug)]
     pub struct MutRc<T>(ReadRc<InteriorMutableRef<T>>);
@@ -324,48 +336,6 @@ pub mod rc {
         fn clone(&self) -> Self {
             Self(ReadRc::clone(&self.0))
         }
-    }
-
-    #[cfg(feature = "threaded")]
-    pub type ReadRc<T> = Arc<T>;
-    #[cfg(feature = "threaded")]
-    pub type InteriorMutableRef<T> = RwLock<T>;
-    #[cfg(feature = "threaded")]
-    pub type ReadRef<'a, T> = RwLockReadGuard<'a, T>;
-    #[cfg(feature = "threaded")]
-    pub type MutRef<'a, T> = RwLockWriteGuard<'a, T>;
-
-    #[cfg(feature = "threaded")]
-    pub fn read_ref<T>(cell_value: &InteriorMutableRef<T>) -> ReadRef<T> {
-        cell_value
-            .read()
-            .expect("Cannot read the value under mutable reference: already locked for writing.")
-    }
-
-    #[cfg(feature = "threaded")]
-    pub fn mutate_ref<T>(cell_value: &InteriorMutableRef<T>) -> MutRef<T> {
-        cell_value
-            .write()
-            .expect("Cannot write the value under mutable reference: already locked.")
-    }
-
-    #[cfg(not(feature = "threaded"))]
-    pub type ReadRc<T> = Rc<T>;
-    #[cfg(not(feature = "threaded"))]
-    pub type InteriorMutableRef<T> = RefCell<T>;
-    #[cfg(not(feature = "threaded"))]
-    pub type ReadRef<'a, T> = Ref<'a, T>;
-    #[cfg(not(feature = "threaded"))]
-    pub type MutRef<'a, T> = RefMut<'a, T>;
-
-    #[cfg(not(feature = "threaded"))]
-    pub fn read_ref<T>(cell_value: &InteriorMutableRef<T>) -> ReadRef<T> {
-        cell_value.borrow()
-    }
-
-    #[cfg(not(feature = "threaded"))]
-    pub fn mutate_ref<T>(cell_value: &InteriorMutableRef<T>) -> MutRef<T> {
-        cell_value.borrow_mut()
     }
 }
 
