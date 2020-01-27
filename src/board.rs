@@ -383,7 +383,7 @@ where
                 })
                 .collect();
 
-            let (columns, rows) = clues_from_solution::<B>(&solution_matrix, white);
+            let (columns, rows) = clues_from_solution(&solution_matrix, white);
             let columns: Vec<_> = columns.into_iter().map(ReadRc::new).collect();
             let rows: Vec<_> = rows.into_iter().map(ReadRc::new).collect();
             assert_eq!(self.desc_cols, columns);

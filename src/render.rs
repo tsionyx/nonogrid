@@ -24,9 +24,8 @@ where
     fn render_simple(&self) -> String;
 
     fn concat(rows: impl Iterator<Item = Vec<String>>) -> String {
-        rows.map(|line| line.concat())
-            .collect::<Vec<_>>()
-            .join("\n")
+        let rows: Vec<_> = rows.map(|line| line.concat()).collect();
+        rows.join("\n")
     }
 }
 

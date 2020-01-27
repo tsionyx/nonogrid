@@ -1308,7 +1308,7 @@ mod backtracking {
             let zero = 0;
             let min = sizes_only.iter().min().unwrap_or(&zero);
             let max = sizes_only.iter().max().unwrap_or(&zero);
-            let sum = sizes_only.iter().sum::<usize>();
+            let sum: usize = sizes_only.iter().sum();
 
             let log = |f: f64| (1.0 + f).ln() + 1.0;
 
@@ -1540,7 +1540,7 @@ fn read_next_line() -> Vec<usize> {
 
     line.trim()
         .split_whitespace()
-        .map(|c| c.parse::<usize>().expect("should be int"))
+        .map(|c| c.parse().expect("should be int"))
         .collect()
 }
 

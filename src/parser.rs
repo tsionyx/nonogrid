@@ -319,8 +319,6 @@ mod ini {
             unimplemented!("{}", Self::NO_FEATURE_ENABLED_MSG)
         }
     }
-
-    impl NetworkReader for MyFormat {}
 }
 
 #[cfg(feature = "xml")]
@@ -617,10 +615,7 @@ impl NonogramsOrg {
 
     fn parse_line(line: &str) -> Vec<EncodedInt> {
         line.split(',')
-            .map(|x| {
-                x.parse::<EncodedInt>()
-                    .expect("The items should be positive integers")
-            })
+            .map(|x| x.parse().expect("The items should be positive integers"))
             .collect()
     }
 
@@ -684,7 +679,7 @@ impl NonogramsOrg {
         (colors, solution)
     }
 
-    pub const fn encoded(&self) -> &Vec<Vec<EncodedInt>> {
+    pub fn encoded(&self) -> &[Vec<EncodedInt>] {
         &self.encoded
     }
 
@@ -1117,7 +1112,8 @@ impl SimpleParser {
     }
 
     fn remove_comments(text: &str) -> String {
-        text.lines()
+        let lines: Vec<_> = text
+            .lines()
             .map(|line| {
                 // 'ish', 'mk' and 'syro' can have '#' comments
                 // 'makhorin' has a '*' comments and '&' rows-columns delimiter
@@ -1128,10 +1124,8 @@ impl SimpleParser {
                     line.trim_end_matches(" 0")
                 }
             })
-            .collect::<Vec<_>>()
-            .join("\n")
-            .trim()
-            .to_string()
+            .collect();
+        lines.join("\n").trim().into()
     }
 }
 

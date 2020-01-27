@@ -101,9 +101,9 @@ mod cli {
 
         pub(super) fn get_search_options(&self) -> SearchOptions {
             (
-                self.parse_arg::<usize>("max-solutions"),
-                self.parse_arg::<u32>("timeout"),
-                self.parse_arg::<usize>("max-depth"),
+                self.parse_arg("max-solutions"),
+                self.parse_arg("timeout"),
+                self.parse_arg("max-depth"),
             )
         }
 

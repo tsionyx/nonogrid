@@ -376,7 +376,7 @@ where
 
         let min = sizes_only.iter().min().unwrap_or(&0);
         let max = sizes_only.iter().max().unwrap_or(&0);
-        let sum = sizes_only.iter().sum::<usize>();
+        let sum: usize = sizes_only.iter().sum();
 
         let log = |f: f64| (1.0 + f).ln() + 1.0;
 

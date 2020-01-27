@@ -42,7 +42,7 @@ where
     type Color: Color;
 
     fn from_str_and_color(s: &str, color: Option<ColorId>) -> Self {
-        let size = s.parse::<usize>().expect("Non-integer block size given");
+        let size = s.parse().expect("Non-integer block size given");
         Self::from_size_and_color(size, color)
     }
 
@@ -253,9 +253,9 @@ pub mod color {
 
             let rgb: Vec<_> = value.split(',').collect();
             if rgb.len() == 3 {
-                let rgb: Vec<_> = rgb
+                let rgb: Vec<u8> = rgb
                     .iter()
-                    .filter_map(|component| component.trim().parse::<u8>().ok())
+                    .filter_map(|component| component.trim().parse().ok())
                     .collect();
 
                 if rgb.len() == 3 {

@@ -147,8 +147,8 @@ where
         let width = self.board().width();
         let height = self.board().height();
 
-        self.cache_rows = Some(new_cache::<B>(2_000 * height));
-        self.cache_cols = Some(new_cache::<B>(2_000 * width));
+        self.cache_rows = Some(new_cache(2_000 * height));
+        self.cache_cols = Some(new_cache(2_000 * width));
     }
 
     fn cached_solution(&mut self, is_column: bool, key: &CacheKey<B>) -> Option<CacheValue<B>> {
