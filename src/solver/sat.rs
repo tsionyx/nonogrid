@@ -90,11 +90,11 @@ where
 }
 
 fn at_least_one(vars: impl Iterator<Item = Var>) -> Vec<Lit> {
-    vars.map(|var| var.positive()).collect()
+    vars.map(Var::positive).collect()
 }
 
-fn at_most_one(vars: Vec<Var>) -> impl Iterator<Item = Vec<Lit>> + 'static {
-    let pairs = pair_combinations(&vars);
+fn at_most_one(vars: &[Var]) -> impl Iterator<Item = Vec<Lit>> + 'static {
+    let pairs = pair_combinations(vars);
     pairs
         .into_iter()
         .map(|(f, s)| vec![f.negative(), s.negative()])
@@ -215,7 +215,7 @@ where
         // Этому соответствует множество клозов вида (not Xi) V (not Xj),
         // где Xi, Xj (i != j) — все возможные позиции данного блока в строке или столбце.
         let vars: Vec<_> = positions.vars_iter().collect();
-        at_most_one(vars)
+        at_most_one(&vars)
     }
 
     fn non_overlap_clauses(positions: &LinePositions) -> impl Iterator<Item = Vec<Lit>> {
@@ -329,7 +329,7 @@ where
         let point_vars = self.get_vars(cell_point);
 
         let values: Vec<_> = point_vars.values().cloned().collect();
-        at_most_one(values)
+        at_most_one(&values)
     }
 
     fn precomputed_cells_clauses(&self) -> Vec<Lit> {

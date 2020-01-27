@@ -146,7 +146,7 @@ mod cli {
             Ok((Source::LocalFile, content))
         }
 
-        pub(super) fn get_search_options(&self) -> SearchOptions {
+        pub(super) const fn get_search_options(&self) -> SearchOptions {
             (None, None, None)
         }
     }
@@ -275,6 +275,7 @@ where
 
 type SearchOptions = (Option<usize>, Option<u32>, Option<usize>);
 
+#[allow(dead_code)]
 enum Source {
     LocalFile,
     WebPbn,

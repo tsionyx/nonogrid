@@ -27,6 +27,7 @@ def all_subsets(it):
 def main():
     parser = argparse.ArgumentParser(description="Run cargo command on all features combinations (e.g. `check`)")
     parser.add_argument('command', help="Cargo subcommand to run")
+    parser.add_argument('trailing_args', nargs='*', help="Additional arguments")
     parser.add_argument('--manifest-file', default=DEFAULT_MANIFEST,
                         help="Alternative path to Cargo.toml (default is {}).".format(
                             DEFAULT_MANIFEST))
@@ -37,10 +38,13 @@ def main():
     total_features_number = 1 << len(features)
 
     for i, feature_set in enumerate(all_subsets(features)):
-        cmd = "{} --no-default-features --features={}".format(cargo_cmd, ','.join(feature_set))
+        cmd = "{} --no-default-features --features={} {}".format(cargo_cmd, ','.join(feature_set),
+                                                                 ' '.join(args.trailing_args))
         print("======== ({}/{}) Running with features '{}' ========".format(i + 1,
                                                                             total_features_number,
                                                                             feature_set))
+        print(cmd)
+
         return_code = os.system(cmd)
         if return_code != 0:
             raise ValueError("Bad return code: {}".format(return_code))
