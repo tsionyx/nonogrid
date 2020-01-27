@@ -62,13 +62,8 @@ impl BW {
     fn add_color(self, color: Self) -> Self {
         match self {
             BW::Undefined => color,
-            value => {
-                if value == color {
-                    value
-                } else {
-                    BW::BlackOrWhite
-                }
-            }
+            value if value == color => value,
+            _ => BW::BlackOrWhite,
         }
     }
 }
@@ -413,9 +408,7 @@ impl Board {
 
     fn set_row(&mut self, index: usize, new: &[BW]) {
         let row_start = self.linear_index(index, 0);
-        for (linear_index, &new_cell) in (row_start..).zip(new) {
-            self.cells[linear_index] = new_cell;
-        }
+        self.cells[row_start..row_start + new.len()].copy_from_slice(new);
     }
 
     fn set_column(&mut self, index: usize, new: &[BW]) {
@@ -547,7 +540,7 @@ mod line {
 
     impl DynamicSolver {
         fn new(desc: Rc<Clues>, line: Rc<Vec<BW>>) -> Self {
-            let block_sums = Self::calc_block_sum(&*desc);
+            let block_sums = Self::calc_block_sum(&desc);
 
             let job_size = desc.vec.len() + 1;
             let solution_matrix = vec![None; job_size * line.len()];

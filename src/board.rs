@@ -239,11 +239,7 @@ where
 
     fn set_row(&mut self, index: usize, new: &[B::Color]) {
         let row_start = self.linear_index(index, 0);
-        (row_start..)
-            .zip(new)
-            .for_each(|(linear_index, &new_cell)| {
-                self.cells[linear_index] = new_cell;
-            });
+        self.cells[row_start..row_start + new.len()].copy_from_slice(new);
     }
 
     fn set_column(&mut self, index: usize, new: &[B::Color]) {

@@ -880,18 +880,18 @@ impl BoardParser for DetectedParser {
 
 impl fmt::Debug for DetectedParser {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        writeln!(f, "DetectedParser {{")?;
-        writeln!(f, "    parser_kind: Olsak,")?;
-        write!(f, "    inner: ",)?;
-        match self.parser_kind {
-            ParserKind::Toml => write!(f, "{:?}", self.cast::<MyFormat>()),
-            ParserKind::WebPbn => write!(f, "{:?}", self.cast::<WebPbn>()),
-            ParserKind::NonogramsOrg => write!(f, "{:?}", self.cast::<NonogramsOrg>()),
-            ParserKind::Olsak => write!(f, "{:?}", self.cast::<OlsakParser>()),
-            ParserKind::Simple => write!(f, "{:?}", self.cast::<SimpleParser>()),
-        }?;
-        writeln!(f, ",",)?;
-        writeln!(f, "}}")
+        let inner = match self.parser_kind {
+            ParserKind::Toml => format!("{:?}", self.cast::<MyFormat>()),
+            ParserKind::WebPbn => format!("{:?}", self.cast::<WebPbn>()),
+            ParserKind::NonogramsOrg => format!("{:?}", self.cast::<NonogramsOrg>()),
+            ParserKind::Olsak => format!("{:?}", self.cast::<OlsakParser>()),
+            ParserKind::Simple => format!("{:?}", self.cast::<SimpleParser>()),
+        };
+
+        f.debug_struct("DetectedParser")
+            .field("parser_kind", &self.parser_kind)
+            .field("inner", &inner)
+            .finish()
     }
 }
 

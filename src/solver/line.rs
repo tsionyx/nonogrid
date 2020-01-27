@@ -63,7 +63,7 @@ where
     type BlockType = B;
 
     fn new(desc: ReadRc<Description<B>>, line: ReadRc<Line<B::Color>>) -> Self {
-        let block_sums = Self::calc_block_sum(&*desc);
+        let block_sums = Self::calc_block_sum(&desc);
 
         let job_size = desc.vec.len() + 1;
         let solution_matrix = vec![None; job_size * line.len()];
@@ -295,13 +295,8 @@ impl DynamicColor for BinaryColor {
     fn add_color(&self, color: Self) -> Self {
         match self {
             Self::Undefined => color,
-            &value => {
-                if value == color {
-                    value
-                } else {
-                    Self::BlackOrWhite
-                }
-            }
+            &value if value == color => value,
+            _ => Self::BlackOrWhite,
         }
     }
 
