@@ -1,3 +1,5 @@
+use log::warn;
+
 use crate::block::Block;
 use crate::board::Board;
 use crate::solver::probing::ProbeSolver;

@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate log;
-
 use std::fmt::Display;
 use std::fs;
 use std::io::{self, stdin, Read};
@@ -153,9 +150,9 @@ mod cli {
 }
 
 fn read_stdin() -> Result<String, io::Error> {
-    warn!("Reading from stdin...");
+    log::warn!("Reading from stdin...");
     let mut buffer = String::new();
-    stdin().read_to_string(&mut buffer)?;
+    let _ = stdin().read_to_string(&mut buffer)?;
     Ok(buffer)
 }
 
@@ -234,7 +231,7 @@ where
                 }
             }
 
-            if log_enabled!(log::Level::Warn) {
+            if log::log_enabled!(log::Level::Warn) {
                 let search_tree = backtracking.search_tree.read();
                 if !search_tree.is_empty() {
                     println!("Searching progress: {:?}", search_tree);

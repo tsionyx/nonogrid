@@ -206,6 +206,7 @@ pub mod color {
     use super::HashMap;
 
     #[derive(Debug, PartialEq, Clone)]
+    #[allow(variant_size_differences)]
     pub enum ColorValue {
         // "red", "blue", "pink"
         CommonName(String),
@@ -280,13 +281,14 @@ pub mod color {
         /// assert_eq!(ColorValue::parse("55bb88").to_rgb(), ColorValue::parse("5b8").to_rgb());
         /// ```
         pub fn to_rgb(&self) -> (u8, u8, u8) {
+            const MULTIPLIER: u8 = 0x11;
             match self {
                 Self::RgbTriplet(r, g, b) => (*r, *g, *b),
                 Self::HexValue3(hex3) => {
                     let (r, gb) = (hex3 >> 8, *hex3 as u8);
                     let (g, b) = (gb >> 4, gb % (1 << 4));
 
-                    (r as u8 * 17, g * 17, b * 17)
+                    (r as u8 * MULTIPLIER, g * MULTIPLIER, b * MULTIPLIER)
                 }
                 Self::HexValue6(hex6) => {
                     let (r, gb) = (hex6 >> 16, *hex6 as u16);

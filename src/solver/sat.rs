@@ -6,6 +6,7 @@ use std::{
     ops::{Deref, Range},
 };
 
+use log::{debug, info, warn};
 use varisat::{solver::Solver, CnfFormula, ExtendFormula, Lit, Var};
 
 use crate::{

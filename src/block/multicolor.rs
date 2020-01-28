@@ -2,6 +2,7 @@ use std::fmt;
 use std::ops::{Add, Sub};
 
 use hashbrown::HashSet;
+use log::debug;
 
 use crate::block::base::{
     color::{ColorId, ColorPalette},

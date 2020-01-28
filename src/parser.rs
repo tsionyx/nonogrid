@@ -5,6 +5,7 @@ use std::io;
 use std::num::ParseIntError;
 
 use hashbrown::{HashMap, HashSet};
+use log::info;
 #[cfg(feature = "web")]
 use reqwest;
 

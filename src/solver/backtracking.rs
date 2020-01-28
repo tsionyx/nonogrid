@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use std::time::Instant;
 
 use hashbrown::{HashMap, HashSet};
-use log::Level;
+use log::{debug, info, log_enabled, warn, Level};
 
 use crate::block::{Block, Color};
 use crate::board::{Board, Point};
@@ -371,6 +371,7 @@ where
 
     const CHOOSE_STRATEGY: ChoosePixel = ChoosePixel::Sqrt;
 
+    #[allow(single_use_lifetimes)]
     fn rate_by_impact<'a>(impact: impl Iterator<Item = &'a (usize, Priority)>) -> f64 {
         let sizes_only: Vec<_> = impact.map(|(new_points, _priority)| *new_points).collect();
 

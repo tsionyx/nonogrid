@@ -2,6 +2,7 @@ use std::fmt;
 use std::iter::once;
 
 use hashbrown::{HashMap, HashSet};
+use log::{debug, info, warn};
 use smallvec::SmallVec;
 
 use callbacks::{ChangeColorCallback, RestoreCallback, SetLineCallback};

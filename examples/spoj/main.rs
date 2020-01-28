@@ -223,7 +223,7 @@ mod utils {
                 let mut hash = Self { hash: self.hash };
                 assert!(size_of::<usize>() <= 8);
                 while bytes.len() >= size_of::<usize>() {
-                    hash.add_to_hash(read_bytes!(usize, bytes) as usize);
+                    hash.add_to_hash(read_bytes!(usize, bytes));
                     bytes = &bytes[size_of::<usize>()..];
                 }
                 if (size_of::<usize>() > 4) && (bytes.len() >= 4) {
@@ -311,6 +311,7 @@ impl Point {
     }
 }
 
+#[derive(Debug)]
 pub struct Board {
     cells: Vec<BW>,
     desc_rows: Vec<Rc<Clues>>,

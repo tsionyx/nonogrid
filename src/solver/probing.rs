@@ -1,6 +1,7 @@
 use std::env;
 
 use hashbrown::hash_map::DefaultHashBuilder;
+use log::{debug, info};
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue as PQ;
 

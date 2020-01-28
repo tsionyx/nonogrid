@@ -1,5 +1,5 @@
 use hashbrown::HashSet;
-use log::Level;
+use log::{debug, log_enabled, warn, Level};
 
 use crate::block::{Block, Line};
 use crate::board::{Board, Point};
