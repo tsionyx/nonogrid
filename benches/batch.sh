@@ -14,8 +14,8 @@ for i in "$@"; do
         echo "  NOTE: you can find maximum available puzzle ID with the command"
         echo "    $ curl -s https://webpbn.com/find.cgi --data 'order=1&perpage=5&search=1' | grep -oP 'play.cgi\?id=\K\d+' | sort -unr"
         echo
-        echo "  Run all http://nonograms.org puzzles till id=28500"
-        echo "    $ nohup bash -e $0 $MODE_NONOGRAMS {1..28500} 2>&1 > $EXAMPLE_LOG_FILE &"
+        echo "  Run all http://nonograms.org puzzles till id=30000"
+        echo "    $ nohup bash -e $0 $MODE_NONOGRAMS {1..30000} 2>&1 > $EXAMPLE_LOG_FILE &"
         echo "  NOTE: you can find maximum available puzzle ID with the command"
         echo "    $ curl -s 'https://www.nonograms.org/search/p/10000?sort=6' | grep -oP 'nonogramprint/i/\K\d+' | sort -unr"
         echo
@@ -118,8 +118,12 @@ function run_webpbn() {
     # https://unix.stackexchange.com/a/158569
     export -f run_single_webpbn
     for i in "$@"; do
-        echo ${i}
-    done | xargs -n1 -P1 bash -c 'run_single_webpbn "$@"' _
+    #    echo ${i}
+    ## change the `xargs -P` argument to parallelize solving
+    #done | xargs -n1 -P10 bash -c 'run_single_webpbn "$@"' _
+        run_single_webpbn ${i}
+        echo
+    done
 }
 
 
@@ -128,7 +132,12 @@ function run_nonograms() {
     mkdir -p puzzles-norg
     prepare
 
+    export -f run_single_nonogram
+    export -f find_nonogram_url
     for i in "$@"; do
+    #    echo ${i}
+    ## change the `xargs -P` argument to parallelize solving
+    #done | xargs -n1 -P10 bash -c 'run_single_nonogram "$@"' _
         run_single_nonogram ${i}
         echo
     done
