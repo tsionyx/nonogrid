@@ -1,6 +1,7 @@
 # Ultimate nonograms solver written in Rust language.
 
 [![Crates.io](https://img.shields.io/crates/v/nonogrid)](https://crates.io/crates/nonogrid)
+[![minimum rustc version](https://img.shields.io/badge/rustc-1.39+-green.svg)](https://blog.rust-lang.org/2019/11/07/Rust-1.39.0.html)
 [![Build Status](https://travis-ci.org/tsionyx/nonogrid.svg?branch=master)](https://travis-ci.org/tsionyx/nonogrid)
 [![codecov](https://codecov.io/gh/tsionyx/nonogrid/branch/master/graph/badge.svg)](https://codecov.io/gh/tsionyx/nonogrid)
 

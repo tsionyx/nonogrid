@@ -1,5 +1,6 @@
 language: rust
 rust:
+  - 1.39.0  # minimal supported version
   - stable
   - beta
   - nightly
@@ -15,11 +16,14 @@ cache:
 before_script:
   - rustup component add rustfmt
   - rustup component add clippy
+  - cargo install --force cargo-audit
+  - cargo generate-lockfile
 
 script:
   - cargo fmt -- --check
-  - cargo clippy --verbose --all-targets --all-features --all -- -Dwarnings -W clippy::nursery -W clippy::cargo
+  - cargo clippy --verbose --all-targets --all-features --all -- -Dwarnings -W clippy::nursery
   - cargo test --all-features --verbose --all
+  - cargo audit
 
 sudo: required
 
