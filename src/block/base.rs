@@ -337,7 +337,11 @@ pub mod color {
         }
 
         pub fn name(&self) -> &str {
-            self.name.as_str()
+            if let ColorValue::CommonName(value) = &self.value {
+                value
+            } else {
+                &self.name
+            }
         }
 
         pub fn rgb_value(&self) -> (u8, u8, u8) {

@@ -12,9 +12,6 @@ use crate::utils::{
     transpose,
 };
 
-#[cfg(not(feature = "colored"))]
-type ColoredString = String;
-
 pub trait Renderer<B>
 where
     B: Block,
@@ -136,20 +133,25 @@ where
     }
 }
 
-#[cfg(feature = "colored")]
-fn to_color_string(color_desc: &ColorDesc) -> ColoredString {
-    let color_res: Result<colored::Color, _> = color_desc.name().parse();
-    if let Ok(color) = color_res {
-        " ".on_color(color)
-    } else {
-        let symbol = color_desc.symbol();
-        ColoredString::from(symbol.as_str())
-    }
-}
-
 #[cfg(not(feature = "colored"))]
-fn to_color_string(color_desc: &ColorDesc) -> ColoredString {
-    color_desc.symbol()
+type ColoredString = String;
+
+impl From<ColorDesc> for ColoredString {
+    #[cfg(feature = "colored")]
+    fn from(color_desc: ColorDesc) -> Self {
+        let color_res: Result<colored::Color, _> = color_desc.name().parse();
+        if let Ok(color) = color_res {
+            " ".on_color(color)
+        } else {
+            let symbol = color_desc.symbol();
+            symbol.as_str().into()
+        }
+    }
+
+    #[cfg(not(feature = "colored"))]
+    fn from(color_desc: ColorDesc) -> Self {
+        color_desc.symbol()
+    }
 }
 
 impl<B> ShellRenderer<B>
@@ -160,13 +162,8 @@ where
     fn cell_symbol(&self, cell: &B::Color) -> ColoredString {
         let id = cell.as_color_id();
 
-        id.and_then(|color_id| {
-            self.board()
-                .desc_by_id(color_id)
-                .as_ref()
-                .map(to_color_string)
-        })
-        .unwrap_or_else(|| cell.to_string().as_str().into())
+        id.and_then(|color_id| self.board().desc_by_id(color_id).map(From::from))
+            .unwrap_or_else(|| cell.to_string().as_str().into())
     }
 
     fn grid_lines(&self) -> Vec<Vec<ColoredString>> {
