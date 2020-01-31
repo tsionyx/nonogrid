@@ -6,8 +6,6 @@ use std::num::ParseIntError;
 
 use hashbrown::{HashMap, HashSet};
 use log::info;
-#[cfg(feature = "web")]
-use reqwest;
 
 pub use ini::MyFormat;
 pub use xml::WebPbn;
@@ -77,7 +75,7 @@ pub trait NetworkReader: BoardParser {
     #[cfg(feature = "web")]
     fn http_content(url: String) -> Result<String, reqwest::Error> {
         info!("Requesting {} ...", &url);
-        let mut response = reqwest::get(url.as_str())?;
+        let response = reqwest::blocking::get(&url)?;
         response.text()
     }
 

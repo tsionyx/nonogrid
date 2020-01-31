@@ -42,7 +42,7 @@ sxd-xpath = {version="0.4", optional=true}
 
 colored = {version="1.9", optional=true}
 
-reqwest = {version="0.9", optional=true}
+reqwest = {version="0.10", optional=true, features=["blocking"]}
 
 varisat = {version="0.2", optional=true}
 
