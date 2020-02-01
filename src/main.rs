@@ -259,6 +259,7 @@ where
                 }
 
                 Board::restore_with_callback(MutRc::clone(&board), solution);
+                log::warn!("{}-th solution found!", i + 1);
                 println!("{}-th solution:", i + 1);
                 println!("{}", r.render_simple());
                 found = true;

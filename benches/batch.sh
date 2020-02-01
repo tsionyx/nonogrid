@@ -178,7 +178,7 @@ function long_solvers() {
         fi
 
         # https://stackoverflow.com/a/12451419
-        local id=$(cat ${log_file} | grep -m1 -F "Total: ${t}" -B4 -A3 | tee >(cat - >&5) | grep -oP '#\K(\d+)' | awk '{print $1-1}' | sort -u)
+        local id=$(cat ${log_file} | grep -m1 -F "Total: ${t}" -B5 -A3 | tee >(cat - >&5) | grep -oP '#\K(\d+)' | awk '{print $1-1}' | sort -u)
         echo "$id: $t"
 
         if [[ ${details} ]]; then
