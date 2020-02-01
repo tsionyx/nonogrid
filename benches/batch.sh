@@ -1,12 +1,15 @@
 #!/bin/bash -e
 
+# https://stackoverflow.com/a/246128
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 MODE_WEBPBN="webpbn"
 MODE_NONOGRAMS="nonograms.org"
 MODE_STAT="stat"
 
 for i in "$@"; do
     if [[ ${i} == "--help" ]] || [[ ${i} == "-h" ]]; then
-        EXAMPLE_LOG_FILE="batch.log"
+        EXAMPLE_LOG_FILE="benches/batch.log"
         echo "Batch mode for nonogram solver"
         echo "Examples: "
         echo "  Run all http://webpbn.com puzzles till id=35000"
@@ -30,7 +33,7 @@ function run_single_webpbn() {
     local puzzle_id=$1
     local fmt=olsak
 
-    local path=puzzles/${puzzle_id}.${fmt}
+    local path=${SCRIPT_DIR}/puzzles/${puzzle_id}.${fmt}
     if [[ ! -f ${path} ]]; then
         echo "File not found locally. Download into $path"
         wget --timeout=10 -qO- "https://webpbn.com/export.cgi" --post-data "id=$puzzle_id&fmt=$fmt&go=1" > ${path}
@@ -41,7 +44,7 @@ function run_single_webpbn() {
 
     if cat ${path} | grep -q ': rows'; then
         echo "Solving WEBPBN's puzzle #$puzzle_id (http://webpbn.com/$puzzle_id) ..."
-        /usr/bin/time -f 'Total: %U' target/release/nonogrid ${path} --timeout=3600 --max-solutions=2 2>&1 1>solutions/${puzzle_id}
+        /usr/bin/time -f 'Total: %U' target/release/nonogrid ${path} --timeout=3600 --max-solutions=2 2>&1 1>${SCRIPT_DIR}/solutions/${puzzle_id}
     else
         echo "No valid file for puzzle #$puzzle_id" >&2
         local lines=$(cat ${path} | wc -l)
@@ -75,7 +78,7 @@ function find_nonogram_url() {
 function run_single_nonogram() {
     local puzzle_id=$1
 
-    local path=puzzles-norg/${puzzle_id}.js
+    local path=${SCRIPT_DIR}/puzzles-norg/${puzzle_id}.js
     if [[ ! -f ${path} ]]; then
         echo "File not found locally. Download into $path"
         url=$(find_nonogram_url ${puzzle_id})
@@ -97,7 +100,7 @@ function run_single_nonogram() {
     else
         sed -n '/^var d=.\+;/p' -i ${path}
         echo "Solving NORG puzzle #$puzzle_id ${url}..."
-        /usr/bin/time -f 'Total: %U' target/release/nonogrid ${path} --timeout=3600 --max-solutions=2 2>&1 1>solutions-norg/${puzzle_id}
+        /usr/bin/time -f 'Total: %U' target/release/nonogrid ${path} --timeout=3600 --max-solutions=2 2>&1 1>${SCRIPT_DIR}/solutions-norg/${puzzle_id}
     fi
 }
 
@@ -111,8 +114,8 @@ function prepare() {
 
 
 function run_webpbn() {
-    mkdir -p solutions
-    mkdir -p puzzles
+    mkdir -p ${SCRIPT_DIR}/solutions
+    mkdir -p ${SCRIPT_DIR}/puzzles
     prepare
 
     # https://unix.stackexchange.com/a/158569
@@ -128,8 +131,8 @@ function run_webpbn() {
 
 
 function run_nonograms() {
-    mkdir -p solutions-norg
-    mkdir -p puzzles-norg
+    mkdir -p ${SCRIPT_DIR}/solutions-norg
+    mkdir -p ${SCRIPT_DIR}/puzzles-norg
     prepare
 
     export -f run_single_nonogram

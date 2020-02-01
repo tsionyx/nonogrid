@@ -114,9 +114,9 @@ cargo build --release --features=sat
 for i in {1..5000}; do
     echo "#$i"
     RUST_LOG=nonogrid=warn /usr/bin/time -f 'Total: %U' target/release/nonogrid 30x30-2/rand$i --max-solutions=2 >/dev/null
-done 2>&1 | tee rand.log
+done 2>&1 | tee benches/rand.log
 
-grep -oP 'Total: \K(.+)' rand.log | sort -n | nl -ba | less
+grep -oP 'Total: \K(.+)' benches/rand.log | sort -n | nl -ba | less
 ```
 
 | 0 - 0.09 | 0.10 - 0.19 | 0.20 - 0.49 | 0.50 - 0.99 | 1.00 - 3.99 | 4.00 - 9.99 | 10.00 - 29.99 | 30.00 - 59.99 | 60 - 120 | 120+ |
@@ -127,8 +127,8 @@ grep -oP 'Total: \K(.+)' rand.log | sort -n | nl -ba | less
 ### Hardest backtracking puzzles
 
 ```
-nohup bash benches/batch.sh webpbn {1..35000} >batch.log 2>&1 &
-bash benches/batch.sh stat batch.log 10 --details
+nohup bash benches/batch.sh webpbn {1..35000} >benches/batch.log 2>&1 &
+bash benches/batch.sh stat benches/batch.log 10 --details
 ```
 
 #### black-and-white (with SAT solver, >=10 seconds)
@@ -190,8 +190,8 @@ done
 ### Distribution of solve times
 
 ```
-$ nohup bash benches/batch.sh nonograms.org {1..30000} 2>&1 > batch-norg.log &
-$ less batch-norg.log | grep 'Total' | awk '{print $2}' | sort -r | uniq -c
+$ nohup bash benches/batch.sh nonograms.org {1..30000} 2>&1 > benches/batch-norg.log &
+$ less benches/batch-norg.log | grep 'Total' | awk '{print $2}' | sort -r | uniq -c
      3 0.06
      9 0.04
      9 0.03

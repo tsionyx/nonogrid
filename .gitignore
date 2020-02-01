@@ -12,9 +12,14 @@
 *.log
 perf.data*
 callgrind.out.*
+*.ipynb
 
 profiles/
 puzzles-norg/
 puzzles/
 solutions-norg/
 solutions/
+
+# archives
+*.tar.gz
+*.tgz
