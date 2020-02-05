@@ -252,7 +252,9 @@ where
         column_indexes
             .zip(new)
             .for_each(|(linear_index, &new_cell)| {
-                self.cells[linear_index] = new_cell;
+                if let Some(cell) = self.cells.get_mut(linear_index) {
+                    *cell = new_cell;
+                }
             });
     }
 
@@ -421,14 +423,18 @@ where
         let old_value = self.cell(point);
         let Point { x, y } = *point;
         let index = self.linear_index(y, x);
-        self.cells[index] = old_value + *color;
+        if let Some(cell) = self.cells.get_mut(index) {
+            *cell = old_value + *color;
+        }
     }
 
     fn unset_color(&mut self, point: &Point, color: &B::Color) -> Result<(), String> {
         let old_value = self.cell(point);
         let Point { x, y } = *point;
         let index = self.linear_index(y, x);
-        self.cells[index] = (old_value - *color)?;
+        if let Some(cell) = self.cells.get_mut(index) {
+            *cell = (old_value - *color)?;
+        }
 
         Ok(())
     }

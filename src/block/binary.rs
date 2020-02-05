@@ -109,8 +109,8 @@ impl Block for BinaryBlock {
     fn partial_sums(desc: &[Self]) -> Vec<usize> {
         desc.iter()
             .scan(None, |prev, block| {
-                let current = if let Some(ref prev_size) = prev {
-                    prev_size + block.0 + 1
+                let current = if let Some(prev_size) = prev {
+                    *prev_size + block.0 + 1
                 } else {
                     block.0
                 };

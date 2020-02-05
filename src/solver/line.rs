@@ -120,10 +120,6 @@ where
         self.get_sol(position as isize, block)
     }
 
-    fn _get_sol(&self, position: usize, block: usize) -> Option<bool> {
-        self.solution_matrix[position * self.job_size + block]
-    }
-
     fn get_sol(&mut self, position: isize, block: usize) -> bool {
         if position < 0 {
             // finished placing the last block, exactly at the beginning of the line.
@@ -132,35 +128,47 @@ where
 
         let position = position as usize;
 
-        let can_be_solved = self._get_sol(position, block);
-        can_be_solved.unwrap_or_else(|| {
-            let can_be_solved = self.fill_matrix(position, block);
-            self.set_sol(position, block, can_be_solved);
-            can_be_solved
-        })
+        if let Some(Some(can_be_solved)) =
+            self.solution_matrix.get(position * self.job_size + block)
+        {
+            return *can_be_solved;
+        }
+
+        let can_be_solved = self.fill_matrix(position, block);
+        self.set_sol(position, block, can_be_solved);
+        can_be_solved
     }
 
     fn set_sol(&mut self, position: usize, block: usize, can_be_solved: bool) {
-        self.solution_matrix[position * self.job_size + block] = Some(can_be_solved)
+        if let Some(item) = self
+            .solution_matrix
+            .get_mut(position * self.job_size + block)
+        {
+            *item = Some(can_be_solved)
+        }
     }
 
-    fn color_at(&self, position: usize) -> B::Color {
-        self.line[position]
-    }
-
-    fn block_at(&self, block_position: usize) -> B {
-        self.desc.vec[block_position]
+    fn can_be_blank_at(&self, position: usize) -> bool {
+        if let Some(color) = self.line.get(position) {
+            color.can_be_blank()
+        } else {
+            false
+        }
     }
 
     fn update_solved(&mut self, position: usize, color: B::Color) {
         let current = self.solved_line[position];
-        self.solved_line[position] = current.add_color(color);
+        if let Some(updated) = self.solved_line.get_mut(position) {
+            *updated = current.add_color(color);
+        }
     }
 
     fn fill_matrix(&mut self, position: usize, block: usize) -> bool {
         // too many blocks left to fit this line segment
-        if position < self.block_sums[block] {
-            return false;
+        if let Some(sum_up_to) = self.block_sums.get(block) {
+            if position < *sum_up_to {
+                return false;
+            }
         }
 
         // do not short-circuit
@@ -168,7 +176,7 @@ where
     }
 
     fn fill_matrix_blank(&mut self, position: usize, block: usize) -> bool {
-        if self.color_at(position).can_be_blank() {
+        if self.can_be_blank_at(position) {
             // current cell is either blank or unknown
             let has_blank = self.get_sol(position as isize - 1, block);
             if has_blank {
@@ -187,33 +195,34 @@ where
         if block == 0 {
             return false;
         }
-        let current_block = self.block_at(block - 1);
-        let mut block_size = current_block.size();
-        let current_color = current_block.color();
-        let should_have_trailing_space = self.trail_with_space(block);
-        if should_have_trailing_space {
-            block_size += 1;
-        }
+        if let Some(current_block) = self.desc.vec.get(block - 1) {
+            let mut block_size = current_block.size();
+            let current_color = current_block.color();
+            let should_have_trailing_space = self.trail_with_space(block);
+            if should_have_trailing_space {
+                block_size += 1;
+            }
 
-        let block_start = position as isize - block_size as isize + 1;
+            let block_start = position as isize - block_size as isize + 1;
 
-        // (position-block_size, position]
-        if self.can_place_color(
-            block_start,
-            position,
-            current_color,
-            should_have_trailing_space,
-        ) {
-            let has_color = self.get_sol(block_start - 1, block - 1);
-            if has_color {
-                // set cell blank, place the current block and continue
-                self.set_color_block(
-                    block_start,
-                    position,
-                    current_color,
-                    should_have_trailing_space,
-                );
-                return true;
+            // (position-block_size, position]
+            if self.can_place_color(
+                block_start,
+                position,
+                current_color,
+                should_have_trailing_space,
+            ) {
+                let has_color = self.get_sol(block_start - 1, block - 1);
+                if has_color {
+                    // set cell blank, place the current block and continue
+                    self.set_color_block(
+                        block_start,
+                        position,
+                        current_color,
+                        should_have_trailing_space,
+                    );
+                    return true;
+                }
             }
         }
 
@@ -221,12 +230,14 @@ where
     }
 
     fn trail_with_space(&self, block: usize) -> bool {
-        if block < self.desc.vec.len() {
-            let current_color = self.block_at(block - 1).color();
-            let next_color = self.block_at(block).color();
+        if let Some(next_block) = self.desc.vec.get(block) {
+            if let Some(current_block) = self.desc.vec.get(block - 1) {
+                let next_color = next_block.color();
+                let current_color = current_block.color();
 
-            if next_color == current_color {
-                return true;
+                if next_color == current_color {
+                    return true;
+                }
             }
         }
 
@@ -245,7 +256,7 @@ where
         }
 
         if trailing_space {
-            if !self.color_at(end).can_be_blank() {
+            if !self.can_be_blank_at(end) {
                 return false;
             }
         } else {

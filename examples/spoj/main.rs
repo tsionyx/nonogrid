@@ -417,7 +417,9 @@ impl Board {
 
         for (i, &new_cell) in new.iter().enumerate() {
             let linear_index = (i * width) + index;
-            self.cells[linear_index] = new_cell;
+            if let Some(cell) = self.cells.get_mut(linear_index) {
+                *cell = new_cell;
+            }
         }
     }
 
@@ -501,14 +503,18 @@ impl Board {
     fn set_color(&mut self, point: &Point, color: BW) {
         let Point { x, y } = *point;
         let index = self.linear_index(y, x);
-        self.cells[index] = color;
+        if let Some(cell) = self.cells.get_mut(index) {
+            *cell = color;
+        }
     }
 
     fn unset_color(&mut self, point: &Point, color: BW) -> Result<(), String> {
         let old_value = self.cell(point);
         let Point { x, y } = *point;
         let index = self.linear_index(y, x);
-        self.cells[index] = (old_value - color)?;
+        if let Some(cell) = self.cells.get_mut(index) {
+            *cell = (old_value - color)?;
+        }
 
         Ok(())
     }
@@ -591,10 +597,6 @@ mod line {
             self.get_sol(position as isize, block)
         }
 
-        fn _get_sol(&self, position: usize, block: usize) -> Option<bool> {
-            self.solution_matrix[position * self.job_size + block]
-        }
-
         fn get_sol(&mut self, position: isize, block: usize) -> bool {
             if position < 0 {
                 return block == 0;
@@ -602,41 +604,53 @@ mod line {
 
             let position = position as usize;
 
-            let can_be_solved = self._get_sol(position, block);
-            can_be_solved.unwrap_or_else(|| {
-                let can_be_solved = self.fill_matrix(position, block);
-                self.set_sol(position, block, can_be_solved);
-                can_be_solved
-            })
+            if let Some(Some(can_be_solved)) =
+                self.solution_matrix.get(position * self.job_size + block)
+            {
+                return *can_be_solved;
+            }
+
+            let can_be_solved = self.fill_matrix(position, block);
+            self.set_sol(position, block, can_be_solved);
+            can_be_solved
         }
 
         fn set_sol(&mut self, position: usize, block: usize, can_be_solved: bool) {
-            self.solution_matrix[position * self.job_size + block] = Some(can_be_solved)
+            if let Some(item) = self
+                .solution_matrix
+                .get_mut(position * self.job_size + block)
+            {
+                *item = Some(can_be_solved)
+            }
         }
 
-        fn color_at(&self, position: usize) -> BW {
-            self.line[position]
-        }
-
-        fn block_at(&self, block_position: usize) -> BB {
-            self.desc.vec[block_position]
+        fn can_be_blank_at(&self, position: usize) -> bool {
+            if let Some(color) = self.line.get(position) {
+                color.can_be_blank()
+            } else {
+                false
+            }
         }
 
         fn update_solved(&mut self, position: usize, color: BW) {
             let current = self.solved_line[position];
-            self.solved_line[position] = current.add_color(color);
+            if let Some(updated) = self.solved_line.get_mut(position) {
+                *updated = current.add_color(color);
+            }
         }
 
         fn fill_matrix(&mut self, position: usize, block: usize) -> bool {
-            if position < self.block_sums[block] {
-                return false;
+            if let Some(sum_up_to) = self.block_sums.get(block) {
+                if position < *sum_up_to {
+                    return false;
+                }
             }
 
             self.fill_matrix_blank(position, block) | self.fill_matrix_color(position, block)
         }
 
         fn fill_matrix_blank(&mut self, position: usize, block: usize) -> bool {
-            if self.color_at(position).can_be_blank() {
+            if self.can_be_blank_at(position) {
                 let has_blank = self.get_sol(position as isize - 1, block);
                 if has_blank {
                     let blank = BW::blank();
@@ -652,25 +666,26 @@ mod line {
             if block == 0 {
                 return false;
             }
-            let current_block = self.block_at(block - 1);
-            let mut block_size = current_block.size();
-            let should_have_trailing_space = self.trail_with_space(block);
-            if should_have_trailing_space {
-                block_size += 1;
-            }
+            if let Some(&current_block) = self.desc.vec.get(block - 1) {
+                let mut block_size = current_block.size();
+                let should_have_trailing_space = self.trail_with_space(block);
+                if should_have_trailing_space {
+                    block_size += 1;
+                }
 
-            let block_start = position as isize - block_size as isize + 1;
+                let block_start = position as isize - block_size as isize + 1;
 
-            if self.can_place_color(block_start, position, should_have_trailing_space) {
-                let has_color = self.get_sol(block_start - 1, block - 1);
-                if has_color {
-                    self.set_color_block(
-                        block_start,
-                        position,
-                        current_block.color(),
-                        should_have_trailing_space,
-                    );
-                    return true;
+                if self.can_place_color(block_start, position, should_have_trailing_space) {
+                    let has_color = self.get_sol(block_start - 1, block - 1);
+                    if has_color {
+                        self.set_color_block(
+                            block_start,
+                            position,
+                            current_block.color(),
+                            should_have_trailing_space,
+                        );
+                        return true;
+                    }
                 }
             }
 
@@ -687,7 +702,7 @@ mod line {
             }
 
             if trailing_space {
-                if !self.color_at(end).can_be_blank() {
+                if !self.can_be_blank_at(end) {
                     return false;
                 }
             } else {
