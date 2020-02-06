@@ -17,15 +17,15 @@ where
     cache_cols: Option<LineSolverCache<B>>,
 }
 
-type Job = (bool, usize);
+type LinePosition = (bool, usize);
 
 trait JobQueue {
-    fn push(&mut self, job: Job);
-    fn pop(&mut self) -> Option<Job>;
+    fn push(&mut self, job: LinePosition);
+    fn pop(&mut self) -> Option<LinePosition>;
 }
 
 struct SmallJobQueue {
-    vec: Vec<Job>,
+    vec: Vec<LinePosition>,
 }
 
 impl SmallJobQueue {
@@ -37,11 +37,11 @@ impl SmallJobQueue {
 }
 
 impl JobQueue for SmallJobQueue {
-    fn push(&mut self, job: Job) {
+    fn push(&mut self, job: LinePosition) {
         self.vec.push(job)
     }
 
-    fn pop(&mut self) -> Option<Job> {
+    fn pop(&mut self) -> Option<LinePosition> {
         let top_job = self.vec.pop()?;
         // remove all the previous occurrences of the new job
         self.vec.retain(|&x| x != top_job);
@@ -56,8 +56,8 @@ impl JobQueue for SmallJobQueue {
 }
 
 struct LongJobQueue {
-    vec: Vec<Job>,
-    visited: HashSet<Job>,
+    vec: Vec<LinePosition>,
+    visited: HashSet<LinePosition>,
 }
 
 impl LongJobQueue {
@@ -77,12 +77,12 @@ impl LongJobQueue {
 }
 
 impl JobQueue for LongJobQueue {
-    fn push(&mut self, job: Job) {
+    fn push(&mut self, job: LinePosition) {
         let _ = self.visited.remove(&job);
         self.vec.push(job)
     }
 
-    fn pop(&mut self) -> Option<Job> {
+    fn pop(&mut self) -> Option<LinePosition> {
         let top_job = loop {
             let top_job = self.vec.pop()?;
             if !self.visited.contains(&top_job) {
@@ -211,9 +211,10 @@ where
         let mut lines_solved = 0_u32;
         let mut solved_cells = vec![];
 
-        while let Some((is_column, index)) = queue.pop() {
-            let new_jobs = self.update_line::<S>(index, is_column)?;
+        while let Some(job) = queue.pop() {
+            let new_jobs = self.update_line::<S>(job)?;
 
+            let (is_column, index) = job;
             let new_states = new_jobs.iter().map(|&another_index| {
                 let (x, y) = if is_column {
                     (index, another_index)
@@ -245,10 +246,12 @@ where
     /// If the line gets partially solved, put the crossed lines into queue.
     ///
     /// Return the list of indexes which was updated during this solution.
-    fn update_line<S>(&mut self, index: usize, is_column: bool) -> Result<Vec<usize>, ()>
+    fn update_line<S>(&mut self, position: LinePosition) -> Result<Vec<usize>, ()>
     where
         S: LineSolver<BlockType = B>,
     {
+        let (is_column, index) = position;
+
         let (cache_key, line) = {
             let board = self.board();
             let line = ReadRc::new(if is_column {
@@ -296,7 +299,7 @@ where
             value
         })?;
 
-        let indexes = self.update_solved(index, is_column, &line, &solution);
+        let indexes = self.update_solved(position, &line, &solution);
 
         if log_enabled!(Level::Debug) && !indexes.is_empty() {
             let name = if is_column { "column" } else { "row" };
@@ -308,8 +311,7 @@ where
 
     fn update_solved(
         &self,
-        index: usize,
-        is_column: bool,
+        (is_column, index): LinePosition,
         old: &[B::Color],
         new: &[B::Color],
     ) -> Vec<usize> {
