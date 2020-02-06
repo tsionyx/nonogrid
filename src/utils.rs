@@ -1,7 +1,8 @@
+use std::cmp::PartialOrd;
 use std::fmt::Display;
 use std::hash::Hash;
 use std::iter::once;
-use std::ops::Range;
+use std::ops::{Range, Sub};
 
 use hashbrown::{HashMap, HashSet};
 
@@ -83,6 +84,17 @@ where
 {
     let set: HashSet<_> = vec.collect();
     set.into_iter().collect()
+}
+
+pub fn abs_sub<T>(a: T, b: T) -> T::Output
+where
+    T: PartialOrd + Sub,
+{
+    if a > b {
+        a - b
+    } else {
+        b - a
+    }
 }
 
 pub mod iter {

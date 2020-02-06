@@ -138,8 +138,10 @@ impl Clues {
 }
 
 mod utils {
+    use std::cmp::PartialOrd;
     use std::collections::{HashMap, HashSet};
     use std::hash::Hash;
+    use std::ops::Sub;
 
     pub fn replace<T>(vec: &mut [T], what: &T, with_what: &T)
     where
@@ -162,6 +164,17 @@ mod utils {
     {
         let set: HashSet<_> = vec.into_iter().collect();
         set.into_iter().collect()
+    }
+
+    pub fn abs_sub<T>(a: T, b: T) -> T::Output
+    where
+        T: PartialOrd + Sub,
+    {
+        if a > b {
+            a - b
+        } else {
+            b - a
+        }
     }
 
     /// The copy of `hashbrown::fx`
@@ -741,7 +754,7 @@ mod propagation {
     use std::rc::Rc;
 
     use super::line;
-    use super::utils::GrowableCache;
+    use super::utils::{abs_sub, GrowableCache};
     use super::{Board, Point, BW};
 
     #[derive(Debug, PartialEq, Eq, Hash)]
@@ -801,14 +814,20 @@ mod propagation {
     }
 
     impl LongJobQueue {
-        fn with_rows_and_columns(
-            rows: impl Iterator<Item = usize>,
-            columns: impl Iterator<Item = usize>,
-        ) -> Self {
-            let jobs = columns
+        fn with_height_and_width(height: usize, width: usize) -> Self {
+            let rows = 0..height;
+            let columns = 0..width;
+
+            let mut jobs: Vec<_> = columns
                 .map(|column_index| (true, column_index))
                 .chain(rows.map(|row_index| (false, row_index)))
                 .collect();
+
+            // closer to the middle goes first
+            jobs.sort_unstable_by_key(|&(is_column, index)| {
+                let middle = if is_column { width / 2 } else { height / 2 };
+                abs_sub(index, middle)
+            });
 
             Self {
                 vec: jobs,
@@ -893,9 +912,7 @@ mod propagation {
             } else {
                 let queue = {
                     let board = self.board.borrow();
-                    let rows = (0..board.height()).rev();
-                    let cols = (0..board.width()).rev();
-                    LongJobQueue::with_rows_and_columns(rows, cols)
+                    LongJobQueue::with_height_and_width(board.height(), board.width())
                 };
                 self.run_jobs(queue)
             }

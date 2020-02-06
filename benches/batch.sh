@@ -17,8 +17,8 @@ for i in "$@"; do
         echo "  NOTE: you can find maximum available puzzle ID with the command"
         echo "    $ curl -s https://webpbn.com/find.cgi --data 'order=1&perpage=5&search=1' | grep -oP 'play.cgi\?id=\K\d+' | sort -unr"
         echo
-        echo "  Run all http://nonograms.org puzzles till id=30000"
-        echo "    $ nohup bash -e $0 $MODE_NONOGRAMS {1..30000} 2>&1 > $EXAMPLE_LOG_FILE &"
+        echo "  Run all http://nonograms.org puzzles till id=31000"
+        echo "    $ nohup bash -e $0 $MODE_NONOGRAMS {1..31000} 2>&1 > $EXAMPLE_LOG_FILE &"
         echo "  NOTE: you can find maximum available puzzle ID with the command"
         echo "    $ curl -s 'https://www.nonograms.org/search/p/10000?sort=6' | grep -oP 'nonogramprint/i/\K\d+' | sort -unr"
         echo
@@ -101,6 +101,8 @@ function run_single_nonogram() {
         sed -n '/^var d=.\+;/p' -i ${path}
         echo "Solving NORG puzzle #$puzzle_id ${url}..."
         /usr/bin/time -f 'Total: %U' target/release/nonogrid ${path} --timeout=3600 --max-solutions=2 2>&1 1>${SCRIPT_DIR}/solutions-norg/${puzzle_id}
+        #local instructions=$(valgrind --tool=callgrind --dump-instr=yes --collect-jumps=yes --callgrind-out-file=callgrind.norg target/release/nonogrid ${path} 2>&1 | tail -1 | awk '{print $4}' | sed 's/,//g')
+        #echo "Result: $instructions $puzzle_id"
     fi
 }
 

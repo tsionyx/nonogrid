@@ -185,35 +185,32 @@ done
 
 ## http://www.nonograms.org puzzles
 
-29896 puzzles were run. All the puzzles are line solvable and has single solution.
+30100 puzzles were run. All the puzzles are line solvable and has single solution.
 
 ### Distribution of solve times
 
 ```
-$ nohup bash benches/batch.sh nonograms.org {1..30000} 2>&1 > benches/batch-norg.log &
+$ nohup bash benches/batch.sh nonograms.org {1..31000} 2>&1 > benches/batch-norg.log &
 $ less benches/batch-norg.log | grep 'Total' | awk '{print $2}' | sort -r | uniq -c
-     3 0.06
-     9 0.04
-     9 0.03
-    56 0.02
-   302 0.01
- 29517 0.00
+     2 0.06
+     1 0.05
+     5 0.04
+    11 0.03
+    46 0.02
+   268 0.01
+ 29767 0.00
 ```
 
-### Top 12 (>=0.04 sec)
+### Top 8 (>=0.04 sec)
 
 | puzzle_id | solve time, sec | colors (w/o blank) |
 |-----------|----------------:|-------------------:|
-| 4462*     | 0.04            | 3
+| 4462*     | 0.05            | 3
 | 9596*     | 0.04            | 10
 | 17921     | 0.04            | 1 (black)
 | 18417     | 0.04            | 1 (black)
-| 19043     | 0.04            | 1 (black)
 | 20689     | 0.04            | 4
-| 21251     | 0.06            | 1 (black)
-| 21259     | 0.04            | 1 (black)
 | 21272     | 0.06            | 1 (black)
-| 21424     | 0.04            | 10
 | 21553     | 0.06            | 5
 | 22118     | 0.04            | 10
 

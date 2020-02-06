@@ -5,7 +5,10 @@ use crate::block::{Block, Line};
 use crate::board::{Board, Point};
 use crate::cache::{cache_info, Cached, GrowableCache};
 use crate::solver::line::{self, LineSolver};
-use crate::utils::rc::{MutRc, ReadRc, ReadRef};
+use crate::utils::{
+    abs_sub,
+    rc::{MutRc, ReadRc, ReadRef},
+};
 
 #[allow(missing_debug_implementations)]
 pub struct Solver<B>
@@ -61,16 +64,23 @@ struct LongJobQueue {
 }
 
 impl LongJobQueue {
-    fn with_rows_and_columns(
-        rows: impl Iterator<Item = usize>,
-        columns: impl Iterator<Item = usize>,
-    ) -> Self {
-        let jobs = columns
+    fn with_height_and_width(height: usize, width: usize) -> Self {
+        let rows = 0..height;
+        let columns = 0..width;
+
+        let mut jobs: Vec<_> = columns
             .map(|column_index| (true, column_index))
-            .chain(rows.map(|row_index| (false, row_index)));
+            .chain(rows.map(|row_index| (false, row_index)))
+            .collect();
+
+        // closer to the middle goes first
+        jobs.sort_unstable_by_key(|&(is_column, index)| {
+            let middle = if is_column { width / 2 } else { height / 2 };
+            abs_sub(index, middle)
+        });
 
         Self {
-            vec: jobs.collect(),
+            vec: jobs,
             visited: HashSet::new(),
         }
     }
@@ -195,9 +205,7 @@ where
         } else {
             let queue = {
                 let board = self.board();
-                let rows = (0..board.height()).rev();
-                let cols = (0..board.width()).rev();
-                LongJobQueue::with_rows_and_columns(rows, cols)
+                LongJobQueue::with_height_and_width(board.height(), board.width())
             };
             self.run_jobs::<S, _>(queue)
         }
