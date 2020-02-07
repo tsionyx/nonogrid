@@ -114,7 +114,6 @@ pub enum PuzzleScheme {
 #[cfg(feature = "ini")]
 mod ini {
     use serde_derive::Deserialize;
-    use toml;
 
     use super::*;
 
@@ -844,6 +843,7 @@ impl BoardParser for DetectedParser {
         })
     }
 
+    //noinspection RsTypeCheck
     fn parse<B>(&self) -> Board<B>
     where
         B: Block,
