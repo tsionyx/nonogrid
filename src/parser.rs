@@ -240,7 +240,7 @@ mod ini {
         {
             descriptions
                 .lines()
-                .flat_map(|line| Self::parse_line(line, palette).unwrap_or_else(|| vec![]))
+                .flat_map(|line| Self::parse_line(line, palette).unwrap_or_else(Vec::new))
                 .collect()
         }
 

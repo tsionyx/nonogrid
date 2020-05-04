@@ -1343,7 +1343,7 @@ mod backtracking {
             let max = sizes_only.iter().max().unwrap_or(&zero);
             let sum: usize = sizes_only.iter().sum();
 
-            let log = |f: f64| (1.0 + f).ln() + 1.0;
+            let log = |f: f64| f.ln_1p() + 1.0;
 
             match Self::choose_strategy() {
                 ChoosePixel::Sum => sum as f64,
