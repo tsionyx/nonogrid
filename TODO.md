@@ -1,7 +1,7 @@
 ## Experiments
 - reduce board by removing solved lines:
   - if there is a fully solved row (column), one can safely remove it (with 'comparing neighbours' check)
-  - if the block position is fully revealed, one can replace that block with white (for the whole board).
+  - if the block position fully revealed, one can replace that block with white (for the whole board).
   Consider applying 'comparing neighbours' procedure.
   - if only one color left after previous two procedures, then replace MultiColor with BinaryColor
     (see puzzles 672, 3085, 10585, 16552, 16878).

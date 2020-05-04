@@ -1,6 +1,6 @@
 # Performance comparison
 
-The basis of the work was done by Jan Wolter in his [survey](https://webpbn.com/survey).
+The basis of the work done by Jan Wolter in his [survey](https://webpbn.com/survey).
 
 To better understand my own solver's ability I have used the same techniques and puzzles
 to prepare a report. To adjust my own machine's performance, I ran several solvers
@@ -18,7 +18,7 @@ bash benches/cmp.sh $PWD
 
 ### [Colored](perf-color.csv)
 
-##### Comparison was made with Wolter's solver only
+##### Comparison made with Wolter's solver only
 
 ```
 for id in 47 220 1503 2257 4940 5193 2684 2073 4364 2817 4809 2814 3149 4445 2984 2498 3620 672; do
@@ -127,7 +127,7 @@ done
 
 ## http://www.nonograms.org puzzles
 
-30100 puzzles were run. All the puzzles are line solvable and has single solution.
+30100 puzzles run. All the puzzles are line solvable and has single solution.
 
 ### Distribution of solve times
 

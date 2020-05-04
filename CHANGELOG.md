@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0)
+The format based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
@@ -35,13 +35,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.6.0] - 2019-11-19
 
 ### Fixed
-- non UTF-8 symbols into input files are ignored.
+- non UTF-8 symbols into input files are ignoring.
 
 ### Added
 - SAT-solver, adapted for binary and multicolor puzzles:
   huge speed improvement;
 - Random puzzles [comparison](https://webpbn.com/survey/#rand);
-- Allow to use callbacks in non-threaded environment;
+- Allow using callbacks in non-threaded environment;
 - Validation on `Board::restore` (to prevent showing bad results on completion);
 - `Renderer::render_simple` to print solution in compact;
 - `ProbeImpact` now stores the color of every cell that was changed during the probe.
@@ -49,7 +49,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - some clippy warnings
   (in `cargo clippy -- -W clippy::nursery` and `cargo clippy -- -W clippy::pedantic` modes);
-- show diff with previous solution when multiple ones are found.
+- show diff with previous solution when multiple ones found.
 - updated and cleaned up benchmarks
 
 
@@ -73,7 +73,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - make the `Priority` abstraction instead of `OrderedFloat<f64>`
 - make the `ProbeResult` abstraction instead of `Option`
 to represent NewInfo/Contradiction variants
-- benchmarks results (run some very long-solving puzzles)
+- benchmark results (run some very long-solving puzzles)
 - use SmallVec for Point's neighbours
 - lower the logs level for some of `probing` and `backtracking` events
 - do not create the propagation solver `with_point` anymore, just run with (or without) a Point
@@ -158,14 +158,14 @@ to represent NewInfo/Contradiction variants
 
 ## [0.2.0] - 2019-03-15
 ### Added
-- Solve the black-and-white board with the line solving then probing then backtracking
+- Solve the black-and-white board with the line solving then probing and then backtracking
 - Parse boards from https://webpbn.com
 
 
 ## [0.1.0] - 2019-02-12
 ### Added
 - Initial release!
-- Parse board from custom TOML-based format
+- Parse a board from custom TOML-based format
 - Store the board
 - Print out the board in the terminal
 - Solve a single black-and-white line
