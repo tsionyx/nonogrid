@@ -31,7 +31,7 @@ smallvec = "1.2"
 
 clap = {version="2.33", optional=true}
 
-env_logger = {version="0.7", optional=true}
+env_logger = {version="0.7", optional=true, default_features=false, features=["termcolor", "atty", "humantime"]}
 
 toml = {version="0.5", optional=true}
 serde_derive = {version="1.0", optional=true}
