@@ -1,4 +1,4 @@
-// Generated with
+// The list was generated with the command
 //   $ rustc -W help | grep ' allow ' | awk '{print $1}' | tr - _ | sort | xargs -I{} echo '#![warn({})]'
 #![warn(absolute_paths_not_starting_with_crate)]
 #![warn(anonymous_parameters)]
@@ -20,7 +20,6 @@
 #![warn(trivial_casts)]
 #![warn(trivial_numeric_casts)]
 // #![warn(unreachable_pub)] // TODO
-#![warn(unsafe_code)]
 #![warn(unstable_features)]
 #![warn(unused_extern_crates)]
 #![warn(unused_import_braces)]
@@ -29,6 +28,17 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 #![warn(variant_size_differences)]
+// recommendations
+#![forbid(unsafe_code)]
+#![deny(clippy::mem_forget)]
+// suppress some pedantic warnings
+#![allow(clippy::non_ascii_literal)]
+#![allow(clippy::must_use_candidate)]
+#![cfg_attr(test, allow(clippy::wildcard_imports))]
+// TODO: remove the following suppression:
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::missing_errors_doc)]
 
 pub mod block;
 pub mod board;

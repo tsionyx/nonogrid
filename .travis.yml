@@ -2,29 +2,45 @@ os: linux
 dist: xenial
 
 language: rust
-rust:
-  - 1.39.0  # minimal supported version
-  - stable
-  - beta
-  - nightly
+
+
+_shared_job: &clippy_job
+  script:
+    # three scenarios for different sets of features
+    - cargo clippy --all-targets --all-features -- -Dwarnings -W clippy::nursery
+    - cargo clippy --all-targets -- -Dwarnings -W clippy::nursery
+    - cargo clippy --all-targets --no-default-features -- -Dwarnings -W clippy::nursery
+    # three scenarios for different sets of features (check only lib)
+    - cargo clippy --lib --all-features -- -Dwarnings -W clippy::pedantic
+    - cargo clippy --lib -- -Dwarnings -W clippy::pedantic
+    - cargo clippy --lib --no-default-features -- -Dwarnings -W clippy::pedantic
 
 jobs:
   allow_failures:
     - rust: nightly
   fast_finish: true
+  include:
+    - name: Minimal supported version
+      rust: 1.39.0
+    - <<: *clippy_job
+      rust: stable
+    - <<: *clippy_job
+      rust: beta
+    - <<: *clippy_job
+      rust: nightly
+
 
 cache:
   - cargo
 
-before_script:
+install:
   - rustup component add rustfmt
   - rustup component add clippy
   - cargo install --force cargo-audit
   - cargo generate-lockfile
 
-script:
+before_script:
   - cargo fmt -- --check
-  - cargo clippy --all-targets --all-features --workspace -- -Dwarnings -W clippy::nursery
   - cargo test --all-features --workspace
   - cargo audit
 

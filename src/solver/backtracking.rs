@@ -209,6 +209,7 @@ where
     }
 }
 
+#[allow(clippy::unused_self)]
 impl<B, P, S> Solver<B, P, S>
 where
     B: Block,
@@ -379,7 +380,7 @@ where
         let max = sizes_only.iter().max().unwrap_or(&0);
         let sum: usize = sizes_only.iter().sum();
 
-        let log = |f: f64| (1.0 + f).ln() + 1.0;
+        let log = |f: f64| f.ln_1p() + 1.0;
 
         // Max is the most trivial, but also most ineffective strategy.
         // For details, see https://ieeexplore.ieee.org/document/6476646
@@ -431,6 +432,7 @@ where
         result
     }
 
+    #[allow(clippy::too_many_lines)]
     fn search_mutable(
         &mut self,
         mut directions: Vec<(Point, B::Color)>,

@@ -45,6 +45,7 @@ where
 }
 
 #[cfg(feature = "sat")]
+#[allow(clippy::needless_pass_by_value)]
 pub fn run<B, S, P>(
     board: MutRc<Board<B>>,
     max_solutions: Option<usize>,

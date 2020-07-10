@@ -280,6 +280,7 @@ pub mod color {
         /// // short form
         /// assert_eq!(ColorValue::parse("55bb88").to_rgb(), ColorValue::parse("5b8").to_rgb());
         /// ```
+        #[allow(clippy::cast_possible_truncation)]
         pub fn to_rgb(&self) -> (u8, u8, u8) {
             const MULTIPLIER: u8 = 0x11;
             match self {

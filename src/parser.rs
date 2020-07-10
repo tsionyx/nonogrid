@@ -115,7 +115,10 @@ pub enum PuzzleScheme {
 mod ini {
     use serde_derive::Deserialize;
 
-    use super::*;
+    use super::{
+        Block, Board, BoardParser, ColorPalette, Description, LocalReader, Paletted, ParseError,
+        PuzzleScheme,
+    };
 
     #[derive(Debug, Deserialize)]
     struct Clues {
@@ -288,7 +291,7 @@ mod ini {
 #[cfg(not(feature = "ini"))]
 mod ini {
     //! dummy definitions
-    use super::*;
+    use super::{Block, Board, BoardParser, ParseError, PuzzleScheme};
 
     #[derive(Debug, Clone, Copy)]
     pub struct MyFormat;
@@ -330,7 +333,10 @@ mod xml {
 
     use crate::utils::rc::{mutate_ref, read_ref, InteriorMutableRef};
 
-    use super::*;
+    use super::{
+        Block, Board, BoardParser, ColorPalette, Description, LocalReader, NetworkReader, Paletted,
+        ParseError, PuzzleScheme,
+    };
 
     #[derive(Debug)]
     pub struct WebPbn {
@@ -549,7 +555,7 @@ mod xml {
 #[cfg(not(feature = "xml"))]
 mod xml {
     //! dummy definitions
-    use super::*;
+    use super::{Block, Board, BoardParser, NetworkReader, ParseError, PuzzleScheme};
 
     #[derive(Debug, Clone, Copy)]
     pub struct WebPbn;
@@ -759,6 +765,7 @@ impl BoardParser for NonogramsOrg {
 }
 
 impl Paletted for NonogramsOrg {
+    #[allow(clippy::cast_possible_truncation)]
     fn get_colors(&self) -> Vec<(String, char, String)> {
         let (colors, _solution) = self.decipher();
         colors

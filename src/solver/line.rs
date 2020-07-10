@@ -100,6 +100,8 @@ where
     }
 }
 
+#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_sign_loss)]
 impl<B> DynamicSolver<B>
 where
     B: Block,

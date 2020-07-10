@@ -61,7 +61,7 @@ impl Color for BinaryColor {
 
 impl fmt::Display for BinaryColor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use BinaryColor::*;
+        use BinaryColor::{Black, BlackOrWhite, Undefined, White};
 
         let symbol = match self {
             White => '.',

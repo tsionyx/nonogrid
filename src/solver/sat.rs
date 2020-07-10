@@ -1,5 +1,7 @@
 //! The algorithm based on the ideas
 //! from the [article](https://habr.com/ru/post/433330/)
+#![allow(clippy::filter_map)]
+
 use std::{
     collections::{HashMap, HashSet},
     iter::{from_fn, once},

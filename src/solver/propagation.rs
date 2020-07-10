@@ -116,8 +116,8 @@ struct CacheKey<B>
 where
     B: Block,
 {
-    pub line_index: usize,
-    pub source: ReadRc<Line<B::Color>>,
+    line_index: usize,
+    source: ReadRc<Line<B::Color>>,
 }
 
 type CacheValue<B> = Result<ReadRc<Line<<B as Block>::Color>>, ()>;
@@ -336,6 +336,7 @@ where
         debug!("Original: {:?}", old);
         debug!("Updated: {:?}", new);
 
+        #[allow(clippy::if_not_else)]
         old.iter()
             .zip(new)
             .enumerate()

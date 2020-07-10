@@ -529,6 +529,7 @@ where
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 impl<B> Board<B>
 where
     B: Block,

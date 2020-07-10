@@ -29,7 +29,7 @@ mod cli {
         crate_authors, crate_description, crate_name, crate_version, value_t, App, Arg, ArgMatches,
     };
 
-    use super::*;
+    use super::{fs, read_stdin, ParseError, SearchOptions, Source};
 
     pub(super) struct Params<'a> {
         matches: ArgMatches<'a>,
@@ -123,7 +123,7 @@ mod cli {
 mod cli {
     use std::env;
 
-    use super::*;
+    use super::{fs, read_stdin, ParseError, SearchOptions, Source};
 
     pub(super) struct Params {
         file_name: Option<String>,
@@ -134,6 +134,7 @@ mod cli {
             let file_name = env::args().nth(1);
             Self { file_name }
         }
+
         pub(super) fn get_content(&self) -> Result<(Source, String), ParseError> {
             let content = if let Some(input_file) = &self.file_name {
                 fs::read_to_string(input_file)?
@@ -143,6 +144,7 @@ mod cli {
             Ok((Source::LocalFile, content))
         }
 
+        #[allow(clippy::unused_self)]
         pub(super) const fn get_search_options(&self) -> SearchOptions {
             (None, None, None)
         }
