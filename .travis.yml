@@ -20,8 +20,11 @@ jobs:
     - rust: nightly
   fast_finish: true
   include:
+    # do not run clippy on 1.39 and install cargo audit with the --force
     - name: Minimal supported version
       rust: 1.39.0
+      before_install:
+        - cargo install --force cargo-audit --version=^0.11
     - <<: *clippy_job
       rust: stable
     - <<: *clippy_job
@@ -33,10 +36,12 @@ jobs:
 cache:
   - cargo
 
+before_install:
+  - cargo install cargo-audit
+
 install:
   - rustup component add rustfmt
   - rustup component add clippy
-  - cargo install --force cargo-audit
   - cargo generate-lockfile
 
 before_script:
