@@ -5,6 +5,32 @@ The format based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
+## [0.6.3] - 2020-07-10
+
+### Added
+- tests for various webpbn [exported formats](https://webpbn.com/export.cgi);
+- tests with minimal supported Rust version (1.39);
+- check for _clippy::pedantic_ in travis (3 different sets of features).
+
+### Fixed
+- travis builds;
+- grammar and typos (thanks to IDEA's hints);
+- clippy warnings for the _sat_ feature (with the updated [cargo_every](cargo-every.py) script).
+
+### Changed
+- move solvers benchmarks into the [script](benches/cmp.sh);
+- [optimize](http://likebike.com/posts/How_To_Write_Fast_Rust_Code.html#opt-hot-path) slice index operations with the `get/get_mut`;
+- optimize initial propagation (the lines closer to the edges will be solved first);
+- refactor `Job` -> `LinePosition`;
+- simplified conditional compliation for _ini_, _xml_, _threaded_ features;
+- `Point` with `pub` fields;
+- reduce turbofish usage by specifying variable's type.
+
+### Removed
+- outdated comments;
+- unnecessary `pub`-s.
+
+
 ## [0.6.2] - 2020-01-17
 
 ### Fixed
