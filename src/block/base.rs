@@ -413,8 +413,10 @@ pub mod color {
             ))
         }
 
-        pub fn get_default(&self) -> Option<String> {
-            self.default_color.clone()
+        #[allow(dead_code)]
+        #[allow(clippy::option_as_ref_deref)]
+        pub fn get_default(&self) -> Option<&str> {
+            self.default_color.as_ref().map(String::as_str)
         }
 
         pub fn id_by_name(&self, name: &str) -> Option<ColorId> {

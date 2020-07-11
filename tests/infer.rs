@@ -19,7 +19,7 @@ mod ini {
         assert_eq!(f.get_colors(), colors);
 
         let palette = f.get_palette();
-        assert_eq!(palette.get_default(), Some("B".to_string()));
+        assert_eq!(palette.get_default(), Some("B"));
         assert_eq!(palette.id_by_name("W"), Some(1));
         assert_eq!(palette.id_by_name("B"), Some(2));
         assert_eq!(palette.id_by_name("b"), Some(4));
@@ -59,7 +59,7 @@ mod webpbn {
         assert_eq!(s.get_colors(), colors);
 
         let palette = s.get_palette();
-        assert_eq!(palette.get_default(), Some("black".to_string()));
+        assert_eq!(palette.get_default(), Some("black"));
         assert_eq!(palette.id_by_name("black"), Some(2));
         assert_eq!(palette.id_by_name("green"), Some(4));
         assert_eq!(palette.id_by_name("red"), Some(8));

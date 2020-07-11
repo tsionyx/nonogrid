@@ -192,12 +192,12 @@ mod ini {
             let value_color_pos = as_chars.position(|c| !c.is_digit(10));
             let (value, block_color) = if let Some(pos) = value_color_pos {
                 let (value, color) = block.split_at(pos);
-                (value, Some(color.to_string()))
+                (value, Some(color))
             } else {
                 (block, palette.get_default())
             };
 
-            let color_id = block_color.and_then(|name| palette.id_by_name(&name));
+            let color_id = block_color.and_then(|name| palette.id_by_name(name));
             B::from_str_and_color(value, color_id)
         }
 
@@ -407,18 +407,15 @@ mod xml {
 
             let block_color = if let Node::Element(e) = block {
                 if let Some(color) = e.attribute("color") {
-                    Some(color.value().to_string())
+                    Some(color.value())
                 } else {
                     palette.get_default()
                 }
             } else {
                 None
             };
-            let color_id = if let Some(name) = &block_color {
-                palette.id_by_name(name)
-            } else {
-                None
-            };
+
+            let color_id = block_color.and_then(|name| palette.id_by_name(name));
             B::from_str_and_color(value, color_id)
         }
 
