@@ -46,7 +46,11 @@ install:
 
 before_script:
   - cargo fmt -- --check
-  - cargo test --all-features --workspace
+  # clear the previous artifacts: prevent repeating coverage runs
+  - rm -f target/debug/deps/*-*
+  # all that goes to >5 will eventually be in the stdin
+  - exec 5>&1
+  - cargo test --all-features --workspace 2>&1 | tee /dev/fd/5 | grep 'Running target/debug' | awk '{print $2}' > test_bins
   - cargo audit
 
 addons:
@@ -66,8 +70,8 @@ after_success:
   - cmake .. && make && make install DESTDIR=../../kcov-build
   - cd ../.. && rm -rf kcov-master master.tar.gz
   - >
-    for file in target/debug/*-*; do
-      [ -x "${file}" ] || continue;
+    cat test_bins | xargs echo "Running the test executions:";
+    for file in $(cat test_bins); do
       echo "Running coverage for $file...";
       mkdir -p "target/cov/$(basename $file)";
       ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file";
