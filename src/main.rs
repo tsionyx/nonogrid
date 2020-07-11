@@ -168,7 +168,7 @@ fn main() -> Result<(), ParseError> {
 
     match source {
         Source::LocalFile => run(
-            &parser::DetectedParser::with_content(content)?,
+            &parser::DetectedParser::with_content(&content)?,
             search_options,
         ),
         Source::WebPbn => run(&parser::WebPbn::read_remote(&content)?, search_options),

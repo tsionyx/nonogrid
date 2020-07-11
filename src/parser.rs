@@ -25,7 +25,7 @@ use crate::utils::{iter::FindOk, product, split_sections};
 pub struct ParseError(pub String);
 
 pub trait BoardParser: fmt::Debug {
-    fn with_content(content: String) -> Result<Self, ParseError>
+    fn with_content(content: &str) -> Result<Self, ParseError>
     where
         Self: Sized;
 
@@ -48,7 +48,7 @@ pub trait LocalReader: BoardParser {
         Self: Sized,
     {
         let content = Self::file_content(file_name)?;
-        Self::with_content(content)
+        Self::with_content(&content)
     }
     fn file_content(file_name: &str) -> io::Result<String> {
         fs::read_to_string(file_name)
@@ -69,7 +69,7 @@ pub trait NetworkReader: BoardParser {
     {
         let url = file_name.to_string();
         let content = Self::http_content(url)?;
-        Self::with_content(content)
+        Self::with_content(&content)
     }
 
     #[cfg(feature = "web")]
@@ -151,8 +151,8 @@ mod ini {
     }
 
     impl BoardParser for MyFormat {
-        fn with_content(content: String) -> Result<Self, ParseError> {
-            let nono = toml::from_str(&content)?;
+        fn with_content(content: &str) -> Result<Self, ParseError> {
+            let nono = toml::from_str(content)?;
 
             Ok(Self { structure: nono })
         }
@@ -302,7 +302,7 @@ mod ini {
     }
 
     impl BoardParser for MyFormat {
-        fn with_content(_content: String) -> Result<Self, ParseError>
+        fn with_content(_content: &str) -> Result<Self, ParseError>
         where
             Self: Sized,
         {
@@ -352,7 +352,7 @@ mod xml {
             let url = format!("{}/XMLpuz.cgi?id={}", Self::BASE_URL, file_name);
 
             let content = Self::http_content(url)?;
-            Self::with_content(content)
+            Self::with_content(&content)
         }
     }
 
@@ -363,8 +363,8 @@ mod xml {
     }
 
     impl BoardParser for WebPbn {
-        fn with_content(content: String) -> Result<Self, ParseError> {
-            let package = xml::parser::parse(&content)?;
+        fn with_content(content: &str) -> Result<Self, ParseError> {
+            let package = xml::parser::parse(content)?;
 
             Ok(Self {
                 package,
@@ -566,7 +566,7 @@ mod xml {
     }
 
     impl BoardParser for WebPbn {
-        fn with_content(_content: String) -> Result<Self, ParseError>
+        fn with_content(_content: &str) -> Result<Self, ParseError>
         where
             Self: Sized,
         {
@@ -728,14 +728,14 @@ impl NetworkReader for NonogramsOrg {
             .first_ok(|(base_url, (_scheme, path))| {
                 let url = format!("{}{}/i/{}", base_url, path, file_name);
                 let content = Self::http_content(url)?;
-                Self::with_content(content)
+                Self::with_content(&content)
             })
     }
 }
 
 impl BoardParser for NonogramsOrg {
-    fn with_content(content: String) -> Result<Self, ParseError> {
-        let json = Self::extract_encoded_json(&content)
+    fn with_content(content: &str) -> Result<Self, ParseError> {
+        let json = Self::extract_encoded_json(content)
             .ok_or_else(|| ParseError("Not found cypher in HTML content".to_string()))?;
 
         Ok(Self {
@@ -814,7 +814,7 @@ impl DetectedParser {
 }
 
 impl BoardParser for DetectedParser {
-    fn with_content(content: String) -> Result<Self, ParseError> {
+    fn with_content(content: &str) -> Result<Self, ParseError> {
         let trim_content = content.trim();
         Ok(if trim_content.starts_with("<?xml") {
             Self {
@@ -944,12 +944,12 @@ impl From<String> for ParseError {
 }
 
 impl BoardParser for OlsakParser {
-    fn with_content(content: String) -> Result<Self, ParseError>
+    fn with_content(content: &str) -> Result<Self, ParseError>
     where
         Self: Sized,
     {
         let names = [": rows", ": columns", "#d"];
-        let mut sections = split_sections(&content, &names, false, None)?;
+        let mut sections = split_sections(content, &names, false, None)?;
         let mut splitted: HashMap<_, _> = sections
             .iter()
             .map(|(&name, lines)| {
@@ -1136,7 +1136,7 @@ impl SimpleParser {
 }
 
 impl BoardParser for SimpleParser {
-    fn with_content(content: String) -> Result<Self, ParseError>
+    fn with_content(content: &str) -> Result<Self, ParseError>
     where
         Self: Sized,
     {
@@ -1170,7 +1170,7 @@ impl BoardParser for SimpleParser {
             });
         }
 
-        let content = Self::remove_comments(&content);
+        let content = Self::remove_comments(content);
 
         let (rows, columns) = {
             // 'faase' and 'ss' formats
@@ -1377,9 +1377,7 @@ mod tests {
         ";
 
         assert_eq!(
-            MyFormat::with_content(s.to_string())
-                .unwrap()
-                .infer_scheme(),
+            MyFormat::with_content(s).unwrap().infer_scheme(),
             PuzzleScheme::BlackAndWhite
         )
     }
@@ -1395,9 +1393,7 @@ mod tests {
         ";
 
         assert_eq!(
-            MyFormat::with_content(s.to_string())
-                .unwrap()
-                .infer_scheme(),
+            MyFormat::with_content(s).unwrap().infer_scheme(),
             PuzzleScheme::BlackAndWhite
         )
     }
@@ -1414,9 +1410,7 @@ mod tests {
         ";
 
         assert_eq!(
-            MyFormat::with_content(s.to_string())
-                .unwrap()
-                .infer_scheme(),
+            MyFormat::with_content(s).unwrap().infer_scheme(),
             PuzzleScheme::BlackAndWhite
         )
     }
@@ -1433,9 +1427,7 @@ mod tests {
         ";
 
         assert_eq!(
-            MyFormat::with_content(s.to_string())
-                .unwrap()
-                .infer_scheme(),
+            MyFormat::with_content(s).unwrap().infer_scheme(),
             PuzzleScheme::MultiColor
         )
     }
@@ -1451,7 +1443,7 @@ mod tests {
         defs = ['g=(0, 204, 0) %']
         ";
 
-        let f = MyFormat::with_content(s.to_string()).unwrap();
+        let f = MyFormat::with_content(s).unwrap();
         let mut colors = vec![];
         colors.push(("g".to_string(), '%', "0, 204, 0".to_string()));
 
