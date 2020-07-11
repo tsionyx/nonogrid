@@ -19,7 +19,7 @@ use crate::block::{
     Block, Description,
 };
 use crate::board::Board;
-use crate::utils::{iter::FindOk, product, split_sections};
+use crate::utils::{iter::FindOk, product, rc::MutRc, split_sections};
 
 #[derive(Debug)]
 pub struct ParseError(pub String);
@@ -32,6 +32,13 @@ pub trait BoardParser: fmt::Debug {
     fn parse<B>(&self) -> Board<B>
     where
         B: Block;
+
+    fn parse_rc<B>(&self) -> MutRc<Board<B>>
+    where
+        B: Block,
+    {
+        MutRc::new(self.parse())
+    }
 
     fn infer_scheme(&self) -> PuzzleScheme;
 }

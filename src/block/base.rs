@@ -218,18 +218,6 @@ pub mod color {
         HexValue6(u32),
     }
 
-    /// ```
-    /// use nonogrid::block::base::color::ColorValue;
-    ///
-    /// assert_eq!(ColorValue::parse("0F0"), ColorValue::HexValue3(240));
-    /// assert_eq!(ColorValue::parse("#0F0"), ColorValue::HexValue3(240));
-    /// assert_eq!(ColorValue::parse("0000FF"), ColorValue::HexValue6(255));
-    /// assert_eq!(ColorValue::parse("#0000FF"), ColorValue::HexValue6(255));
-    /// assert_eq!(ColorValue::parse("white"), ColorValue::CommonName("white".to_string()));
-    /// assert_eq!(ColorValue::parse("200, 16,0  "), ColorValue::RgbTriplet(200, 16, 0));
-    /// // invalid triplet: G component is not an u8
-    /// assert_eq!(ColorValue::parse("200, X, 16"), ColorValue::CommonName("200, X, 16".to_string()));
-    /// ```
     impl ColorValue {
         pub fn parse(value: &str) -> Self {
             let value = if value.starts_with('#') {
@@ -267,19 +255,6 @@ pub mod color {
             Self::CommonName(value.to_string())
         }
 
-        /// ```
-        /// use nonogrid::block::base::color::ColorValue;
-        ///
-        /// assert_eq!(ColorValue::parse("0F0").to_rgb(), (0, 255, 0));
-        /// assert_eq!(ColorValue::parse("0000FF").to_rgb(), (0, 0, 255));
-        /// assert_eq!(ColorValue::parse("red").to_rgb(), (255, 0, 0));
-        /// assert_eq!(ColorValue::parse("YELLOW").to_rgb(), (255, 255, 0));
-        /// assert_eq!(ColorValue::parse("teal").to_rgb(), (0, 128, 128));
-        /// assert_eq!(ColorValue::parse("unknown").to_rgb(), (0, 0, 0));
-        /// assert_eq!(ColorValue::parse("200, 16,0  ").to_rgb(), (200, 16, 0));
-        /// // short form
-        /// assert_eq!(ColorValue::parse("55bb88").to_rgb(), ColorValue::parse("5b8").to_rgb());
-        /// ```
         #[allow(clippy::cast_possible_truncation)]
         pub fn to_rgb(&self) -> (u8, u8, u8) {
             const MULTIPLIER: u8 = 0x11;
@@ -545,5 +520,47 @@ mod tests {
         //                     2 . . . 2
         //                   4 . 4
         assert_eq!(ranges, vec![(1, 0..13), (2, 6..11), (4, 5..8)])
+    }
+}
+
+#[cfg(test)]
+mod color_value_tests {
+    use super::color::ColorValue;
+
+    #[test]
+    fn construct() {
+        assert_eq!(ColorValue::parse("0F0"), ColorValue::HexValue3(240));
+        assert_eq!(ColorValue::parse("#0F0"), ColorValue::HexValue3(240));
+        assert_eq!(ColorValue::parse("0000FF"), ColorValue::HexValue6(255));
+        assert_eq!(ColorValue::parse("#0000FF"), ColorValue::HexValue6(255));
+        assert_eq!(
+            ColorValue::parse("white"),
+            ColorValue::CommonName("white".to_string())
+        );
+        assert_eq!(
+            ColorValue::parse("200, 16,0  "),
+            ColorValue::RgbTriplet(200, 16, 0)
+        );
+        // invalid triplet: G component is not an u8
+        assert_eq!(
+            ColorValue::parse("200, X, 16"),
+            ColorValue::CommonName("200, X, 16".to_string())
+        );
+    }
+
+    #[test]
+    fn rgb() {
+        assert_eq!(ColorValue::parse("0F0").to_rgb(), (0, 255, 0));
+        assert_eq!(ColorValue::parse("0000FF").to_rgb(), (0, 0, 255));
+        assert_eq!(ColorValue::parse("red").to_rgb(), (255, 0, 0));
+        assert_eq!(ColorValue::parse("YELLOW").to_rgb(), (255, 255, 0));
+        assert_eq!(ColorValue::parse("teal").to_rgb(), (0, 128, 128));
+        assert_eq!(ColorValue::parse("unknown").to_rgb(), (0, 0, 0));
+        assert_eq!(ColorValue::parse("200, 16,0  ").to_rgb(), (200, 16, 0));
+        // short form
+        assert_eq!(
+            ColorValue::parse("55bb88").to_rgb(),
+            ColorValue::parse("5b8").to_rgb()
+        );
     }
 }

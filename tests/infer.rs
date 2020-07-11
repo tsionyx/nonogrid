@@ -1,6 +1,9 @@
 #[cfg(feature = "ini")]
 mod ini {
-    use nonogrid::parser::{BoardParser, LocalReader, MyFormat, Paletted, PuzzleScheme};
+    use nonogrid::{
+        parser::{LocalReader, MyFormat, Paletted, PuzzleScheme},
+        BoardParser,
+    };
 
     #[test]
     fn infer_own_black_and_white() {

@@ -4,27 +4,23 @@ mod ini {
 
     use log::warn;
 
-    use nonogrid::parser::{BoardParser, LocalReader, MyFormat};
     use nonogrid::{
-        block::binary::BinaryBlock,
-        block::multicolor::ColoredBlock,
-        parser::PuzzleScheme,
-        solver::{line, probing::*, propagation},
-        utils::rc::MutRc,
+        parser::{LocalReader, MyFormat, PuzzleScheme},
+        BinaryBlock, BoardParser, ColoredBlock, FullProbe, LineSolver, ProbeSolver,
+        PropagationSolver,
     };
 
     #[test]
     fn hello() {
         use nonogrid::{
-            block::binary::BinaryColor,
             render::{Renderer, ShellRenderer},
+            BinaryColor,
         };
 
         let f = MyFormat::read_local("examples/hello.toml").unwrap();
-        let board = f.parse::<BinaryBlock>();
-        let board = MutRc::new(board);
+        let board = f.parse_rc::<BinaryBlock>();
 
-        let line_callback_renderer = ShellRenderer::with_board(MutRc::clone(&board));
+        let line_callback_renderer = ShellRenderer::with_board(board.clone());
         board
             .write()
             .set_callback_on_set_line(move |is_column, index| {
@@ -36,15 +32,15 @@ mod ini {
                 println!("{}", line_callback_renderer.render())
             });
 
-        let color_callback_renderer = ShellRenderer::with_board(MutRc::clone(&board));
+        let color_callback_renderer = ShellRenderer::with_board(board.clone());
         board.write().set_callback_on_change_color(move |point| {
             println!("Changing the {:?}", point,);
             println!("{}", color_callback_renderer.render())
         });
 
         warn!("Solving with simple line propagation");
-        let mut solver = propagation::Solver::new(MutRc::clone(&board));
-        solver.run::<line::DynamicSolver<_>>(None).unwrap();
+        let mut solver = PropagationSolver::new(board.clone());
+        solver.run::<LineSolver<_>>(None).unwrap();
 
         let board = board.read();
 
@@ -63,12 +59,11 @@ mod ini {
     #[test]
     fn pony() {
         let f = MyFormat::read_local("examples/MLP.toml").unwrap();
-        let board = f.parse::<BinaryBlock>();
-        let board = MutRc::new(board);
+        let board = f.parse_rc::<BinaryBlock>();
 
         warn!("Solving with simple line propagation");
-        let mut solver = propagation::Solver::new(MutRc::clone(&board));
-        solver.run::<line::DynamicSolver<_>>(None).unwrap();
+        let mut solver = PropagationSolver::new(board.clone());
+        solver.run::<LineSolver<_>>(None).unwrap();
 
         {
             let board = board.read();
@@ -76,8 +71,8 @@ mod ini {
             assert!(!board.is_solved_full());
         }
 
-        let mut solver = FullProbe1::with_board(MutRc::clone(&board));
-        solver.run_unsolved::<line::DynamicSolver<_>>().unwrap();
+        let mut solver = FullProbe::with_board(board.clone());
+        solver.run_unsolved::<LineSolver<_>>().unwrap();
 
         {
             let board = board.read();
@@ -91,12 +86,11 @@ mod ini {
         let p = MyFormat::read_local("examples/UK.toml").unwrap();
         assert_eq!(p.infer_scheme(), PuzzleScheme::MultiColor);
 
-        let board = p.parse::<ColoredBlock>();
-        let board = MutRc::new(board);
+        let board = p.parse_rc::<ColoredBlock>();
 
         warn!("Solving with simple line propagation");
-        let mut solver = propagation::Solver::new(MutRc::clone(&board));
-        solver.run::<line::DynamicSolver<_>>(None).unwrap();
+        let mut solver = PropagationSolver::new(board.clone());
+        solver.run::<LineSolver<_>>(None).unwrap();
 
         let board = board.read();
         assert!(board.is_solved_full());
@@ -110,13 +104,9 @@ mod web {
 
     use log::warn;
 
-    use nonogrid::parser::{BoardParser, NetworkReader, NonogramsOrg};
     use nonogrid::{
-        block::binary::BinaryBlock,
-        block::multicolor::ColoredBlock,
-        parser::PuzzleScheme,
-        solver::{line, propagation},
-        utils::rc::MutRc,
+        parser::{NetworkReader, NonogramsOrg, PuzzleScheme},
+        BinaryBlock, BoardParser, ColoredBlock, LineSolver, PropagationSolver,
     };
 
     #[test]
@@ -126,12 +116,11 @@ mod web {
         let p = WebPbn::read_remote("18").unwrap();
         assert_eq!(p.infer_scheme(), PuzzleScheme::MultiColor);
 
-        let board = p.parse::<ColoredBlock>();
-        let board = MutRc::new(board);
+        let board = p.parse_rc::<ColoredBlock>();
 
         warn!("Solving with simple line propagation");
-        let mut solver = propagation::Solver::new(MutRc::clone(&board));
-        solver.run::<line::DynamicSolver<_>>(None).unwrap();
+        let mut solver = PropagationSolver::new(board.clone());
+        solver.run::<LineSolver<_>>(None).unwrap();
 
         let board = board.read();
         assert!(board.is_solved_full());
@@ -201,11 +190,10 @@ mod web {
         let p = NonogramsOrg::read_remote("6").unwrap();
         assert_eq!(p.infer_scheme(), PuzzleScheme::BlackAndWhite);
 
-        let board = p.parse::<BinaryBlock>();
-        let board = MutRc::new(board);
+        let board = p.parse_rc::<BinaryBlock>();
 
-        let mut solver = propagation::Solver::new(MutRc::clone(&board));
-        solver.run::<line::DynamicSolver<_>>(None).unwrap();
+        let mut solver = PropagationSolver::new(board.clone());
+        solver.run::<LineSolver<_>>(None).unwrap();
 
         let board = board.read();
         assert!(board.is_solved_full());
@@ -217,16 +205,9 @@ mod web {
 mod detect_webpbn_formats {
     use reqwest::blocking::Client;
 
-    use nonogrid::parser::{BoardParser, DetectedParser};
     use nonogrid::{
-        block::binary::BinaryBlock,
-        block::multicolor::ColoredBlock,
-        parser::PuzzleScheme,
-        solver::{
-            line,
-            probing::{FullProbe1, ProbeSolver},
-        },
-        utils::rc::MutRc,
+        parser::PuzzleScheme, BinaryBlock, BoardParser, ColoredBlock, DetectedParser, FullProbe,
+        LineSolver, ProbeSolver,
     };
 
     fn request_puzzle(id: u32, fmt: &str) -> String {
@@ -251,21 +232,21 @@ mod detect_webpbn_formats {
 
         match scheme {
             PuzzleScheme::BlackAndWhite => {
-                let board = MutRc::new(p.parse::<BinaryBlock>());
+                let board = p.parse_rc::<BinaryBlock>();
                 // warn!("Solving with simple line propagation");
                 // let mut solver = propagation::Solver::new(MutRc::clone(&board));
                 // solver.run::<line::DynamicSolver<_>>(None).unwrap();
 
-                let mut solver = FullProbe1::with_board(MutRc::clone(&board));
-                solver.run_unsolved::<line::DynamicSolver<_>>().unwrap();
+                let mut solver = FullProbe::with_board(board.clone());
+                solver.run_unsolved::<LineSolver<_>>().unwrap();
 
                 let board = board.read();
                 assert!(board.is_solved_full());
             }
             PuzzleScheme::MultiColor => {
-                let board = MutRc::new(p.parse::<ColoredBlock>());
-                let mut solver = FullProbe1::with_board(MutRc::clone(&board));
-                solver.run_unsolved::<line::DynamicSolver<_>>().unwrap();
+                let board = p.parse_rc::<ColoredBlock>();
+                let mut solver = FullProbe::with_board(board.clone());
+                solver.run_unsolved::<LineSolver<_>>().unwrap();
 
                 let board = board.read();
                 assert!(board.is_solved_full());

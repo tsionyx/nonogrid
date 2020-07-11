@@ -13,13 +13,13 @@ use solver::{
 };
 use utils::rc::MutRc;
 
-pub mod block;
-pub mod board;
-pub(crate) mod cache;
-pub mod parser;
-pub mod render;
-pub mod solver;
-pub mod utils;
+mod block;
+mod board;
+mod cache;
+mod parser;
+mod render;
+mod solver;
+mod utils;
 
 #[cfg(feature = "clap")]
 mod cli {

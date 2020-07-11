@@ -356,6 +356,7 @@ impl<B> Board<B>
 where
     B: Block,
 {
+    #[allow(dead_code)]
     pub fn differs(&self, other: &[B::Color]) -> bool {
         self.cells.as_slice() != other
     }
@@ -529,7 +530,7 @@ where
     }
 }
 
-#[allow(clippy::needless_pass_by_value)]
+#[allow(dead_code)]
 impl<B> Board<B>
 where
     B: Block,
@@ -545,7 +546,13 @@ where
     pub fn set_callback_on_change_color<CB: ChangeColorCallback + 'static>(&mut self, f: CB) {
         self.on_change_color = Some(Box::new(f));
     }
+}
 
+#[allow(clippy::needless_pass_by_value)]
+impl<B> Board<B>
+where
+    B: Block,
+{
     pub fn set_row_with_callback(board_ref: MutRc<Self>, index: usize, new: &[B::Color]) {
         board_ref.write().set_row(index, new);
         if let Some(f) = &board_ref.read().on_set_line {

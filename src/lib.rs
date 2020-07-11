@@ -40,10 +40,28 @@
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::missing_errors_doc)]
 
-pub mod block;
-pub mod board;
-pub(crate) mod cache;
+mod block;
+mod board;
+mod cache;
 pub mod parser;
 pub mod render;
-pub mod solver;
-pub mod utils;
+mod solver;
+mod utils;
+
+pub use self::{
+    block::{
+        base::{color::ColorId, Block, Color, Description},
+        binary::{BinaryBlock, BinaryColor},
+        multicolor::ColoredBlock,
+    },
+    board::Board,
+    parser::{BoardParser, DetectedParser},
+    solver::{
+        line::{DynamicColor, DynamicSolver as LineSolver},
+        probing::{FullProbe1 as FullProbe, ProbeSolver},
+        propagation::Solver as PropagationSolver,
+        run as solve,
+    },
+};
+
+pub type RcBoard<B> = utils::rc::MutRc<Board<B>>;
