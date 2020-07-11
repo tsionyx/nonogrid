@@ -5,7 +5,23 @@ The format based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
-## [0.6.3] - 2020-07-10
+## [0.7.0] - 2020-07-12
+
+### Added
+- `BoardParser::parse_rc` to produce the `Arc<RefCell<Board>>` in one step;
+
+### Changed
+- flatten the library's API;
+- renamed some public `struct`-s;
+- use `Box<[B]>` instead of `Vec<B>` for the solved lines;
+- regrouped the imports;
+- updated the dependencies.
+
+### Fixed
+- clean the travis cache from previous build's artifacts.
+
+
+## [0.6.3] - 2020-07-11
 
 ### Added
 - tests for various webpbn [exported formats](https://webpbn.com/export.cgi);
