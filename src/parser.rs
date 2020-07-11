@@ -98,14 +98,19 @@ pub trait NetworkReader: BoardParser {
 
 pub trait Paletted {
     fn get_colors(&self) -> Vec<(String, char, String)>;
+    fn get_colors_sorted(&self) -> Vec<(String, char, String)> {
+        let mut colors = self.get_colors();
+        colors.sort_unstable_by(|(name1, ..), (name2, ..)| name1.cmp(name2));
+        colors
+    }
+
     fn default_palette(&self, white_name: &str, black_name: &str) -> ColorPalette {
         let mut palette = ColorPalette::with_white_and_black(white_name, black_name);
 
-        let colors = self.get_colors();
-        colors.iter().for_each(|(name, symbol, value)| {
+        for (name, symbol, value) in &self.get_colors_sorted() {
             let val = ColorValue::parse(value);
             palette.color_with_name_value_and_symbol(name, val, *symbol);
-        });
+        }
 
         palette
     }
@@ -279,10 +284,7 @@ mod ini {
         fn get_colors(&self) -> Vec<(String, char, String)> {
             if let Some(colors) = &self.structure.colors {
                 if let Some(defs) = &colors.defs {
-                    let mut colors: Vec<_> =
-                        defs.iter().map(|def| Self::parse_color_def(def)).collect();
-                    colors.sort_unstable_by_key(|(name, ..)| name.clone());
-                    return colors;
+                    return defs.iter().map(|def| Self::parse_color_def(def)).collect();
                 }
             }
 
@@ -392,9 +394,8 @@ mod xml {
         }
 
         fn infer_scheme(&self) -> PuzzleScheme {
-            let colors = self.get_colors();
-            let mut names: Vec<_> = colors.iter().map(|(name, ..)| name).collect();
-            names.sort_unstable();
+            let colors = self.get_colors_sorted();
+            let names: Vec<_> = colors.iter().map(|(name, ..)| name).collect();
             if names.is_empty() || names == ["black", "white"] {
                 return PuzzleScheme::BlackAndWhite;
             }
@@ -479,8 +480,7 @@ mod xml {
             let value = evaluate_xpath(&document, ".//color").expect("XPath evaluation failed");
 
             if let Value::Nodeset(ns) = value {
-                let mut colors: Vec<_> = ns
-                    .iter()
+                ns.iter()
                     .filter_map(|color_node| {
                         let value = color_node.string_value();
                         if let Node::Element(e) = color_node {
@@ -498,9 +498,7 @@ mod xml {
                             None
                         }
                     })
-                    .collect();
-                colors.sort_unstable_by_key(|(name, ..)| name.clone());
-                colors
+                    .collect()
             } else {
                 vec![]
             }
@@ -783,11 +781,10 @@ impl Paletted for NonogramsOrg {
     fn get_palette(&self) -> ColorPalette {
         let mut palette = ColorPalette::with_white("W");
 
-        let colors = self.get_colors();
-        colors.iter().for_each(|(name, _dumb_symbol, value)| {
+        for (name, _dumb_symbol, value) in &self.get_colors() {
             let val = ColorValue::parse(value);
             palette.color_with_name_and_value(name, val);
-        });
+        }
 
         palette
     }

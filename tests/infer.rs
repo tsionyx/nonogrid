@@ -59,7 +59,7 @@ mod webpbn {
             ("red".to_string(), '*', "FF0000".to_string()),
             ("white".to_string(), '.', "FFFFFF".to_string()),
         ];
-        assert_eq!(s.get_colors(), colors);
+        assert_eq!(s.get_colors_sorted(), colors);
 
         let palette = s.get_palette();
         assert_eq!(palette.get_default(), Some("black"));
