@@ -22,11 +22,11 @@ panic = 'abort'
 
 [dependencies]
 hashbrown = "0.6"
-lru = "0.4"
-priority-queue = "0.7"
-ordered-float = "1.0"
+lru = "0.5"
+priority-queue = "1.0"
+ordered-float = "2.0"
 log = "0.4"
-smallvec = "1.2"
+smallvec = "1.4"
 
 
 clap = {version="2.33", optional=true}
@@ -34,8 +34,7 @@ clap = {version="2.33", optional=true}
 env_logger = {version="0.7", optional=true, default_features=false, features=["termcolor", "atty", "humantime"]}
 
 toml = {version="0.5", optional=true}
-serde_derive = {version="1.0", optional=true}
-serde = {version="1.0", optional=true}
+serde = {version="1.0", optional=true, features=["derive"]}
 
 sxd-document = {version="0.3", optional=true}
 sxd-xpath = {version="0.4", optional=true}
@@ -51,7 +50,7 @@ varisat = {version="0.2", optional=true}
 args = ["clap"]
 std_time = []
 logger = ["env_logger"]
-ini = ["toml", "serde", "serde_derive"]
+ini = ["toml", "serde"]
 
 sat = ["varisat"]
 xml = ["sxd-document", "sxd-xpath"]

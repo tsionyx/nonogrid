@@ -120,7 +120,7 @@ pub enum PuzzleScheme {
 
 #[cfg(feature = "ini")]
 mod ini {
-    use serde_derive::Deserialize;
+    use serde::Deserialize;
 
     use super::{
         Block, Board, BoardParser, ColorPalette, Description, LocalReader, Paletted, ParseError,
