@@ -124,8 +124,8 @@ where
         warn!("Initializing board: height={}, width={}", height, width);
         let cells = vec![init; width * height];
 
-        let uniq_rows = dedup(rows.iter().map(|desc| desc.vec.clone()));
-        let uniq_cols = dedup(columns.iter().map(|desc| desc.vec.clone()));
+        let uniq_rows: Vec<&Vec<B>> = dedup(rows.iter().map(|desc| &desc.vec));
+        let uniq_cols: Vec<&Vec<B>> = dedup(columns.iter().map(|desc| &desc.vec));
 
         if uniq_rows.len() < height {
             warn!(
@@ -147,7 +147,7 @@ where
             .map(|desc| {
                 uniq_rows
                     .iter()
-                    .position(|uniq_row| uniq_row == &desc.vec)
+                    .position(|&uniq_row| uniq_row == &desc.vec)
                     .expect("Every row should be present in unique rows")
             })
             .collect();
@@ -156,7 +156,7 @@ where
             .map(|desc| {
                 uniq_cols
                     .iter()
-                    .position(|uniq_col| uniq_col == &desc.vec)
+                    .position(|&uniq_col| uniq_col == &desc.vec)
                     .expect("Every column should be present in unique columns")
             })
             .collect();
@@ -249,13 +249,11 @@ where
         let width = self.width();
         let column_indexes = (index..).step_by(width);
 
-        column_indexes
-            .zip(new)
-            .for_each(|(linear_index, &new_cell)| {
-                if let Some(cell) = self.cells.get_mut(linear_index) {
-                    *cell = new_cell;
-                }
-            });
+        for (linear_index, &new_cell) in column_indexes.zip(new) {
+            if let Some(cell) = self.cells.get_mut(linear_index) {
+                *cell = new_cell;
+            }
+        }
     }
 
     /// How many cells in a line are known to be of particular color
