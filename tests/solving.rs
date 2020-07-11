@@ -212,3 +212,177 @@ mod web {
         assert!((board.solution_rate() - 1.0).abs() < f64::EPSILON);
     }
 }
+
+#[cfg(feature = "web")]
+mod detect_webpbn_formats {
+    use reqwest::blocking::Client;
+
+    use nonogrid::parser::{BoardParser, DetectedParser};
+    use nonogrid::{
+        block::binary::BinaryBlock,
+        block::multicolor::ColoredBlock,
+        parser::PuzzleScheme,
+        solver::{
+            line,
+            probing::{FullProbe1, ProbeSolver},
+        },
+        utils::rc::MutRc,
+    };
+
+    fn request_puzzle(id: u32, fmt: &str) -> String {
+        let id = id.to_string();
+        let params = [("id", id.as_str()), ("fmt", fmt), ("go", "1")];
+        let client = Client::new();
+        let req = client
+            .post("https://webpbn.com/export.cgi")
+            .form(&params)
+            .send()
+            .unwrap();
+
+        req.text().unwrap()
+    }
+
+    fn solve_puzzle_scheme(id: u32, fmt: &str, scheme: PuzzleScheme) -> String {
+        let content = request_puzzle(id, fmt);
+        print!("{}", &content);
+
+        let p = DetectedParser::with_content(&content).unwrap();
+        assert_eq!(p.infer_scheme(), scheme);
+
+        match scheme {
+            PuzzleScheme::BlackAndWhite => {
+                let board = MutRc::new(p.parse::<BinaryBlock>());
+                // warn!("Solving with simple line propagation");
+                // let mut solver = propagation::Solver::new(MutRc::clone(&board));
+                // solver.run::<line::DynamicSolver<_>>(None).unwrap();
+
+                let mut solver = FullProbe1::with_board(MutRc::clone(&board));
+                solver.run_unsolved::<line::DynamicSolver<_>>().unwrap();
+
+                let board = board.read();
+                assert!(board.is_solved_full());
+            }
+            PuzzleScheme::MultiColor => {
+                let board = MutRc::new(p.parse::<ColoredBlock>());
+                let mut solver = FullProbe1::with_board(MutRc::clone(&board));
+                solver.run_unsolved::<line::DynamicSolver<_>>().unwrap();
+
+                let board = board.read();
+                assert!(board.is_solved_full());
+            }
+        };
+
+        content
+    }
+
+    fn solve_puzzle(id: u32, fmt: &str) -> String {
+        solve_puzzle_scheme(id, fmt, PuzzleScheme::BlackAndWhite)
+    }
+
+    #[test]
+    fn faase_65() {
+        let content = solve_puzzle(65, "faase");
+        let content: Vec<_> = content.lines().collect();
+        assert!(content.contains(&"width 34"));
+        assert!(content.contains(&"height 40"));
+        assert!(content.contains(&"rows"));
+        assert!(content.contains(&"columns"));
+        // columns + rows + control rows
+        assert_eq!(content.len(), 34 + 40 + 4);
+    }
+
+    #[test]
+    fn ish_436() {
+        let content = solve_puzzle(436, "ish");
+        let content: Vec<_> = content.lines().collect();
+        assert!(content.contains(&"# row clues"));
+        assert!(content.contains(&"# column clues"));
+        assert!(content.contains(&"# Copyright 2006 by Jan Wolter"));
+        assert!(content.contains(&""));
+        // columns + rows + control rows
+        assert_eq!(content.len(), 40 + 35 + 6);
+    }
+
+    #[test]
+    fn keen_529() {
+        let content = solve_puzzle(529, "keen");
+        let content: Vec<_> = content.lines().collect();
+        assert!(content.contains(&""));
+        // columns + rows + control rows
+        assert_eq!(content.len(), 45 + 45 + 1);
+    }
+
+    #[test]
+    fn makhorin_803() {
+        let content = solve_puzzle(803, "makhorin");
+        let content: Vec<_> = content.lines().collect();
+        assert!(content[0].starts_with('*'));
+        assert!(content[1].starts_with('*'));
+        assert!(content.contains(&"&"));
+        // columns + rows + control rows
+        assert_eq!(content.len(), 50 + 45 + 3);
+    }
+
+    #[test]
+    fn nin_1611() {
+        let content = solve_puzzle(1611, "nin");
+        let content: Vec<_> = content.lines().collect();
+        assert!(content.contains(&"55 60"));
+        // columns + rows + control rows
+        assert_eq!(content.len(), 55 + 60 + 1);
+    }
+
+    #[test]
+    fn olsak_1694() {
+        let content = solve_puzzle(1694, "olsak");
+        let content: Vec<_> = content.lines().collect();
+        assert!(content.contains(&"#d"));
+        assert!(content[3].contains("#FFFFFF"));
+        assert!(content[3].contains("white"));
+        assert!(content[4].contains("#000000"));
+        assert!(content[4].contains("black"));
+        assert!(content.contains(&": rows"));
+        assert!(content.contains(&": columns"));
+        // columns + rows + description + control rows + colors
+        assert_eq!(content.len(), 45 + 50 + 2 + 3 + 2);
+    }
+
+    #[test]
+    fn olsak_color_2814() {
+        let content = solve_puzzle_scheme(2814, "olsak", PuzzleScheme::MultiColor);
+        let content: Vec<_> = content.lines().collect();
+        assert!(content.contains(&"#d"));
+        assert!(content[3].contains("#FFFFFF"));
+        assert!(content[3].contains("white"));
+        assert!(content[4].contains("#000000"));
+        assert!(content[4].contains("black"));
+        assert!(content[5].contains("#4040FF"));
+        assert!(content[5].contains("blue"));
+        assert!(content.contains(&": rows"));
+        assert!(content.contains(&": columns"));
+        // columns + rows + description + control rows + colors
+        assert_eq!(content.len(), 45 + 50 + 2 + 3 + 3);
+    }
+
+    #[test]
+    fn ss_2040() {
+        let content = solve_puzzle(2040, "ss");
+        let content: Vec<_> = content.lines().collect();
+        assert!(content.contains(&"width 55"));
+        assert!(content.contains(&"height 60"));
+        assert!(content.contains(&""));
+        assert!(content.contains(&"rows"));
+        assert!(content.contains(&"columns"));
+        // columns + rows + description + control rows
+        assert_eq!(content.len(), 55 + 60 + 4 + 6);
+    }
+
+    #[test]
+    fn syro_2413() {
+        let content = solve_puzzle(2413, "syro");
+        let content: Vec<_> = content.lines().collect();
+        assert!(content.contains(&"#"));
+        // columns + rows + control rows
+        assert_eq!(content.len(), 20 + 20 + 2);
+    }
+}
