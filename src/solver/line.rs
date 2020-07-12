@@ -359,18 +359,18 @@ mod tests {
 
     #[test]
     fn check_empty_line() {
-        let l = Vec::<BinaryColor>::new();
+        let l = Vec::<BinaryColor>::new().into();
         let ds = DynamicSolver::new(simple_description(), ReadRc::new(l));
 
-        assert_eq!(*ds.line, vec![]);
+        assert_eq!(*ds.line, vec![].into());
     }
 
     #[test]
     fn check_no_additional_space() {
-        let l = vec![White; 3];
+        let l = vec![White; 3].into();
         let ds = DynamicSolver::new(simple_description(), ReadRc::new(l));
 
-        assert_eq!(*ds.line, vec![White, White, White]);
+        assert_eq!(*ds.line, vec![White; 3].into());
     }
 
     fn cases() -> Vec<(Vec<usize>, Vec<BinaryColor>, Vec<BinaryColor>)> {
@@ -438,16 +438,17 @@ mod tests {
 
     #[test]
     fn solve_basic() {
-        let l = vec![Undefined; 3];
+        let l = vec![Undefined; 3].into();
         assert_eq!(
             solve::<DynamicSolver<_>, _>(simple_description(), ReadRc::new(l)).unwrap(),
-            vec![Black; 3]
+            vec![Black; 3].into()
         );
     }
 
     #[test]
     fn solve_cases() {
         for (desc, line, expected) in cases() {
+            let line = line.into_boxed_slice();
             let as_blocks: Vec<_> = desc.iter().map(|b| BinaryBlock(*b)).collect();
             let desc = Description::new(as_blocks);
 
@@ -456,7 +457,7 @@ mod tests {
             let mut ds = DynamicSolver::new(ReadRc::new(desc), ReadRc::new(line));
             assert!(ds.solve());
             assert_eq!(*ds.line, original_line);
-            assert_eq!(ds.get_solution(), expected);
+            assert_eq!(ds.get_solution(), expected.into());
         }
     }
 }
@@ -478,11 +479,11 @@ mod tests_solve_color {
         ColorPalette::WHITE_ID
     }
 
-    fn unsolved_line(size: usize) -> Vec<MultiColor> {
+    fn unsolved_line(size: usize) -> Box<[MultiColor]> {
         id_to_color_line(&vec![127; size])
     }
 
-    fn id_to_color_line(line: &[ColorId]) -> Vec<MultiColor> {
+    fn id_to_color_line(line: &[ColorId]) -> Box<[MultiColor]> {
         line.iter().cloned().map(MultiColor).collect()
     }
 
@@ -493,7 +494,7 @@ mod tests_solve_color {
     fn check_solve(desc: &[ColoredBlock], initial: &[MultiColor], solved: &[ColorId]) {
         let desc = desc_from_slice(desc);
         assert_eq!(
-            solve::<DynamicSolver<_>, _>(desc, ReadRc::new(initial.to_vec())).unwrap(),
+            solve::<DynamicSolver<_>, _>(desc, ReadRc::new(initial.to_vec().into())).unwrap(),
             id_to_color_line(solved)
         );
     }
@@ -587,7 +588,7 @@ mod tests_solve_color {
 
     #[test]
     fn first_non_space() {
-        let mut line = unsolved_line(3);
+        let mut line = unsolved_line(3).into_vec();
         line.insert(0, MultiColor(4));
         check_solve(
             &[

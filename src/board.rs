@@ -641,7 +641,7 @@ mod tests {
 
         let board = Board::with_descriptions(rows, columns);
         assert_eq!(board.cells.len(), 9);
-        assert_eq!(board.get_row(0), &[Undefined, Undefined, Undefined]);
+        assert_eq!(board.get_row(0), vec![Undefined; 3].into());
     }
 
     #[test]
@@ -662,7 +662,7 @@ mod tests {
 
         let board = Board::with_descriptions(rows, columns);
         assert_eq!(board.cells.len(), 5);
-        assert_eq!(board.get_row(0), &[Undefined]);
+        assert_eq!(board.get_row(0), vec![Undefined].into());
         assert_eq!(board.desc_rows[0].vec, vec![BinaryBlock(1)]);
         assert_eq!(board.desc_rows[1].vec, vec![]);
         assert_eq!(board.desc_rows[2].vec, vec![BinaryBlock(1)]);

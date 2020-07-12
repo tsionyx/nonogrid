@@ -49,10 +49,10 @@ mod ini {
 
         let b = BinaryColor::Black;
         let w = BinaryColor::White;
-        assert_eq!(board.get_column(0), vec![b; 7]);
+        assert_eq!(board.get_column(0), vec![b; 7].into());
         assert_eq!(
             board.get_column(board.width() - 1),
-            vec![b, b, b, b, b, w, b]
+            vec![b, b, b, b, b, w, b].into()
         );
     }
 
