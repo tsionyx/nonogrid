@@ -33,8 +33,10 @@ mod ini {
 #[cfg(feature = "web")]
 #[cfg(feature = "xml")]
 mod webpbn {
-    use nonogrid::parser::{BoardParser, Paletted, PuzzleScheme};
-    use nonogrid::parser::{NetworkReader, WebPbn};
+    use nonogrid::{
+        parser::{NetworkReader, Paletted, PuzzleScheme, WebPbn},
+        BoardParser,
+    };
 
     #[test]
     fn infer_pbn_black_and_white() {

@@ -4,12 +4,14 @@ use std::fmt::Display;
 use colored::{self, ColoredString, Colorize};
 use hashbrown::HashMap;
 
-use crate::block::{base::color::ColorDesc, Block, Color, Description};
-use crate::board::Board;
-use crate::utils::{
-    pad, pad_with,
-    rc::{MutRc, ReadRc, ReadRef},
-    transpose,
+use crate::{
+    block::{base::color::ColorDesc, Block, Color, Description},
+    board::Board,
+    utils::{
+        pad, pad_with,
+        rc::{MutRc, ReadRc, ReadRef},
+        transpose,
+    },
 };
 
 pub trait Renderer<B>

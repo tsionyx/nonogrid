@@ -1,17 +1,21 @@
-use std::fmt::Display;
-use std::fs;
-use std::io::{self, stdin, Read};
-
-use block::{binary::BinaryBlock, multicolor::ColoredBlock, Block};
-use board::Board;
-use cli::Params;
-use parser::{BoardParser, NetworkReader, ParseError, PuzzleScheme};
-use render::{Renderer, ShellRenderer};
-use solver::{
-    line::{DynamicColor, DynamicSolver},
-    probing::FullProbe1,
+use std::{
+    fmt::Display,
+    fs,
+    io::{self, stdin, Read},
 };
-use utils::rc::MutRc;
+
+use self::{
+    block::{binary::BinaryBlock, multicolor::ColoredBlock, Block},
+    board::Board,
+    cli::Params,
+    parser::{BoardParser, NetworkReader, ParseError, PuzzleScheme},
+    render::{Renderer, ShellRenderer},
+    solver::{
+        line::{DynamicColor, DynamicSolver},
+        probing::FullProbe1,
+    },
+    utils::rc::MutRc,
+};
 
 mod block;
 mod board;

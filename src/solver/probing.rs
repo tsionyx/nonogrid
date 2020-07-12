@@ -5,12 +5,14 @@ use log::{debug, info};
 use ordered_float::OrderedFloat;
 use priority_queue::PriorityQueue as PQ;
 
-use crate::block::{Block, Color};
-use crate::board::{Board, Point};
-use crate::solver::{line::LineSolver, propagation};
-use crate::utils::{
-    iter::PartialEntry,
-    rc::{MutRc, ReadRef},
+use crate::{
+    block::{Block, Color},
+    board::{Board, Point},
+    solver::{line::LineSolver, propagation},
+    utils::{
+        iter::PartialEntry,
+        rc::{MutRc, ReadRef},
+    },
 };
 
 #[derive(Debug)]

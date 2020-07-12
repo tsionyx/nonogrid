@@ -1,9 +1,6 @@
 use log::warn;
 
-use crate::block::Block;
-use crate::board::Board;
-use crate::solver::probing::ProbeSolver;
-use crate::utils::rc::MutRc;
+use crate::{block::Block, board::Board, solver::probing::ProbeSolver, utils::rc::MutRc};
 
 #[cfg(not(feature = "sat"))]
 pub mod backtracking;

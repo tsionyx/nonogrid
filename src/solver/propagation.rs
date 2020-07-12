@@ -1,13 +1,15 @@
 use hashbrown::HashSet;
 use log::{debug, log_enabled, warn, Level};
 
-use crate::block::{Block, Line};
-use crate::board::{Board, Point};
-use crate::cache::{cache_info, Cached, GrowableCache};
-use crate::solver::line::{self, LineSolver};
-use crate::utils::{
-    abs_sub,
-    rc::{MutRc, ReadRc, ReadRef},
+use crate::{
+    block::{Block, Line},
+    board::{Board, Point},
+    cache::{cache_info, Cached, GrowableCache},
+    solver::line::{self, LineSolver},
+    utils::{
+        abs_sub,
+        rc::{MutRc, ReadRc, ReadRef},
+    },
 };
 
 #[allow(missing_debug_implementations)]

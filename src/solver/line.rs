@@ -1,10 +1,12 @@
 use std::iter::once;
 
-use crate::block::{
-    base::color::ColorPalette, binary::BinaryColor, multicolor::MultiColor, Block, Color,
-    Description, Line,
+use crate::{
+    block::{
+        base::color::ColorPalette, binary::BinaryColor, multicolor::MultiColor, Block, Color,
+        Description, Line,
+    },
+    utils::{self, rc::ReadRc},
 };
-use crate::utils::{self, rc::ReadRc};
 
 type LineColor<T> = <<T as LineSolver>::BlockType as Block>::Color;
 
@@ -342,16 +344,12 @@ impl DynamicColor for MultiColor {
 
 #[cfg(test)]
 mod tests {
-    use crate::block::{
-        binary::{
-            BinaryBlock,
-            BinaryColor::{self, Black, Undefined, White},
-        },
-        Description,
+    use crate::block::binary::{
+        BinaryBlock,
+        BinaryColor::{Black, Undefined, White},
     };
-    use crate::utils::rc::ReadRc;
 
-    use super::{solve, DynamicSolver, LineSolver};
+    use super::*;
 
     fn simple_description() -> ReadRc<Description<BinaryBlock>> {
         ReadRc::new(Description::new(vec![BinaryBlock(3)]))
@@ -449,7 +447,7 @@ mod tests {
     fn solve_cases() {
         for (desc, line, expected) in cases() {
             let line = line.into_boxed_slice();
-            let as_blocks: Vec<_> = desc.iter().map(|b| BinaryBlock(*b)).collect();
+            let as_blocks = desc.iter().map(|b| BinaryBlock(*b)).collect();
             let desc = Description::new(as_blocks);
 
             let original_line = line.clone();
@@ -464,16 +462,9 @@ mod tests {
 
 #[cfg(test)]
 mod tests_solve_color {
-    use crate::block::{
-        base::{
-            color::{ColorId, ColorPalette},
-            Description,
-        },
-        multicolor::{ColoredBlock, MultiColor},
-    };
-    use crate::utils::rc::ReadRc;
+    use crate::block::{base::color::ColorId, multicolor::ColoredBlock};
 
-    use super::{solve, DynamicSolver, LineSolver};
+    use super::*;
 
     const fn w() -> ColorId {
         ColorPalette::WHITE_ID

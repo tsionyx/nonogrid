@@ -1,7 +1,9 @@
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::marker::Sized;
-use std::ops::{Add, Range, Sub};
+use std::{
+    fmt::Debug,
+    hash::Hash,
+    marker::Sized,
+    ops::{Add, Range, Sub},
+};
 
 use hashbrown::HashMap;
 

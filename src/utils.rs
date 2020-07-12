@@ -1,8 +1,10 @@
-use std::cmp::PartialOrd;
-use std::fmt::Display;
-use std::hash::Hash;
-use std::iter::once;
-use std::ops::{Range, Sub};
+use std::{
+    cmp::PartialOrd,
+    fmt::Display,
+    hash::Hash,
+    iter::once,
+    ops::{Range, Sub},
+};
 
 use hashbrown::{HashMap, HashSet};
 

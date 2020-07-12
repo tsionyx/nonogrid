@@ -1,25 +1,22 @@
-use std::any::Any;
-use std::fmt;
-use std::fs;
-use std::io;
-use std::num::ParseIntError;
+use std::{any::Any, fmt, fs, io, num::ParseIntError};
 
 use hashbrown::{HashMap, HashSet};
 use log::info;
 
-pub use ini::MyFormat;
-pub use xml::WebPbn;
-
-use crate::block::{
-    base::{
-        clues_from_solution,
-        color::{ColorId, ColorPalette, ColorValue},
+use crate::{
+    block::{
+        base::{
+            clues_from_solution,
+            color::{ColorId, ColorPalette, ColorValue},
+        },
+        binary::BinaryBlock,
+        Block, Description,
     },
-    binary::BinaryBlock,
-    Block, Description,
+    board::Board,
+    utils::{iter::FindOk, product, rc::MutRc, split_sections},
 };
-use crate::board::Board;
-use crate::utils::{iter::FindOk, product, rc::MutRc, split_sections};
+
+pub use self::{ini::MyFormat, xml::WebPbn};
 
 #[derive(Debug)]
 pub struct ParseError(pub String);

@@ -1,5 +1,7 @@
-use std::fmt;
-use std::ops::{Add, Sub};
+use std::{
+    fmt,
+    ops::{Add, Sub},
+};
 
 use crate::block::base::{
     color::{ColorId, ColorPalette},

@@ -1,23 +1,24 @@
-use std::fmt;
-use std::iter::once;
+use std::{fmt, iter::once};
 
 use hashbrown::{HashMap, HashSet};
 use log::{debug, info, warn};
 use smallvec::SmallVec;
 
-use callbacks::{ChangeColorCallback, RestoreCallback, SetLineCallback};
-
-use crate::block::{
-    base::{
-        clues_from_solution,
-        color::{ColorDesc, ColorId, ColorPalette},
+use crate::{
+    block::{
+        base::{
+            clues_from_solution,
+            color::{ColorDesc, ColorId, ColorPalette},
+        },
+        Block, Color, Description, Line,
     },
-    Block, Color, Description, Line,
+    utils::{
+        dedup,
+        rc::{mutate_ref, InteriorMutableRef, MutRc, ReadRc},
+    },
 };
-use crate::utils::{
-    dedup,
-    rc::{mutate_ref, InteriorMutableRef, MutRc, ReadRc},
-};
+
+use self::callbacks::{ChangeColorCallback, RestoreCallback, SetLineCallback};
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
 pub struct Point {

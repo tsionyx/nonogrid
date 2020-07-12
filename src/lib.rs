@@ -40,14 +40,6 @@
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::missing_errors_doc)]
 
-mod block;
-mod board;
-mod cache;
-pub mod parser;
-pub mod render;
-mod solver;
-mod utils;
-
 pub use self::{
     block::{
         base::{color::ColorId, Block, Color, Description},
@@ -63,5 +55,13 @@ pub use self::{
         run as solve,
     },
 };
+
+mod block;
+mod board;
+mod cache;
+pub mod parser;
+pub mod render;
+mod solver;
+mod utils;
 
 pub type RcBoard<B> = utils::rc::MutRc<Board<B>>;

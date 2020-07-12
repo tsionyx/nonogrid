@@ -1,20 +1,19 @@
-use std::cmp::Reverse;
-use std::fmt;
-use std::marker::PhantomData;
-use std::time::Instant;
+use std::{cmp::Reverse, fmt, marker::PhantomData, time::Instant};
 
 use hashbrown::{HashMap, HashSet};
 use log::{debug, info, log_enabled, warn, Level};
 
-use crate::block::{Block, Color};
-use crate::board::{Board, Point};
-use crate::solver::{
-    line::LineSolver,
-    probing::{Impact, Priority, ProbeImpact, ProbeSolver},
-};
-use crate::utils::{
-    rc::{MutRc, ReadRef},
-    time,
+use crate::{
+    block::{Block, Color},
+    board::{Board, Point},
+    solver::{
+        line::LineSolver,
+        probing::{Impact, Priority, ProbeImpact, ProbeSolver},
+    },
+    utils::{
+        rc::{MutRc, ReadRef},
+        time,
+    },
 };
 
 type Solution<B> = Vec<<B as Block>::Color>;
