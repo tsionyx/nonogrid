@@ -1,9 +1,11 @@
+use std::{fmt::Debug, hash::Hash};
+
 use hashbrown::HashSet;
 use log::{debug, log_enabled, warn, Level};
 
 use crate::{
     block::{Block, Line},
-    board::{Board, Point},
+    board::{Board, LineDirection, LinePosition, Point},
     cache::{cache_info, Cached, GrowableCache},
     solver::line::{self, LineSolver},
     utils::{
@@ -22,63 +24,64 @@ where
     cache_cols: Option<LineSolverCache<B>>,
 }
 
-type LinePosition = (bool, usize);
-
-trait JobQueue {
-    fn push(&mut self, job: LinePosition);
-    fn pop(&mut self) -> Option<LinePosition>;
+trait JobQueue<T> {
+    fn push(&mut self, job: T);
+    fn pop(&mut self) -> Option<T>;
 }
 
-struct SmallJobQueue {
-    vec: Vec<LinePosition>,
+struct SmallJobQueue<T> {
+    vec: Vec<T>,
 }
 
-impl SmallJobQueue {
+impl SmallJobQueue<LinePosition> {
     fn with_point(point: Point) -> Self {
         Self {
-            vec: vec![(true, point.x), (false, point.y)],
+            vec: vec![LinePosition::Column(point.x), LinePosition::Row(point.y)],
         }
     }
 }
 
-impl JobQueue for SmallJobQueue {
-    fn push(&mut self, job: LinePosition) {
+impl<T> JobQueue<T> for SmallJobQueue<T>
+where
+    T: PartialEq + Copy + Debug,
+{
+    fn push(&mut self, job: T) {
         self.vec.push(job)
     }
 
-    fn pop(&mut self) -> Option<LinePosition> {
+    fn pop(&mut self) -> Option<T> {
         let top_job = self.vec.pop()?;
         // remove all the previous occurrences of the new job
         self.vec.retain(|&x| x != top_job);
 
-        if log_enabled!(Level::Debug) {
-            let (is_column, index) = top_job;
-            let line_description = if is_column { "column" } else { "row" };
-            debug!("Solving {} {}", index, line_description);
-        }
+        debug!("Solving {:?}", top_job);
         Some(top_job)
     }
 }
 
-struct LongJobQueue {
-    vec: Vec<LinePosition>,
-    visited: HashSet<LinePosition>,
+struct LongJobQueue<T> {
+    vec: Vec<T>,
+    visited: HashSet<T>,
 }
 
-impl LongJobQueue {
+impl LongJobQueue<LinePosition> {
     fn with_height_and_width(height: usize, width: usize) -> Self {
         let rows = 0..height;
         let columns = 0..width;
 
         let mut jobs: Vec<_> = columns
-            .map(|column_index| (true, column_index))
-            .chain(rows.map(|row_index| (false, row_index)))
+            .map(LinePosition::Column)
+            .chain(rows.map(LinePosition::Row))
             .collect();
 
         // closer to the middle goes first
-        jobs.sort_unstable_by_key(|&(is_column, index)| {
-            let middle = if is_column { width / 2 } else { height / 2 };
-            abs_sub(index, middle)
+        jobs.sort_unstable_by_key(|&line_addr| {
+            let middle = match line_addr.direction() {
+                LineDirection::Row => height / 2,
+                LineDirection::Column => width / 2,
+            };
+
+            abs_sub(line_addr.index(), middle)
         });
 
         Self {
@@ -88,13 +91,16 @@ impl LongJobQueue {
     }
 }
 
-impl JobQueue for LongJobQueue {
-    fn push(&mut self, job: LinePosition) {
+impl<T> JobQueue<T> for LongJobQueue<T>
+where
+    T: Eq + Hash + Copy + Debug,
+{
+    fn push(&mut self, job: T) {
         let _ = self.visited.remove(&job);
         self.vec.push(job)
     }
 
-    fn pop(&mut self) -> Option<LinePosition> {
+    fn pop(&mut self) -> Option<T> {
         let top_job = loop {
             let top_job = self.vec.pop()?;
             if !self.visited.contains(&top_job) {
@@ -104,11 +110,7 @@ impl JobQueue for LongJobQueue {
         // mark the job as visited
         let _ = self.visited.insert(top_job);
 
-        if log_enabled!(Level::Debug) {
-            let (is_column, index) = top_job;
-            let line_description = if is_column { "column" } else { "row" };
-            debug!("Solving {} {}", index, line_description);
-        }
+        debug!("Solving {:?}", top_job);
         Some(top_job)
     }
 }
@@ -163,21 +165,28 @@ where
         self.cache_cols = Some(new_cache(2_000 * width));
     }
 
-    fn cached_solution(&mut self, is_column: bool, key: &CacheKey<B>) -> Option<CacheValue<B>> {
-        let cache = if is_column {
-            self.cache_cols.as_mut()
-        } else {
-            self.cache_rows.as_mut()
+    fn cached_solution(
+        &mut self,
+        direction: LineDirection,
+        key: &CacheKey<B>,
+    ) -> Option<CacheValue<B>> {
+        let cache = match direction {
+            LineDirection::Row => self.cache_rows.as_mut(),
+            LineDirection::Column => self.cache_cols.as_mut(),
         };
 
         cache.and_then(|cache| cache.cache_get(key).cloned())
     }
 
-    fn set_cached_solution(&mut self, is_column: bool, key: CacheKey<B>, solved: CacheValue<B>) {
-        let cache = if is_column {
-            self.cache_cols.as_mut()
-        } else {
-            self.cache_rows.as_mut()
+    fn set_cached_solution(
+        &mut self,
+        direction: LineDirection,
+        key: CacheKey<B>,
+        solved: CacheValue<B>,
+    ) {
+        let cache = match direction {
+            LineDirection::Row => self.cache_rows.as_mut(),
+            LineDirection::Column => self.cache_cols.as_mut(),
         };
 
         if let Some(cache) = cache {
@@ -216,31 +225,30 @@ where
     fn run_jobs<S, Q>(&mut self, mut queue: Q) -> Result<Vec<Point>, ()>
     where
         S: LineSolver<BlockType = B>,
-        Q: JobQueue,
+        Q: JobQueue<LinePosition>,
     {
         let mut lines_solved = 0_u32;
         let mut solved_cells = vec![];
 
-        while let Some(job) = queue.pop() {
-            let new_jobs = self.update_line::<S>(job)?;
+        while let Some(line_pos) = queue.pop() {
+            let new_jobs = self.update_line::<S>(line_pos)?;
 
-            let (is_column, index) = job;
+            let (direction, index) = (line_pos.direction(), line_pos.index());
             let new_states = new_jobs.iter().map(|&another_index| {
-                let (x, y) = if is_column {
-                    (index, another_index)
-                } else {
-                    (another_index, index)
+                let (x, y) = match direction {
+                    LineDirection::Row => (another_index, index),
+                    LineDirection::Column => (index, another_index),
                 };
                 Point::new(x, y)
             });
 
             solved_cells.extend(new_states);
 
-            new_jobs
-                .into_iter()
-                .rev()
-                .map(|new_index| (!is_column, new_index))
-                .for_each(|job| queue.push(job));
+            let new_direction = !direction;
+            for new_index in new_jobs.into_iter().rev() {
+                let new_pos = LinePosition::with_direction_and_index(new_direction, new_index);
+                queue.push(new_pos)
+            }
 
             lines_solved += 1;
         }
@@ -260,21 +268,10 @@ where
     where
         S: LineSolver<BlockType = B>,
     {
-        let (is_column, index) = position;
-
         let (cache_key, line) = {
             let board = self.board();
-            let line = if is_column {
-                board.get_column(index)
-            } else {
-                board.get_row(index)
-            };
-
-            let cache_index = if is_column {
-                board.column_cache_index(index)
-            } else {
-                board.row_cache_index(index)
-            };
+            let line = board.get_line(position);
+            let cache_index = board.cache_index(position);
 
             let key = CacheKey {
                 line_index: cache_index,
@@ -283,37 +280,25 @@ where
             (key, line)
         };
 
-        let cached = self.cached_solution(is_column, &cache_key);
+        let cached = self.cached_solution(position.direction(), &cache_key);
 
         let solution = cached.unwrap_or_else(|| {
-            let line_desc = {
-                let board = self.board();
-                if is_column {
-                    ReadRc::clone(&board.descriptions(false)[index])
-                } else {
-                    ReadRc::clone(&board.descriptions(true)[index])
-                }
-            };
+            let line_desc = self.board().description(position);
 
-            if log_enabled!(Level::Debug) {
-                let name = if is_column { "column" } else { "row" };
-                debug!(
-                    "Solving {} {}: {:?}. Partial: {:?}",
-                    index, name, line_desc, line
-                );
-            }
-
+            debug!(
+                "Solving {:?}: {:?}. Partial: {:?}",
+                position, line_desc, line
+            );
             let value = line::solve::<S, _>(line_desc, ReadRc::clone(&line));
 
-            self.set_cached_solution(is_column, cache_key, value.clone());
+            self.set_cached_solution(position.direction(), cache_key, value.clone());
             value
         })?;
 
         let indexes = self.update_solved(position, &line, &solution);
 
-        if log_enabled!(Level::Debug) && !indexes.is_empty() {
-            let name = if is_column { "column" } else { "row" };
-            debug!("New info on {} {}: {:?}", name, index, indexes);
+        if !indexes.is_empty() {
+            debug!("New info on {:?}: {:?}", position, indexes);
         }
 
         Ok(indexes)
@@ -321,7 +306,7 @@ where
 
     fn update_solved(
         &self,
-        (is_column, index): LinePosition,
+        position: LinePosition,
         old: &[B::Color],
         new: &[B::Color],
     ) -> Vec<usize> {
@@ -329,10 +314,10 @@ where
             return vec![];
         }
 
-        if is_column {
-            Board::set_column_with_callback(MutRc::clone(&self.board), index, new);
-        } else {
-            Board::set_row_with_callback(MutRc::clone(&self.board), index, new);
+        let board = MutRc::clone(&self.board);
+        match position {
+            LinePosition::Row(index) => Board::set_row_with_callback(board, index, new),
+            LinePosition::Column(index) => Board::set_column_with_callback(board, index, new),
         }
 
         debug!("Original: {:?}", old);

@@ -52,6 +52,8 @@ where
     S: line::LineSolver<BlockType = B>,
     P: ProbeSolver<BlockType = B>,
 {
+    use crate::board::LineDirection;
+
     warn!("Solving with simple line propagation");
     let mut solver = propagation::Solver::new(MutRc::clone(&board));
     let solved_points = solver
@@ -72,8 +74,8 @@ where
     if !board.read().is_solved_full() {
         warn!("Trying to solve with SAT");
         let solver = sat::ClauseGenerator::with_clues(
-            board.read().descriptions(false),
-            board.read().descriptions(true),
+            board.read().descriptions(LineDirection::Column),
+            board.read().descriptions(LineDirection::Row),
             board.read().make_snapshot(),
         );
 

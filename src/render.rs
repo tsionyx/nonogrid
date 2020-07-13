@@ -6,7 +6,7 @@ use hashbrown::HashMap;
 
 use crate::{
     block::{base::color::ColorDesc, Block, Color, Description},
-    board::Board,
+    board::{Board, LineDirection},
     utils::{
         pad, pad_with,
         rc::{MutRc, ReadRc, ReadRef},
@@ -97,7 +97,7 @@ where
     }
 
     fn side_width(&self) -> usize {
-        Self::descriptions_width(self.board().descriptions(true))
+        Self::descriptions_width(self.board().descriptions(LineDirection::Row))
     }
 
     fn descriptions_width(descriptions: &[ReadRc<Description<B>>]) -> usize {
@@ -124,12 +124,12 @@ where
     }
 
     fn side_lines(&self) -> Vec<Vec<String>> {
-        Self::descriptions_to_matrix(self.board().descriptions(true))
+        Self::descriptions_to_matrix(self.board().descriptions(LineDirection::Row))
     }
 
     fn header_lines(&self) -> Vec<Vec<String>> {
         transpose(&Self::descriptions_to_matrix(
-            self.board().descriptions(false),
+            self.board().descriptions(LineDirection::Column),
         ))
         .unwrap()
     }

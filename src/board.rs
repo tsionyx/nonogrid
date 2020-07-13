@@ -1,4 +1,4 @@
-use std::{fmt, iter::once};
+use std::{fmt, iter::once, ops::Not};
 
 use hashbrown::{HashMap, HashSet};
 use log::{debug, info, warn};
@@ -29,6 +29,52 @@ pub struct Point {
 impl Point {
     pub const fn new(x: usize, y: usize) -> Self {
         Self { x, y }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum LinePosition {
+    Row(usize),
+    Column(usize),
+}
+
+impl LinePosition {
+    pub fn direction(self) -> LineDirection {
+        match self {
+            Self::Row(_) => LineDirection::Row,
+            Self::Column(_) => LineDirection::Column,
+        }
+    }
+
+    pub fn index(self) -> usize {
+        match self {
+            Self::Row(index) => index,
+            Self::Column(index) => index,
+        }
+    }
+
+    pub fn with_direction_and_index(direction: LineDirection, index: usize) -> Self {
+        match direction {
+            LineDirection::Row => Self::Row(index),
+            LineDirection::Column => Self::Column(index),
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum LineDirection {
+    Row,
+    Column,
+}
+
+impl Not for LineDirection {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Self::Row => Self::Column,
+            Self::Column => Self::Row,
+        }
     }
 }
 
@@ -186,12 +232,15 @@ where
         self.cells.chunks(self.width())
     }
 
-    pub fn descriptions(&self, rows: bool) -> &[ReadRc<Description<B>>] {
-        if rows {
-            &self.desc_rows
-        } else {
-            &self.desc_cols
+    pub fn descriptions(&self, direction: LineDirection) -> &[ReadRc<Description<B>>] {
+        match direction {
+            LineDirection::Row => &self.desc_rows,
+            LineDirection::Column => &self.desc_cols,
         }
+    }
+
+    pub fn description(&self, line_pos: LinePosition) -> ReadRc<Description<B>> {
+        ReadRc::clone(&self.descriptions(line_pos.direction())[line_pos.index()])
     }
 
     pub fn height(&self) -> usize {
@@ -210,7 +259,7 @@ where
         self.iter_rows().nth(index).expect("Invalid row index")
     }
 
-    pub fn get_row(&self, index: usize) -> Line<B::Color> {
+    fn get_row(&self, index: usize) -> Line<B::Color> {
         self.get_row_slice(index).into()
     }
 
@@ -220,6 +269,13 @@ where
 
     pub fn get_column(&self, index: usize) -> Line<B::Color> {
         self.get_column_iter(index).cloned().collect()
+    }
+
+    pub fn get_line(&self, line_pos: LinePosition) -> Line<B::Color> {
+        match line_pos {
+            LinePosition::Row(index) => self.get_row(index),
+            LinePosition::Column(index) => self.get_column(index),
+        }
     }
 
     fn linear_index(&self, row_index: usize, column_index: usize) -> usize {
@@ -328,12 +384,11 @@ where
             .filter(move |n| !self.cell(n).is_solved())
     }
 
-    pub fn row_cache_index(&self, row_index: usize) -> usize {
-        self.rows_cache_indexes[row_index]
-    }
-
-    pub fn column_cache_index(&self, column_index: usize) -> usize {
-        self.cols_cache_indexes[column_index]
+    pub fn cache_index(&self, line_pos: LinePosition) -> usize {
+        match line_pos {
+            LinePosition::Row(index) => self.rows_cache_indexes[index],
+            LinePosition::Column(index) => self.cols_cache_indexes[index],
+        }
     }
 }
 
