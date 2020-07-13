@@ -13,16 +13,12 @@ type LineColor<T> = <<T as LineSolver>::BlockType as Block>::Color;
 pub trait LineSolver {
     type BlockType: Block;
 
-    fn new(desc: ReadRc<Description<Self::BlockType>>, line: ReadRc<Line<LineColor<Self>>>)
-        -> Self;
+    fn new(desc: ReadRc<Description<Self::BlockType>>, line: Line<LineColor<Self>>) -> Self;
     fn solve(&mut self) -> bool;
     fn get_solution(self) -> Line<LineColor<Self>>;
 }
 
-pub fn solve<L, B>(
-    desc: ReadRc<Description<B>>,
-    line: ReadRc<Line<B::Color>>,
-) -> Result<Line<B::Color>, ()>
+pub fn solve<L, B>(desc: ReadRc<Description<B>>, line: Line<B::Color>) -> Result<Line<B::Color>, ()>
 where
     L: LineSolver<BlockType = B>,
     B: Block,
@@ -50,11 +46,11 @@ where
 #[derive(Debug)]
 pub struct DynamicSolver<B: Block, S = <B as Block>::Color> {
     desc: ReadRc<Description<B>>,
-    line: ReadRc<Line<S>>,
+    line: Line<S>,
     block_sums: Vec<usize>,
     job_size: usize,
     solution_matrix: Vec<Option<bool>>,
-    solved_line: Line<S>,
+    solved_line: Box<[S]>,
 }
 
 impl<B> LineSolver for DynamicSolver<B>
@@ -64,7 +60,7 @@ where
 {
     type BlockType = B;
 
-    fn new(desc: ReadRc<Description<B>>, line: ReadRc<Line<B::Color>>) -> Self {
+    fn new(desc: ReadRc<Description<B>>, line: Line<B::Color>) -> Self {
         let block_sums = Self::calc_block_sum(&desc);
 
         let job_size = desc.vec.len() + 1;
@@ -98,7 +94,7 @@ where
     }
 
     fn get_solution(self) -> Line<B::Color> {
-        self.solved_line
+        self.solved_line.into()
     }
 }
 
@@ -358,17 +354,17 @@ mod tests {
     #[test]
     fn check_empty_line() {
         let l = Vec::<BinaryColor>::new().into();
-        let ds = DynamicSolver::new(simple_description(), ReadRc::new(l));
+        let ds = DynamicSolver::new(simple_description(), l);
 
-        assert_eq!(*ds.line, vec![].into());
+        assert_eq!(ds.line, vec![].into());
     }
 
     #[test]
     fn check_no_additional_space() {
         let l = vec![White; 3].into();
-        let ds = DynamicSolver::new(simple_description(), ReadRc::new(l));
+        let ds = DynamicSolver::new(simple_description(), l);
 
-        assert_eq!(*ds.line, vec![White; 3].into());
+        assert_eq!(ds.line, vec![White; 3].into());
     }
 
     fn cases() -> Vec<(Vec<usize>, Vec<BinaryColor>, Vec<BinaryColor>)> {
@@ -438,7 +434,7 @@ mod tests {
     fn solve_basic() {
         let l = vec![Undefined; 3].into();
         assert_eq!(
-            solve::<DynamicSolver<_>, _>(simple_description(), ReadRc::new(l)).unwrap(),
+            solve::<DynamicSolver<_>, _>(simple_description(), l).unwrap(),
             vec![Black; 3].into()
         );
     }
@@ -446,15 +442,14 @@ mod tests {
     #[test]
     fn solve_cases() {
         for (desc, line, expected) in cases() {
-            let line = line.into_boxed_slice();
             let as_blocks = desc.iter().map(|b| BinaryBlock(*b)).collect();
             let desc = Description::new(as_blocks);
 
-            let original_line = line.clone();
+            let original_line = line.clone().into();
 
-            let mut ds = DynamicSolver::new(ReadRc::new(desc), ReadRc::new(line));
+            let mut ds = DynamicSolver::new(ReadRc::new(desc), line.into());
             assert!(ds.solve());
-            assert_eq!(*ds.line, original_line);
+            assert_eq!(ds.line, original_line);
             assert_eq!(ds.get_solution(), expected.into());
         }
     }
@@ -470,11 +465,11 @@ mod tests_solve_color {
         ColorPalette::WHITE_ID
     }
 
-    fn unsolved_line(size: usize) -> Box<[MultiColor]> {
+    fn unsolved_line(size: usize) -> ReadRc<[MultiColor]> {
         id_to_color_line(&vec![127; size])
     }
 
-    fn id_to_color_line(line: &[ColorId]) -> Box<[MultiColor]> {
+    fn id_to_color_line(line: &[ColorId]) -> ReadRc<[MultiColor]> {
         line.iter().cloned().map(MultiColor).collect()
     }
 
@@ -485,7 +480,7 @@ mod tests_solve_color {
     fn check_solve(desc: &[ColoredBlock], initial: &[MultiColor], solved: &[ColorId]) {
         let desc = desc_from_slice(desc);
         assert_eq!(
-            solve::<DynamicSolver<_>, _>(desc, ReadRc::new(initial.to_vec().into())).unwrap(),
+            solve::<DynamicSolver<_>, _>(desc, initial.into()).unwrap(),
             id_to_color_line(solved)
         );
     }
@@ -579,7 +574,7 @@ mod tests_solve_color {
 
     #[test]
     fn first_non_space() {
-        let mut line = unsolved_line(3).into_vec();
+        let mut line = unsolved_line(3).to_vec();
         line.insert(0, MultiColor(4));
         check_solve(
             &[
@@ -599,7 +594,7 @@ mod tests_solve_color {
             ColoredBlock::from_size_and_color(1, 8),
         ]);
 
-        let mut ds = DynamicSolver::new(desc, ReadRc::new(unsolved_line(4)));
+        let mut ds = DynamicSolver::new(desc, unsolved_line(4));
         assert_eq!(ds.solve(), false);
     }
 }

@@ -119,10 +119,10 @@ where
     B: Block,
 {
     line_index: usize,
-    source: ReadRc<Line<B::Color>>,
+    source: Line<B::Color>,
 }
 
-type CacheValue<B> = Result<ReadRc<Line<<B as Block>::Color>>, ()>;
+type CacheValue<B> = Result<Line<<B as Block>::Color>, ()>;
 type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
 
 fn new_cache<B>(capacity: usize) -> LineSolverCache<B>
@@ -264,11 +264,11 @@ where
 
         let (cache_key, line) = {
             let board = self.board();
-            let line = ReadRc::new(if is_column {
+            let line = if is_column {
                 board.get_column(index)
             } else {
                 board.get_row(index)
-            });
+            };
 
             let cache_index = if is_column {
                 board.column_cache_index(index)
@@ -303,7 +303,7 @@ where
                 );
             }
 
-            let value = line::solve::<S, _>(line_desc, ReadRc::clone(&line)).map(ReadRc::new);
+            let value = line::solve::<S, _>(line_desc, ReadRc::clone(&line));
 
             self.set_cached_solution(is_column, cache_key, value.clone());
             value
