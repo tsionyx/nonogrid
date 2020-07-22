@@ -305,7 +305,7 @@ mod utils {
             }
         }
 
-        pub fn cache_get(&mut self, key: &K) -> Option<&V> {
+        pub fn cache_get(&self, key: &K) -> Option<&V> {
             self.store.get(key)
         }
 
@@ -982,17 +982,13 @@ mod propagation {
             self.cache_cols = Some(new_cache(width * width));
         }
 
-        fn cached_solution(
-            &mut self,
-            direction: LineDirection,
-            key: &CacheKey,
-        ) -> Option<CacheValue> {
+        fn cached_solution(&self, direction: LineDirection, key: &CacheKey) -> Option<&CacheValue> {
             let cache = match direction {
-                LineDirection::Row => self.cache_rows.as_mut(),
-                LineDirection::Column => self.cache_cols.as_mut(),
+                LineDirection::Row => self.cache_rows.as_ref(),
+                LineDirection::Column => self.cache_cols.as_ref(),
             };
 
-            cache.and_then(|cache| cache.cache_get(key).cloned())
+            cache.and_then(|cache| cache.cache_get(key))
         }
 
         fn set_cached_solution(
@@ -1064,20 +1060,24 @@ mod propagation {
                 (key, line)
             };
 
-            let cached = self.cached_solution(line_pos.direction(), &cache_key);
+            {
+                let cached = self.cached_solution(line_pos.direction(), &cache_key);
+                if let Some(solution) = cached {
+                    return solution
+                        .as_ref()
+                        .map(|solution| self.update_solved(line_pos, &line, solution))
+                        .map_err(Clone::clone);
+                }
+            }
 
-            let solution = cached.unwrap_or_else(|| {
-                let value = {
-                    let board = self.board();
-                    let line_desc = board.description(line_pos);
-                    line::solve(line_desc, Rc::clone(&line))
-                };
+            let value = {
+                let board = self.board();
+                let line_desc = board.description(line_pos);
+                line::solve(line_desc, Rc::clone(&line))
+            };
 
-                self.set_cached_solution(line_pos.direction(), cache_key, value.clone());
-                value
-            })?;
-
-            let indexes = self.update_solved(line_pos, &line, &solution);
+            self.set_cached_solution(line_pos.direction(), cache_key, value.clone());
+            let indexes = self.update_solved(line_pos, &line, &value?);
             Ok(indexes)
         }
 
