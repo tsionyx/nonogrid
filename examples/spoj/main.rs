@@ -358,6 +358,15 @@ impl Point {
     fn new(x: usize, y: usize) -> Self {
         Self { x, y }
     }
+
+    fn with_line_and_offset(position: LinePosition, offset: usize) -> Self {
+        let (x, y) = match position {
+            LinePosition::Row(line_index) => (offset, line_index),
+            LinePosition::Column(line_index) => (line_index, offset),
+        };
+
+        Self::new(x, y)
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -861,6 +870,12 @@ mod propagation {
     trait JobQueue<T> {
         fn push(&mut self, job: T);
         fn pop(&mut self) -> Option<T>;
+
+        fn extend<I: IntoIterator<Item = T>>(&mut self, jobs: I) {
+            for job in jobs {
+                self.push(job)
+            }
+        }
     }
 
     struct SmallJobQueue<T> {
@@ -1016,31 +1031,26 @@ mod propagation {
             let mut solved_cells = vec![];
 
             while let Some(line_pos) = queue.pop() {
-                let new_jobs = self.update_line(line_pos)?;
-                let (direction, index) = (line_pos.direction(), line_pos.index());
+                if let Some(updated_indexes) = self.update_line(line_pos)? {
+                    {
+                        let solved_points = updated_indexes.iter().map(|&updated_index| {
+                            Point::with_line_and_offset(line_pos, updated_index)
+                        });
 
-                {
-                    let new_states = new_jobs.iter().map(|&another_index| {
-                        let (x, y) = match direction {
-                            LineDirection::Row => (another_index, index),
-                            LineDirection::Column => (index, another_index),
-                        };
-                        Point::new(x, y)
-                    });
-                    solved_cells.extend(new_states);
-                };
+                        solved_cells.extend(solved_points);
+                    }
 
-                let new_direction = !direction;
-                for new_index in new_jobs.into_iter().rev() {
-                    let new_pos = LinePosition::with_direction_and_index(new_direction, new_index);
-                    queue.push(new_pos)
+                    let orthogonal_direction = !line_pos.direction();
+                    queue.extend(updated_indexes.into_iter().rev().map(|new_index| {
+                        LinePosition::with_direction_and_index(orthogonal_direction, new_index)
+                    }));
                 }
             }
 
             Ok(solved_cells)
         }
 
-        fn update_line(&mut self, line_pos: LinePosition) -> Result<Vec<usize>, ()> {
+        fn update_line(&mut self, line_pos: LinePosition) -> Result<Option<Vec<usize>>, ()> {
             let (cache_key, line) = {
                 let board = self.board();
                 let line = board.get_line(line_pos);
@@ -1068,13 +1078,17 @@ mod propagation {
             })?;
 
             let indexes = self.update_solved(line_pos, &line, &solution);
-
             Ok(indexes)
         }
 
-        fn update_solved(&self, line_pos: LinePosition, old: &[BW], new: &[BW]) -> Vec<usize> {
+        fn update_solved(
+            &self,
+            line_pos: LinePosition,
+            old: &[BW],
+            new: &[BW],
+        ) -> Option<Vec<usize>> {
             if old == new {
-                return vec![];
+                return None;
             }
 
             match line_pos {
@@ -1082,11 +1096,13 @@ mod propagation {
                 LinePosition::Column(index) => self.board.borrow_mut().set_column(index, new),
             }
 
-            old.iter()
-                .zip(new)
-                .enumerate()
-                .filter_map(|(i, (pre, post))| if pre == post { None } else { Some(i) })
-                .collect()
+            Some(
+                old.iter()
+                    .zip(new)
+                    .enumerate()
+                    .filter_map(|(i, (pre, post))| if pre == post { None } else { Some(i) })
+                    .collect(),
+            )
         }
     }
 }

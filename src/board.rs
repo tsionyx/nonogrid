@@ -30,6 +30,15 @@ impl Point {
     pub const fn new(x: usize, y: usize) -> Self {
         Self { x, y }
     }
+
+    pub fn with_line_and_offset(position: LinePosition, offset: usize) -> Self {
+        let (x, y) = match position {
+            LinePosition::Row(line_index) => (offset, line_index),
+            LinePosition::Column(line_index) => (line_index, offset),
+        };
+
+        Self::new(x, y)
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -48,8 +57,7 @@ impl LinePosition {
 
     pub fn index(self) -> usize {
         match self {
-            Self::Row(index) => index,
-            Self::Column(index) => index,
+            Self::Row(index) | Self::Column(index) => index,
         }
     }
 
