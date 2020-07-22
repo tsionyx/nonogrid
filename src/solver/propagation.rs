@@ -133,6 +133,8 @@ where
 type CacheValue<B> = Result<Line<<B as Block>::Color>, ()>;
 type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
 
+const MAX_CACHE_ENTRIES_PER_LINE: usize = 2000;
+
 fn new_cache<B>(capacity: usize) -> LineSolverCache<B>
 where
     B: Block,
@@ -167,8 +169,8 @@ where
         let width = self.board().width();
         let height = self.board().height();
 
-        self.cache_rows = Some(new_cache(2_000 * height));
-        self.cache_cols = Some(new_cache(2_000 * width));
+        self.cache_rows = Some(new_cache(MAX_CACHE_ENTRIES_PER_LINE * height));
+        self.cache_cols = Some(new_cache(MAX_CACHE_ENTRIES_PER_LINE * width));
     }
 
     fn cached_solution(
