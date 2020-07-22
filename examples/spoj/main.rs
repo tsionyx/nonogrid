@@ -1,12 +1,7 @@
 #![allow(clippy::missing_const_for_fn)]
 #![allow(clippy::use_self)]
 
-use std::cell::RefCell;
-use std::fmt;
-use std::io;
-use std::ops::Sub;
-use std::rc::Rc;
-use std::slice::Chunks;
+use std::{cell::RefCell, fmt, io, ops::Sub, rc::Rc, slice::Chunks};
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum BW {
@@ -138,10 +133,12 @@ impl Clues {
 }
 
 mod utils {
-    use std::cmp::PartialOrd;
-    use std::collections::{HashMap, HashSet};
-    use std::hash::Hash;
-    use std::ops::Sub;
+    use std::{
+        cmp::PartialOrd,
+        collections::{HashMap, HashSet},
+        hash::Hash,
+        ops::Sub,
+    };
 
     pub fn replace<T>(vec: &mut [T], what: &T, with_what: &T)
     where
@@ -402,17 +399,19 @@ impl Board {
         self.iter_rows().nth(index).expect("Invalid row index")
     }
 
-    fn get_row(&self, index: usize) -> Vec<BW> {
-        self.get_row_slice(index).to_vec()
+    fn get_row(&self, index: usize) -> Rc<[BW]> {
+        self.get_row_slice(index).into()
     }
 
-    fn get_column(&self, index: usize) -> Vec<BW> {
-        self.cells
+    fn get_column(&self, index: usize) -> Rc<[BW]> {
+        let column: Vec<_> = self
+            .cells
             .iter()
             .skip(index)
             .step_by(self.width())
             .cloned()
-            .collect()
+            .collect();
+        column.into()
     }
 
     fn linear_index(&self, row_index: usize, column_index: usize) -> usize {
@@ -534,13 +533,11 @@ impl Board {
 }
 
 mod line {
-    use std::iter::once;
-    use std::rc::Rc;
+    use std::{iter::once, rc::Rc};
 
-    use super::utils::replace;
-    use super::{Clues, BB, BW};
+    use super::{utils::replace, Clues, BB, BW};
 
-    pub fn solve(desc: Rc<Clues>, line: Rc<Vec<BW>>) -> Result<Vec<BW>, ()> {
+    pub fn solve(desc: Rc<Clues>, line: Rc<[BW]>) -> Result<Rc<[BW]>, ()> {
         let mut solver = DynamicSolver::new(desc, line);
         if solver.solve() {
             Ok(solver.get_solution())
@@ -551,15 +548,15 @@ mod line {
 
     struct DynamicSolver {
         desc: Rc<Clues>,
-        line: Rc<Vec<BW>>,
+        line: Rc<[BW]>,
         block_sums: Vec<usize>,
         job_size: usize,
         solution_matrix: Vec<Option<bool>>,
-        solved_line: Vec<BW>,
+        solved_line: Box<[BW]>,
     }
 
     impl DynamicSolver {
-        fn new(desc: Rc<Clues>, line: Rc<Vec<BW>>) -> Self {
+        fn new(desc: Rc<Clues>, line: Rc<[BW]>) -> Self {
             let block_sums = Self::calc_block_sum(&desc);
 
             let job_size = desc.vec.len() + 1;
@@ -591,8 +588,8 @@ mod line {
             true
         }
 
-        fn get_solution(self) -> Vec<BW> {
-            self.solved_line
+        fn get_solution(self) -> Rc<[BW]> {
+            self.solved_line.into()
         }
 
         fn calc_block_sum(desc: &Clues) -> Vec<usize> {
@@ -749,21 +746,25 @@ mod line {
 }
 
 mod propagation {
-    use std::cell::{Ref, RefCell};
-    use std::collections::HashSet;
-    use std::rc::Rc;
+    use std::{
+        cell::{Ref, RefCell},
+        collections::HashSet,
+        rc::Rc,
+    };
 
-    use super::line;
-    use super::utils::{abs_sub, GrowableCache};
-    use super::{Board, Point, BW};
+    use super::{
+        line,
+        utils::{abs_sub, GrowableCache},
+        Board, Point, BW,
+    };
 
     #[derive(Debug, PartialEq, Eq, Hash)]
     struct CacheKey {
-        pub line_index: usize,
-        pub source: Rc<Vec<BW>>,
+        line_index: usize,
+        source: Rc<[BW]>,
     }
 
-    type CacheValue = Result<Rc<Vec<BW>>, ()>;
+    type CacheValue = Result<Rc<[BW]>, ()>;
     type LineSolverCache = GrowableCache<CacheKey, CacheValue>;
 
     fn new_cache(capacity: usize) -> LineSolverCache {
@@ -973,14 +974,14 @@ mod propagation {
             let solution = cached.unwrap_or_else(|| {
                 let line_desc = {
                     let board = self.board();
-                    if is_column {
-                        Rc::clone(&board.descriptions(false)[index])
+                    Rc::clone(if is_column {
+                        &board.descriptions(false)[index]
                     } else {
-                        Rc::clone(&board.descriptions(true)[index])
-                    }
+                        &board.descriptions(true)[index]
+                    })
                 };
 
-                let value = line::solve(line_desc, Rc::clone(&line)).map(Rc::new);
+                let value = line::solve(line_desc, Rc::clone(&line));
 
                 self.set_cached_solution(is_column, cache_key, value.clone());
                 value
@@ -1018,9 +1019,11 @@ mod propagation {
 }
 
 mod probing {
-    use std::cell::{Ref, RefCell};
-    use std::collections::BinaryHeap;
-    use std::rc::Rc;
+    use std::{
+        cell::{Ref, RefCell},
+        collections::BinaryHeap,
+        rc::Rc,
+    };
 
     use super::{propagation, Board, PartialEntry, Point, BW};
 
@@ -1209,13 +1212,17 @@ mod probing {
 }
 
 mod backtracking {
-    use std::cell::{Ref, RefCell};
-    use std::cmp::Reverse;
-    use std::collections::HashMap;
-    use std::rc::Rc;
+    use std::{
+        cell::{Ref, RefCell},
+        cmp::Reverse,
+        collections::HashMap,
+        rc::Rc,
+    };
 
-    use super::probing::{FullProbe1, Impact, Priority};
-    use super::{Board, Point, BW};
+    use super::{
+        probing::{FullProbe1, Impact, Priority},
+        Board, Point, BW,
+    };
 
     type Solution = Vec<BW>;
 
@@ -1631,9 +1638,9 @@ fn main() {
         }
 
         if let Some(backtracking) = backtracking {
-            let solutions = &backtracking.solutions;
+            let mut solutions = backtracking.solutions;
             if !solutions.is_empty() {
-                let solution = solutions[0].clone();
+                let solution = solutions.remove(0);
                 board.borrow_mut().restore(solution);
                 print!("{}", *board.borrow());
             }
