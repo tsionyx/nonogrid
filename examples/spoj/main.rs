@@ -857,8 +857,6 @@ mod propagation {
     type CacheValue = Result<Line, ()>;
     type LineSolverCache = GrowableCache<CacheKey, CacheValue>;
 
-    const MAX_CACHE_ENTRIES_PER_LINE: usize = 2000;
-
     fn new_cache(capacity: usize) -> LineSolverCache {
         GrowableCache::with_capacity(capacity)
     }
@@ -980,8 +978,8 @@ mod propagation {
             let width = self.board().width();
             let height = self.board().height();
 
-            self.cache_rows = Some(new_cache(MAX_CACHE_ENTRIES_PER_LINE * height));
-            self.cache_cols = Some(new_cache(MAX_CACHE_ENTRIES_PER_LINE * width));
+            self.cache_rows = Some(new_cache(height * height));
+            self.cache_cols = Some(new_cache(width * width));
         }
 
         fn cached_solution(
