@@ -31,6 +31,7 @@ impl Point {
         Self { x, y }
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     pub fn with_line_and_offset(position: LinePosition, offset: usize) -> Self {
         let (x, y) = match position {
             LinePosition::Row(line_index) => (offset, line_index),
@@ -47,6 +48,7 @@ pub enum LinePosition {
     Column(usize),
 }
 
+#[allow(clippy::missing_const_for_fn)]
 impl LinePosition {
     pub fn direction(self) -> LineDirection {
         match self {

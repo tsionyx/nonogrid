@@ -248,6 +248,7 @@ enum ProbeResult<PropagationResult> {
 }
 
 impl<PropagationResult> ProbeResult<PropagationResult> {
+    #[allow(clippy::missing_const_for_fn)]
     fn is_contradiction(&self) -> bool {
         if let Self::Contradiction = self {
             true
