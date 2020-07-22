@@ -25,12 +25,62 @@ jobs:
       rust: 1.39.0
       before_install:
         - cargo install --force cargo-audit --version=^0.11
+      script:
+        - echo "Skipping the script section (clippy) for the minimal version"
     - <<: *clippy_job
       rust: stable
     - <<: *clippy_job
       rust: beta
     - <<: *clippy_job
       rust: nightly
+
+    - stage: deploy
+      before_install: []
+      install: []
+      before_script: []
+
+      script:
+       # clear the previous artifacts: prevent repeating coverage runs
+       - rm -f target/debug/deps/*-*
+       # all that goes to >5 will eventually be in the stdin
+       - exec 5>&1
+       - cargo test --all-features --workspace 2>&1 | tee /dev/fd/5 | grep 'Running target/debug' | awk '{print $2}' > test_bins
+
+      after_script:
+       - SPOJ_TOKEN=$(curl -i 'https://www.spoj.com/login' --data "login_user=jcross_bot&password=$SPOJ_PASSWORD" | grep -oP 'SPOJ=[a-z0-9]+')
+       # remove comment lines, remove newlines, strip away multiple spaces
+       - CONTENT=$(cat examples/spoj/main.rs | sed '/^ *\/\//d' | tr '\n' ' ' | sed 's/  */ /g')
+       # 93 is the Rust language code and the problem is here https://www.spoj.com/problems/JCROSS/
+       - SUBMISSION_ID=$(curl 'https://www.spoj.com/submit/complete/' --cookie "$SPOJ_TOKEN" --data "lang=93&problemcode=JCROSS" --data-urlencode "file=$CONTENT" | grep newSubmissionId | grep -oP 'value="\K\d+')
+       - echo "See the result at https://www.spoj.com/status/JCROSS,jcross_bot/ns=$SUBMISSION_ID"
+
+      after_success:
+       - wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz && tar xzf master.tar.gz
+       - cd kcov-master && mkdir build && cd build
+       - cmake .. && make && make install DESTDIR=../../kcov-build
+       - cd ../.. && rm -rf kcov-master master.tar.gz
+       - >
+         cat test_bins | xargs echo "Running the test executions:";
+         for file in $(cat test_bins); do
+           echo "Running coverage for $file...";
+           mkdir -p "target/cov/$(basename $file)";
+           ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file";
+         done
+
+       - bash <(curl -s https://codecov.io/bash)
+       - echo "Uploaded code coverage"
+
+      addons:
+        apt:
+          packages:
+            - libcurl4-openssl-dev
+            - libelf-dev
+            - libdw-dev
+            - cmake
+            - gcc
+            - binutils-dev
+            - libiberty-dev
+            - curl
 
 
 cache:
@@ -48,34 +98,10 @@ before_script:
   - cargo fmt -- --check
   # clear the previous artifacts: prevent repeating coverage runs
   - rm -f target/debug/deps/*-*
-  # all that goes to >5 will eventually be in the stdin
-  - exec 5>&1
-  - cargo test --all-features --workspace 2>&1 | tee /dev/fd/5 | grep 'Running target/debug' | awk '{print $2}' > test_bins
+  - cargo test --all-features --workspace
   - cargo audit
 
-addons:
-  apt:
-    packages:
-      - libcurl4-openssl-dev
-      - libelf-dev
-      - libdw-dev
-      - cmake
-      - gcc
-      - binutils-dev
-      - libiberty-dev
 
-after_success:
-  - wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz && tar xzf master.tar.gz
-  - cd kcov-master && mkdir build && cd build
-  - cmake .. && make && make install DESTDIR=../../kcov-build
-  - cd ../.. && rm -rf kcov-master master.tar.gz
-  - >
-    cat test_bins | xargs echo "Running the test executions:";
-    for file in $(cat test_bins); do
-      echo "Running coverage for $file...";
-      mkdir -p "target/cov/$(basename $file)";
-      ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file";
-    done
-
-  - bash <(curl -s https://codecov.io/bash)
-  - echo "Uploaded code coverage"
+stages:
+  - test
+  - deploy
