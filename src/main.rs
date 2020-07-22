@@ -231,7 +231,7 @@ where
                         assert!(!diff.is_empty());
                         println!("Diff with previous solution: {:?}", diff);
                     }
-                    Board::restore_with_callback(MutRc::clone(&board), solution);
+                    Board::restore_with_callback(&board, solution);
                     println!("{}-th solution:", i + 1);
                     println!("{}", r.render_simple());
                 }
@@ -264,7 +264,7 @@ where
                     println!("Diff with previous solution: {:?}", diff);
                 }
 
-                Board::restore_with_callback(MutRc::clone(&board), solution);
+                Board::restore_with_callback(&board, solution);
                 log::warn!("{}-th solution found!", i + 1);
                 println!("{}-th solution:", i + 1);
                 println!("{}", r.render_simple());

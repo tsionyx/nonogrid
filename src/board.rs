@@ -596,46 +596,45 @@ where
     }
 }
 
-#[allow(clippy::needless_pass_by_value)]
 impl<B> Board<B>
 where
     B: Block,
 {
-    pub fn set_row_with_callback(board_ref: MutRc<Self>, index: usize, new: &[B::Color]) {
-        board_ref.write().set_row(index, new);
-        if let Some(f) = &board_ref.read().on_set_line {
+    pub fn set_row_with_callback(self_: &MutRc<Self>, index: usize, new: &[B::Color]) {
+        self_.write().set_row(index, new);
+        if let Some(f) = &self_.read().on_set_line {
             f(false, index);
         }
     }
 
-    pub fn set_column_with_callback(board_ref: MutRc<Self>, index: usize, new: &[B::Color]) {
-        board_ref.write().set_column(index, new);
-        if let Some(f) = &board_ref.read().on_set_line {
+    pub fn set_column_with_callback(self_: &MutRc<Self>, index: usize, new: &[B::Color]) {
+        self_.write().set_column(index, new);
+        if let Some(f) = &self_.read().on_set_line {
             f(true, index);
         }
     }
 
-    pub fn restore_with_callback(board_ref: MutRc<Self>, cells: Vec<B::Color>) {
-        board_ref.write().restore(cells);
-        if let Some(f) = &board_ref.read().on_restore {
+    pub fn restore_with_callback(self_: &MutRc<Self>, cells: Vec<B::Color>) {
+        self_.write().restore(cells);
+        if let Some(f) = &self_.read().on_restore {
             f();
         }
     }
 
-    pub fn set_color_with_callback(board_ref: MutRc<Self>, point: &Point, color: &B::Color) {
-        board_ref.write().set_color(point, color);
-        if let Some(f) = &board_ref.read().on_change_color {
+    pub fn set_color_with_callback(self_: &MutRc<Self>, point: &Point, color: &B::Color) {
+        self_.write().set_color(point, color);
+        if let Some(f) = &self_.read().on_change_color {
             f(*point);
         }
     }
 
     pub fn unset_color_with_callback(
-        board_ref: MutRc<Self>,
+        self_: &MutRc<Self>,
         point: &Point,
         color: &B::Color,
     ) -> Result<(), String> {
-        board_ref.write().unset_color(point, color)?;
-        if let Some(f) = &board_ref.read().on_change_color {
+        self_.write().unset_color(point, color)?;
+        if let Some(f) = &self_.read().on_change_color {
             f(*point);
         }
         Ok(())

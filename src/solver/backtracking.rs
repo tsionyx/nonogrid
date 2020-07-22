@@ -424,7 +424,7 @@ where
 
         // do not restore the solved cells on a root path - they are really solved!
         if !path.is_empty() {
-            Board::restore_with_callback(MutRc::clone(&self.board), save);
+            Board::restore_with_callback(&self.board, save);
             self.set_explored(path);
         }
 
@@ -527,7 +527,7 @@ where
             let guess_save = self.board().make_snapshot();
             let state_result = self.try_direction(&full_path);
             //let is_solved = board.is_solved_full();
-            Board::restore_with_callback(MutRc::clone(&self.board), guess_save);
+            Board::restore_with_callback(&self.board, guess_save);
             self.set_explored(&full_path);
 
             let success = state_result?;
@@ -539,8 +539,7 @@ where
                     color, point
                 );
 
-                let unset_result =
-                    Board::unset_color_with_callback(MutRc::clone(&self.board), &point, &color);
+                let unset_result = Board::unset_color_with_callback(&self.board, &point, &color);
                 //board_changed = true;
                 if unset_result.is_err() {
                     // the whole `path` branch of a search tree is a dead end
@@ -687,7 +686,7 @@ where
 
         //let save = self.board().make_snapshot();
 
-        Board::set_color_with_callback(MutRc::clone(&self.board), &point, &color);
+        Board::set_color_with_callback(&self.board, &point, &color);
         let new_probes = self
             .probe_solver
             .propagate_point::<S>(&point)

@@ -221,11 +221,7 @@ where
                     contradictions_number += 1;
 
                     for color in colors {
-                        Board::unset_color_with_callback(
-                            MutRc::clone(&self.board),
-                            &contradiction,
-                            &color,
-                        )?;
+                        Board::unset_color_with_callback(&self.board, &contradiction, &color)?;
                     }
                     let new_probes = self.propagate_point::<S>(&contradiction).map_err(|_| {
                         format!(
@@ -304,7 +300,7 @@ where
         vars.into_iter()
             .map(|assumption| {
                 let save = self.board().make_snapshot();
-                Board::set_color_with_callback(MutRc::clone(&self.board), &point, &assumption);
+                Board::set_color_with_callback(&self.board, &point, &assumption);
 
                 let solved = self.run_propagation::<S>(&point);
 
@@ -329,7 +325,7 @@ where
                         ProbeResult::NewInfo(new_cells)
                     },
                 );
-                Board::restore_with_callback(MutRc::clone(&self.board), save);
+                Board::restore_with_callback(&self.board, save);
 
                 (assumption, impact)
             })
