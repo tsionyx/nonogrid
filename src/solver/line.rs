@@ -161,8 +161,8 @@ where
     }
 
     fn update_solved(&mut self, position: usize, color: B::Color) {
-        let current = self.solved_line[position];
         if let Some(updated) = self.solved_line.get_mut(position) {
+            let current: B::Color = *updated;
             *updated = current.add_color(color);
         }
     }

@@ -155,11 +155,11 @@ mod utils {
         }
     }
 
-    pub fn dedup<T>(vec: Vec<T>) -> Vec<T>
+    pub fn dedup<T>(vec: impl Iterator<Item = T>) -> Vec<T>
     where
         T: Eq + Hash + Clone,
     {
-        let set: HashSet<_> = vec.into_iter().collect();
+        let set: HashSet<_> = vec.collect();
         set.into_iter().collect()
     }
 
@@ -338,27 +338,21 @@ impl Board {
         let init = BW::default();
         let cells = vec![init; width * height];
 
-        let uniq_rows = utils::dedup(rows.iter().map(|desc| desc.vec.clone()).collect());
-        let uniq_cols = utils::dedup(columns.iter().map(|desc| desc.vec.clone()).collect());
+        let uniq_indexes = |lines: &[Clues]| {
+            let uniq_lines = utils::dedup(lines.iter().map(|desc| &desc.vec));
+            lines
+                .iter()
+                .map(|desc| {
+                    uniq_lines
+                        .iter()
+                        .position(|&uniq_line| uniq_line == &desc.vec)
+                        .expect("Every line should be present in unique lines")
+                })
+                .collect()
+        };
 
-        let rows_cache_indexes = rows
-            .iter()
-            .map(|desc| {
-                uniq_rows
-                    .iter()
-                    .position(|uniq_row| uniq_row == &desc.vec)
-                    .expect("Every row should be present in unique rows")
-            })
-            .collect();
-        let cols_cache_indexes = columns
-            .iter()
-            .map(|desc| {
-                uniq_cols
-                    .iter()
-                    .position(|uniq_col| uniq_col == &desc.vec)
-                    .expect("Every column should be present in unique columns")
-            })
-            .collect();
+        let rows_cache_indexes = uniq_indexes(&rows);
+        let cols_cache_indexes = uniq_indexes(&columns);
 
         let desc_rows = rows.into_iter().map(Rc::new).collect();
         let desc_cols = columns.into_iter().map(Rc::new).collect();
@@ -643,8 +637,8 @@ mod line {
         }
 
         fn update_solved(&mut self, position: usize, color: BW) {
-            let current = self.solved_line[position];
             if let Some(updated) = self.solved_line.get_mut(position) {
+                let current: BW = *updated;
                 *updated = current.add_color(color);
             }
         }

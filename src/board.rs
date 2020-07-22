@@ -125,42 +125,28 @@ where
         warn!("Initializing board: height={}, width={}", height, width);
         let cells = vec![init; width * height];
 
-        let uniq_rows: Vec<&Vec<B>> = dedup(rows.iter().map(|desc| &desc.vec));
-        let uniq_cols: Vec<&Vec<B>> = dedup(columns.iter().map(|desc| &desc.vec));
+        let uniq_indexes = |lines: &[Description<B>]| {
+            let uniq_lines: Vec<&Vec<B>> = dedup(lines.iter().map(|desc| &desc.vec));
+            if uniq_lines.len() < lines.len() {
+                warn!(
+                    "Reducing number of clues: {} --> {}",
+                    lines.len(),
+                    uniq_lines.len()
+                );
+            }
+            lines
+                .iter()
+                .map(|desc| {
+                    uniq_lines
+                        .iter()
+                        .position(|&uniq_line| uniq_line == &desc.vec)
+                        .expect("Every line should be present in unique lines")
+                })
+                .collect()
+        };
 
-        if uniq_rows.len() < height {
-            warn!(
-                "Reducing number of rows clues: {} --> {}",
-                height,
-                uniq_rows.len()
-            );
-        }
-        if uniq_cols.len() < width {
-            warn!(
-                "Reducing number of columns clues: {} --> {}",
-                width,
-                uniq_cols.len()
-            );
-        }
-
-        let rows_cache_indexes = rows
-            .iter()
-            .map(|desc| {
-                uniq_rows
-                    .iter()
-                    .position(|&uniq_row| uniq_row == &desc.vec)
-                    .expect("Every row should be present in unique rows")
-            })
-            .collect();
-        let cols_cache_indexes = columns
-            .iter()
-            .map(|desc| {
-                uniq_cols
-                    .iter()
-                    .position(|&uniq_col| uniq_col == &desc.vec)
-                    .expect("Every column should be present in unique columns")
-            })
-            .collect();
+        let rows_cache_indexes = uniq_indexes(&rows);
+        let cols_cache_indexes = uniq_indexes(&columns);
 
         let desc_rows = rows.into_iter().map(ReadRc::new).collect();
         let desc_cols = columns.into_iter().map(ReadRc::new).collect();
