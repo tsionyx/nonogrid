@@ -71,21 +71,20 @@ pub trait NetworkReader: BoardParser {
     where
         Self: Sized,
     {
-        let url = file_name.to_string();
-        let content = Self::http_content(url)?;
+        let content = Self::http_content(file_name)?;
         Self::with_content(&content)
     }
 
     #[cfg(feature = "web")]
-    fn http_content(url: String) -> Result<String, reqwest::Error> {
-        info!("Requesting {} ...", &url);
-        let response = reqwest::blocking::get(&url)?;
+    fn http_content(url: &str) -> Result<String, reqwest::Error> {
+        info!("Requesting {} ...", url);
+        let response = reqwest::blocking::get(url)?;
         response.text()
     }
 
     #[cfg(not(feature = "web"))]
-    fn http_content(url: String) -> Result<String, ParseError> {
-        info!("Requesting {} ...", &url);
+    fn http_content(url: &str) -> Result<String, ParseError> {
+        info!("Requesting {} ...", url);
         Err(ParseError(format!(
             "Cannot request url {}: no support for web client (hint: add --features=web)",
             url
@@ -141,14 +140,9 @@ mod ini {
     }
 
     #[derive(Debug, Deserialize)]
-    struct NonoToml {
+    pub struct MyFormat {
         clues: Clues,
         colors: Option<Colors>,
-    }
-
-    #[derive(Debug)]
-    pub struct MyFormat {
-        structure: NonoToml,
     }
 
     impl LocalReader for MyFormat {}
@@ -161,16 +155,14 @@ mod ini {
 
     impl BoardParser for MyFormat {
         fn with_content(content: &str) -> Result<Self, ParseError> {
-            let nono = toml::from_str(content)?;
-
-            Ok(Self { structure: nono })
+            Ok(toml::from_str(content)?)
         }
 
         fn parse<B>(&self) -> Board<B>
         where
             B: Block,
         {
-            let clues = &self.structure.clues;
+            let clues = &self.clues;
             let palette = self.get_palette();
             Board::with_descriptions_and_palette(
                 Self::parse_clues(&clues.rows, &palette),
@@ -180,7 +172,7 @@ mod ini {
         }
 
         fn infer_scheme(&self) -> PuzzleScheme {
-            if let Some(colors) = &self.structure.colors {
+            if let Some(colors) = &self.colors {
                 if let Some(defs) = &colors.defs {
                     if !defs.is_empty() {
                         return PuzzleScheme::MultiColor;
@@ -220,7 +212,7 @@ mod ini {
                 .next()
                 .expect("Split returned empty");
 
-            if non_comment == "" {
+            if non_comment.is_empty() {
                 return None;
             }
 
@@ -228,8 +220,8 @@ mod ini {
                 non_comment
                     .split(',')
                     .filter_map(|row| {
-                        let row: &str = row.trim().trim_matches(|c| c == '\'' || c == '"');
-                        if row == "" {
+                        let row = row.trim().trim_matches(|c| c == '\'' || c == '"');
+                        if row.is_empty() {
                             None
                         } else {
                             Some(Description::new(
@@ -252,16 +244,16 @@ mod ini {
         {
             descriptions
                 .lines()
-                .flat_map(|line| Self::parse_line(line, palette).unwrap_or_else(Vec::new))
+                .flat_map(|line| Self::parse_line(line, palette).unwrap_or_default())
                 .collect()
         }
 
         ///```
-        /// use nonogrid::parser::MyFormat;
+        /// # use nonogrid::parser::MyFormat;
         ///
         /// let s = "b = (blue) *";
-        /// let colors = MyFormat::parse_color_def(s);
-        /// assert_eq!(colors, ("b".to_string(), '*', "blue".to_string()));
+        /// let def = MyFormat::parse_color_def(s);
+        /// assert_eq!(def, ("b".to_string(), '*', "blue".to_string()));
         /// ```
         pub fn parse_color_def(color_def: impl AsRef<str>) -> (String, char, String) {
             let parts: Vec<_> = color_def.as_ref().split('=').map(str::trim).collect();
@@ -279,7 +271,7 @@ mod ini {
 
     impl Paletted for MyFormat {
         fn get_colors(&self) -> Vec<(String, char, String)> {
-            if let Some(colors) = &self.structure.colors {
+            if let Some(colors) = &self.colors {
                 if let Some(defs) = &colors.defs {
                     return defs.iter().map(Self::parse_color_def).collect();
                 }
@@ -357,7 +349,7 @@ mod xml {
         fn read_remote(file_name: &str) -> Result<Self, ParseError> {
             let url = format!("{}/XMLpuz.cgi?id={}", Self::BASE_URL, file_name);
 
-            let content = Self::http_content(url)?;
+            let content = Self::http_content(&url)?;
             Self::with_content(&content)
         }
     }
@@ -408,7 +400,7 @@ mod xml {
         where
             B: Block,
         {
-            let value = &block.string_value();
+            let value = block.string_value();
 
             let block_color = if let Node::Element(e) = block {
                 if let Some(color) = e.attribute("color") {
@@ -421,7 +413,7 @@ mod xml {
             };
 
             let color_id = block_color.and_then(|name| palette.id_by_name(name));
-            B::from_str_and_color(value, color_id)
+            B::from_str_and_color(&value, color_id)
         }
 
         fn parse_line<B>(description: &Node, palette: &ColorPalette) -> Description<B>
@@ -726,7 +718,7 @@ impl NetworkReader for NonogramsOrg {
             .iter()
             .first_ok(|(base_url, (_scheme, path))| {
                 let url = format!("{}{}/i/{}", base_url, path, file_name);
-                let content = Self::http_content(url)?;
+                let content = Self::http_content(&url)?;
                 Self::with_content(&content)
             })
     }
@@ -806,8 +798,8 @@ impl DetectedParser {
     where
         T: BoardParser + 'static,
     {
-        let expect_msg = &format!("Parser should be created with {:?}", self.parser_kind);
-        self.inner.downcast_ref::<T>().expect(expect_msg)
+        let expect_msg = format!("Parser should be created with {:?}", self.parser_kind);
+        self.inner.downcast_ref::<T>().expect(&expect_msg)
     }
 }
 
@@ -900,24 +892,28 @@ pub struct OlsakColor {
 
 impl OlsakColor {
     ///```
-    /// use nonogrid::parser::OlsakColor;
+    /// # use nonogrid::parser::OlsakColor;
     ///
     /// let s = "0:   #FFFFFF   white";
     /// let color = OlsakColor::parse(s);
-    /// assert_eq!(color, OlsakColor{block_name: "0".to_string(),
-    ///     symbol: ' ', rgb: "#FFFFFF".to_string(), name: "white".to_string()});
+    /// assert_eq!(color.block_name, "0");
+    /// assert_eq!(color.symbol, ' ');
+    /// assert_eq!(color.rgb, "#FFFFFF");
+    /// assert_eq!(color.name, "white");
     ///
     /// let s = "n:%  #00B000   green";
     /// let color = OlsakColor::parse(s);
-    /// assert_eq!(color, OlsakColor{block_name: "n".to_string(),
-    ///     symbol: '%', rgb: "#00B000".to_string(), name: "green".to_string()});
+    /// assert_eq!(color.block_name, "n");
+    /// assert_eq!(color.symbol, '%');
+    /// assert_eq!(color.rgb, "#00B000");
+    /// assert_eq!(color.name, "green");
     /// ```
     pub fn parse(color_def: &str) -> Self {
         let parts: Vec<_> = color_def.split_whitespace().collect();
         let block_name_and_symbol: Vec<_> = parts[0].split(':').collect();
 
         let block_name = block_name_and_symbol[0];
-        let symbol = block_name_and_symbol[1].to_string().pop().unwrap_or(' ');
+        let symbol = block_name_and_symbol[1].chars().next().unwrap_or(' ');
 
         Self {
             block_name: block_name.to_string(),
@@ -1013,13 +1009,13 @@ impl OlsakParser {
         let value_color_pos = as_chars.position(|c| !c.is_digit(10));
         let (value, block_color) = if let Some(pos) = value_color_pos {
             let (value, color) = block.split_at(pos);
-            (value, Some(color.to_string()))
+            (value, Some(color))
         } else {
             (block, None)
         };
 
         let color_name = block_color
-            .and_then(|block_color| self.colors.get(&block_color))
+            .and_then(|block_color| self.colors.get(block_color))
             .map(|color| &color.name);
 
         let color_id = color_name.and_then(|name| palette.id_by_name(name));
@@ -1090,7 +1086,14 @@ impl SimpleParser {
             .map(|line| {
                 Description::new(
                     line.iter()
-                        .map(|block| B::from_str_and_color(block, None))
+                        .filter_map(|block| {
+                            let block = block.trim();
+                            if block.is_empty() {
+                                None
+                            } else {
+                                Some(B::from_str_and_color(block, None))
+                            }
+                        })
                         .collect(),
                 )
             })
@@ -1129,7 +1132,7 @@ impl SimpleParser {
                 }
             })
             .collect();
-        lines.join("\n").trim().into()
+        lines.join("\n").trim().to_string()
     }
 }
 
@@ -1142,9 +1145,10 @@ impl BoardParser for SimpleParser {
             .lines()
             .flat_map(|line| line.trim().chars())
             .collect();
+        let solution_matrix_chars = ['0', '1'].iter().copied().collect();
 
         // only '1' and '0' as the solution matrix
-        if symbols.len() == 2 {
+        if symbols == solution_matrix_chars {
             let solution_matrix: Vec<_> = content
                 .lines()
                 .map(|line| {
@@ -1157,13 +1161,11 @@ impl BoardParser for SimpleParser {
             return Ok(Self {
                 rows: rows
                     .into_iter()
-                    .map(|d: Description<BinaryBlock>| {
-                        d.vec.into_iter().map(|b| b.to_string()).collect()
-                    })
+                    .map(|d| d.vec.iter().map(BinaryBlock::to_string).collect())
                     .collect(),
                 columns: columns
                     .into_iter()
-                    .map(|d| d.vec.into_iter().map(|b| b.to_string()).collect())
+                    .map(|d| d.vec.iter().map(BinaryBlock::to_string).collect())
                     .collect(),
             });
         }
@@ -1445,6 +1447,6 @@ mod tests {
         let mut colors = vec![];
         colors.push(("g".to_string(), '%', "0, 204, 0".to_string()));
 
-        assert_eq!(f.get_colors(), colors,)
+        assert_eq!(f.get_colors(), colors)
     }
 }
