@@ -5,6 +5,27 @@ The format based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
+## [0.7.1] - 2020-08-09
+
+### Added
+- automatically deploy solution on https://spoj.com.
+
+### Changed
+- represent a line as `Rc<B>` instead of `Rc<Vec<B>>`;
+- trait bounds for `ShellRenderer`;
+- move rendering of `BinaryColor` into `render.rs`;
+- `update_solved` returns `Option::None` instead of empty `Vec`;
+- refactoring:
+  - extract `LineDirection` and `LinePosition`;
+  - generalize `JobQueue`;
+  - `uniq_indexes` closure in the `Board` constructor;
+  - do not allocate unnecessary `String`-s in parsers;
+  - simplify `MyFormat`: reduce nesting;
+  - `== ""` => `.is_empty()`;
+- remove suppression of some warnings (`#[derive(Debug)]`);
+- coverage run only once as the last step of CI;
+
+
 ## [0.7.0] - 2020-07-12
 
 ### Added
