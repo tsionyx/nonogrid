@@ -121,13 +121,16 @@ impl Sub for MultiColor {
 
 impl fmt::Display for MultiColor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let colors: Vec<_> = self.variants_as_ids().into_iter().collect();
-        let symbol = if colors.len() == 1 {
-            format!("{}", colors[0])
+        let colors = self.variants_as_ids();
+        if colors.len() == 1 {
+            let color = colors
+                .into_iter()
+                .next()
+                .expect("There should be a value: the length is 1");
+            write!(f, "{}", color)
         } else {
-            "?".to_string()
-        };
-        write!(f, "{}", symbol)
+            write!(f, "?")
+        }
     }
 }
 

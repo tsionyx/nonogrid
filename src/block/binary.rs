@@ -61,19 +61,6 @@ impl Color for BinaryColor {
     }
 }
 
-impl fmt::Display for BinaryColor {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use BinaryColor::{Black, BlackOrWhite, Undefined, White};
-
-        let symbol = match self {
-            White => '.',
-            Black => '\u{2b1b}',
-            Undefined | BlackOrWhite => '?',
-        };
-        write!(f, "{}", symbol)
-    }
-}
-
 impl Add for BinaryColor {
     type Output = Self;
 

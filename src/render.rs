@@ -1,11 +1,11 @@
-use std::fmt::Display;
+use std::fmt::{self, Display};
 
 #[cfg(feature = "colored")]
 use colored::{self, ColoredString, Colorize};
 use hashbrown::HashMap;
 
 use crate::{
-    block::{base::color::ColorDesc, Block, Color, Description},
+    block::{base::color::ColorDesc, binary::BinaryColor, Block, Color, Description},
     board::{Board, LineDirection},
     utils::{
         pad, pad_with,
@@ -60,23 +60,16 @@ where
         });
 
         let side = self.side_lines();
-        let side = side.into_iter().map(|row| {
-            row.into_iter()
-                .map(|s| ColoredString::from(s.as_str()))
-                .collect()
-        });
+        let side = side
+            .into_iter()
+            .map(|row| row.into_iter().map(|s| ColoredString::from(s.as_str())));
 
         let grid = self.grid_lines();
-        let grid = side.zip(grid).map(|(mut s, g): (Vec<_>, _)| {
-            s.extend(g);
-            s
-        });
+        let grid = side.zip(grid).map(|(s, g)| s.chain(g).collect());
 
-        Self::concat(
-            header
-                .chain(grid)
-                .map(|line| line.iter().map(|symbol| pad(&symbol, 2, true)).collect()),
-        )
+        Self::concat(header.chain(grid).map(|line: Vec<ColoredString>| {
+            line.iter().map(|symbol| pad(symbol, 2, true)).collect()
+        }))
     }
 
     fn render_simple(&self) -> String {
@@ -90,7 +83,7 @@ where
 
 impl<B> ShellRenderer<B>
 where
-    B: Block + Display,
+    B: Block,
 {
     fn board(&self) -> ReadRef<Board<B>> {
         self.board.read()
@@ -107,7 +100,12 @@ where
             .max()
             .unwrap_or(0)
     }
+}
 
+impl<B> ShellRenderer<B>
+where
+    B: Block + Display,
+{
     fn desc_to_string(desc: &ReadRc<Description<B>>) -> Vec<String> {
         desc.vec.iter().map(ToString::to_string).collect()
     }
@@ -158,7 +156,7 @@ impl From<ColorDesc> for ColoredString {
 
 impl<B> ShellRenderer<B>
 where
-    B: Block + Display,
+    B: Block,
     B::Color: Display,
 {
     fn cell_symbol(&self, cell: &B::Color) -> ColoredString {
@@ -183,5 +181,18 @@ where
                     .collect()
             })
             .collect()
+    }
+}
+
+impl Display for BinaryColor {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use BinaryColor::{Black, BlackOrWhite, Undefined, White};
+
+        let symbol = match self {
+            White => '.',
+            Black => '\u{2b1b}',
+            Undefined | BlackOrWhite => '?',
+        };
+        write!(f, "{}", symbol)
     }
 }
