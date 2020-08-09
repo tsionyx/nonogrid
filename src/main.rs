@@ -279,9 +279,10 @@ where
 
 type SearchOptions = (Option<usize>, Option<u32>, Option<usize>);
 
-#[allow(dead_code)]
 enum Source {
     LocalFile,
+    #[allow(dead_code)]
     WebPbn,
+    #[allow(dead_code)]
     NonogramsOrg,
 }

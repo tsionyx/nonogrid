@@ -18,7 +18,7 @@ use crate::{
 
 type Solution<B> = Vec<<B as Block>::Color>;
 
-#[allow(missing_debug_implementations)]
+#[derive(Debug)]
 pub struct Solver<B, P, S>
 where
     B: Block,

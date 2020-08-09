@@ -28,7 +28,7 @@ where
     }
 }
 
-#[allow(missing_debug_implementations)]
+#[derive(Debug)]
 pub struct ShellRenderer<B>
 where
     B: Block,

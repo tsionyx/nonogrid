@@ -79,7 +79,7 @@ pub trait ProbeSolver {
         S: LineSolver<BlockType = Self::BlockType>;
 }
 
-#[allow(missing_debug_implementations)]
+#[derive(Debug)]
 pub struct FullProbe1<B>
 where
     B: Block,

@@ -163,7 +163,7 @@ where
     // to suppress IDEA warning
     B::Color: Copy,
 {
-    #[allow(dead_code)]
+    #[cfg(test)]
     fn with_descriptions(rows: Vec<Description<B>>, columns: Vec<Description<B>>) -> Self {
         Self::with_descriptions_and_palette(rows, columns, None)
     }

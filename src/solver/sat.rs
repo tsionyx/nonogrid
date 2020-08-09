@@ -107,7 +107,7 @@ impl<B> ClauseGenerator<B>
 where
     B: Block,
 {
-    const BLACK_COLOR: u32 = 0;
+    const BLACK_COLOR: ColorId = 0;
 
     pub fn with_clues(
         columns: &[ReadRc<Description<B>>],

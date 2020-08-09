@@ -14,7 +14,7 @@ use crate::{
     },
 };
 
-#[allow(missing_debug_implementations)]
+#[derive(Debug)]
 pub struct Solver<B>
 where
     B: Block,

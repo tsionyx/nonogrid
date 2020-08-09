@@ -14,6 +14,7 @@ pub trait Cached<K, V> {
     fn cache_misses(&self) -> Option<u32>;
 }
 
+#[derive(Debug)]
 pub struct GrowableCache<K, V>
 where
     K: Eq + Hash,
