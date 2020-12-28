@@ -220,7 +220,7 @@ mod ini {
                 non_comment
                     .split(',')
                     .filter_map(|row| {
-                        let row = row.trim().trim_matches(|c| c == '\'' || c == '"');
+                        let row = row.trim().trim_matches(&['\'', '"'][..]);
                         if row.is_empty() {
                             None
                         } else {
@@ -261,10 +261,7 @@ mod ini {
             let mut desc = parts[1].to_string();
             let symbol = desc.pop().expect("Empty color description in definition");
 
-            desc = desc
-                .trim()
-                .trim_matches(|c| c == '(' || c == ')')
-                .to_string();
+            desc = desc.trim().trim_matches(&['(', ')'][..]).to_string();
             (name.to_string(), symbol, desc)
         }
     }
@@ -598,10 +595,7 @@ impl NonogramsOrg {
     fn extract_encoded_json(html: &str) -> Option<&str> {
         html.lines().find_map(|line| {
             if line.starts_with(Self::CYPHER_PREFIX) {
-                Some(
-                    line[Self::CYPHER_PREFIX.len()..]
-                        .trim_end_matches(|c| c == Self::CYPHER_SUFFIX),
-                )
+                Some(line[Self::CYPHER_PREFIX.len()..].trim_end_matches(Self::CYPHER_SUFFIX))
             } else {
                 None
             }
@@ -616,8 +610,8 @@ impl NonogramsOrg {
 
     fn parse_json(array: &str) -> Vec<Vec<EncodedInt>> {
         array
-            .trim_start_matches(|x| x == '[')
-            .trim_end_matches(|x| x == ']')
+            .trim_start_matches('[')
+            .trim_end_matches(']')
             .split("],[")
             .map(Self::parse_line)
             .collect()
