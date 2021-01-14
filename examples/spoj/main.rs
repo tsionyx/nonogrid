@@ -48,8 +48,8 @@ impl BW {
         }
     }
 
-    fn both_colors() -> Option<Self> {
-        Some(BW::BlackOrWhite)
+    fn both_colors() -> Self {
+        BW::BlackOrWhite
     }
 
     fn can_be_blank(self) -> bool {
@@ -675,10 +675,8 @@ mod line {
             let solved = &mut self.solved_line;
 
             let both = BW::both_colors();
-            if let Some(both) = both {
-                let init = BW::default();
-                replace(solved, &both, &init);
-            }
+            let init = BW::default();
+            replace(solved, &both, &init);
             Ok(())
         }
 

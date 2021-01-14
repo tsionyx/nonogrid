@@ -58,10 +58,7 @@ where
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub struct Description<T: Block>
-where
-    T: Block,
-{
+pub struct Description<T: Block> {
     pub vec: Vec<T>,
 }
 

@@ -36,6 +36,7 @@ impl<K: Hash + Eq, V> GrowableCache<K, V> {
 
 impl<K: Hash + Eq, V> Cached<K, V> for GrowableCache<K, V> {
     fn cache_get(&mut self, key: &K) -> Option<&V> {
+        #![allow(clippy::option_if_let_else)]
         if let Some(v) = self.store.get(key) {
             self.hits += 1;
             Some(v)

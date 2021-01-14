@@ -320,15 +320,13 @@ where
         false
     }
 
-    fn add_solution(&mut self) -> Result<(), String> {
+    fn add_solution(&mut self) {
         // TODO: force to check the board
         info!("Found one of solutions");
         if !self.already_found() {
             let cells = self.board().make_snapshot();
             self.solutions.push(cells);
         }
-
-        Ok(())
     }
 
     /// The most promising (point+color) pair should go first
@@ -498,7 +496,7 @@ where
                 // rate = board.solution_rate
                 // self._add_search_result(path, rate)
                 if self.board().is_solved_full() {
-                    self.add_solution()?;
+                    self.add_solution();
                     warn!("The only color {:?} for the {:?} lead to full solution. No need to traverse the path {:?} anymore", color, point, path);
                     return Ok(true);
                 }
@@ -569,7 +567,7 @@ where
                 // rate = board.solution_rate
                 // self._add_search_result(path, rate)
                 if self.board().is_solved_full() {
-                    self.add_solution()?;
+                    self.add_solution();
                     warn!(
                         "The negation of color {:?} for the {:?} lead to full solution. No need to traverse the path {:?} anymore.",
                         color, point, path);
@@ -698,7 +696,7 @@ where
             })?;
 
         if self.board().is_solved_full() {
-            self.add_solution()?;
+            self.add_solution();
             return Ok(vec![]);
         }
 

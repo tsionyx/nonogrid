@@ -97,14 +97,12 @@ impl Block for BinaryBlock {
 
     fn partial_sums(desc: &[Self]) -> Vec<usize> {
         desc.iter()
-            .scan(None, |prev, block| {
-                let current = if let Some(prev_size) = prev {
-                    *prev_size + block.0 + 1
-                } else {
-                    block.0
-                };
-                *prev = Some(current);
-                *prev
+            .scan(None, |acc_sum, block| {
+                // 1 cell is for a minimal gap between the previous run of blocks
+                // and the current block
+                let prev_sum = acc_sum.map_or(0, |prev_sum| prev_sum + 1);
+                *acc_sum = Some(prev_sum + block.0);
+                *acc_sum
             })
             .collect()
     }

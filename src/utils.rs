@@ -30,7 +30,8 @@ pub fn pad_with<T: Clone>(v: &mut Vec<T>, el: T, max_size: usize, right: bool) {
         if right {
             v.extend(plus);
         } else {
-            let _ = v.splice(..0, plus);
+            let splice = v.splice(..0, plus);
+            drop(splice);
         }
     }
 }
@@ -151,10 +152,8 @@ pub mod iter {
         type Output = T;
 
         fn unwrap_or_insert_with<F: FnOnce() -> T>(&mut self, index: usize, default: F) -> T {
-            if let Some(elem) = self.get(index) {
-                if let Some(y) = elem {
-                    return *y;
-                }
+            if let Some(Some(x)) = self.get(index) {
+                return *x;
             }
 
             let new = default();

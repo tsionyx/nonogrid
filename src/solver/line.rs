@@ -152,11 +152,9 @@ where
     }
 
     fn can_be_blank_at(&self, position: usize) -> bool {
-        if let Some(color) = self.line.get(position) {
-            color.can_be_blank()
-        } else {
-            false
-        }
+        self.line
+            .get(position)
+            .map_or(false, B::Color::can_be_blank)
     }
 
     fn update_solved(&mut self, position: usize, color: B::Color) {

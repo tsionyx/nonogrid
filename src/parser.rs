@@ -191,6 +191,7 @@ mod ini {
         {
             let mut as_chars = block.chars();
             let value_color_pos = as_chars.position(|c| !c.is_digit(10));
+            #[allow(clippy::option_if_let_else)]
             let (value, block_color) = if let Some(pos) = value_color_pos {
                 let (value, color) = block.split_at(pos);
                 (value, Some(color))
@@ -400,11 +401,9 @@ mod xml {
             let value = block.string_value();
 
             let block_color = if let Node::Element(e) = block {
-                if let Some(color) = e.attribute("color") {
-                    Some(color.value())
-                } else {
-                    palette.get_default()
-                }
+                e.attribute("color")
+                    .map(|color| color.value())
+                    .or_else(|| palette.get_default())
             } else {
                 None
             };
@@ -1001,6 +1000,8 @@ impl OlsakParser {
     {
         let mut as_chars = block.chars();
         let value_color_pos = as_chars.position(|c| !c.is_digit(10));
+
+        #[allow(clippy::option_if_let_else)]
         let (value, block_color) = if let Some(pos) = value_color_pos {
             let (value, color) = block.split_at(pos);
             (value, Some(color))

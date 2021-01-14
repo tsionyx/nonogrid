@@ -156,19 +156,20 @@ impl Block for ColoredBlock {
 
     fn partial_sums(desc: &[Self]) -> Vec<usize> {
         desc.iter()
-            .scan(None, |prev: &mut Option<Self>, block| {
-                let current = if let Some(ref prev) = prev {
-                    let sum = prev.size() + block.size();
-                    if prev.color() == block.color() {
-                        sum + 1
+            .scan(None, |acc_block: &mut Option<Self>, block| {
+                let prev_sum = acc_block.map_or(0, |acc_block| {
+                    // 1 cell is for a minimal gap between the previous run of blocks
+                    // and the current block
+                    let gap_size = if acc_block.color() == block.color() {
+                        1
                     } else {
-                        sum
-                    }
-                } else {
-                    block.size()
-                };
+                        0
+                    };
+                    acc_block.size() + gap_size
+                });
 
-                *prev = Some(Self::from_size_and_color(current, block.color));
+                let current = prev_sum + block.size();
+                *acc_block = Some(Self::from_size_and_color(current, block.color));
                 Some(current)
             })
             .collect()
