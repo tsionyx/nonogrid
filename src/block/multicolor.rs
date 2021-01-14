@@ -56,7 +56,7 @@ impl Color for MultiColor {
         let full_size = all_colors.len();
         let rate = full_size - current_size;
         let normalized_rate = rate as f64 / (full_size - 1) as f64;
-        assert!(normalized_rate >= 0.0 && normalized_rate <= 1.0);
+        assert!((0.0..=1.0).contains(&normalized_rate));
 
         normalized_rate
     }
