@@ -263,6 +263,40 @@ pub fn split_sections<'a, 'b>(
     Ok(res)
 }
 
+pub trait Stripper<P> {
+    fn strip_prefix(&self, pattern: P) -> Option<&Self>;
+    fn strip_suffix(&self, pattern: P) -> Option<&Self>;
+}
+
+// The `std::str::pattern` is unstable, so we cannot use it in generic functions.
+macro_rules! impl_stripper {
+    ($pattern:ty, $len_fn:ident) => {
+        impl Stripper<$pattern> for str {
+            fn strip_prefix(&self, pattern: $pattern) -> Option<&Self> {
+                if self.starts_with(pattern) {
+                    let size = pattern.$len_fn();
+                    Some(&self[size..])
+                } else {
+                    None
+                }
+            }
+
+            fn strip_suffix(&self, pattern: $pattern) -> Option<&Self> {
+                if self.ends_with(pattern) {
+                    let size = pattern.$len_fn();
+                    let all_but_last = self.len() - size;
+                    Some(&self[..all_but_last])
+                } else {
+                    None
+                }
+            }
+        }
+    };
+}
+
+impl_stripper!(char, len_utf8);
+impl_stripper!(&Self, len);
+
 #[cfg(not(feature = "sat"))]
 pub mod time {
     use std::time::Instant;

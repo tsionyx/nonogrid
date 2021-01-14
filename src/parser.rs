@@ -593,12 +593,12 @@ impl NonogramsOrg {
     const CYPHER_SUFFIX: char = ';';
 
     fn extract_encoded_json(html: &str) -> Option<&str> {
+        #[allow(unused_imports)]
+        use crate::utils::Stripper; // for Rust<1.45
+
         html.lines().find_map(|line| {
-            if line.starts_with(Self::CYPHER_PREFIX) {
-                Some(line[Self::CYPHER_PREFIX.len()..].trim_end_matches(Self::CYPHER_SUFFIX))
-            } else {
-                None
-            }
+            line.strip_prefix(Self::CYPHER_PREFIX)
+                .map(|line| line.trim_end_matches(Self::CYPHER_SUFFIX))
         })
     }
 

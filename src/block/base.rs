@@ -222,11 +222,10 @@ pub mod color {
 
     impl ColorValue {
         pub fn parse(value: &str) -> Self {
-            let value = if value.starts_with('#') {
-                &value[1..]
-            } else {
-                value
-            };
+            #[allow(unused_imports)]
+            use crate::utils::Stripper; // for Rust<1.45
+
+            let value = value.strip_prefix('#').unwrap_or(value);
 
             if value.len() == 3 {
                 let hex3 = u16::from_str_radix(value, 16);
