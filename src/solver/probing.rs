@@ -8,7 +8,10 @@ use priority_queue::PriorityQueue as PQ;
 use crate::{
     block::{Block, Color},
     board::{Board, Point},
-    solver::{line::LineSolver, propagation},
+    solver::{
+        line::{LineSolver, UnsolvableLine},
+        propagation,
+    },
     utils::{
         iter::PartialEntry,
         rc::{MutRc, ReadRef},
@@ -63,7 +66,10 @@ pub trait ProbeSolver {
     fn with_board(board: MutRc<Board<Self::BlockType>>) -> Self;
 
     fn unsolved_cells(&self) -> OrderedPoints;
-    fn propagate_point<S>(&mut self, point: &Point) -> Result<Vec<(Point, Priority)>, ()>
+    fn propagate_point<S>(
+        &mut self,
+        point: &Point,
+    ) -> Result<Vec<(Point, Priority)>, UnsolvableLine>
     where
         S: LineSolver<BlockType = Self::BlockType>;
 
@@ -134,7 +140,10 @@ where
         queue
     }
 
-    fn propagate_point<S>(&mut self, point: &Point) -> Result<Vec<(Point, Priority)>, ()>
+    fn propagate_point<S>(
+        &mut self,
+        point: &Point,
+    ) -> Result<Vec<(Point, Priority)>, UnsolvableLine>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -223,10 +232,10 @@ where
                     for color in colors {
                         Board::unset_color_with_callback(&self.board, &contradiction, &color)?;
                     }
-                    let new_probes = self.propagate_point::<S>(&contradiction).map_err(|_| {
+                    let new_probes = self.propagate_point::<S>(&contradiction).map_err(|err| {
                         format!(
-                            "Error while propagating contradicted values in {:?}",
-                            &contradiction
+                            "Error while propagating contradicted values in {:?}: {:?}",
+                            contradiction, err
                         )
                     })?;
                     probes.extend(new_probes);
@@ -274,7 +283,7 @@ where
         self.board.read()
     }
 
-    fn run_propagation<S>(&mut self, point: &Point) -> Result<Vec<Point>, ()>
+    fn run_propagation<S>(&mut self, point: &Point) -> Result<Vec<Point>, UnsolvableLine>
     where
         S: LineSolver<BlockType = B>,
     {

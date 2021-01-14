@@ -631,13 +631,13 @@ mod line {
 
     use super::{utils::replace, Clues, Line, BB, BW};
 
-    pub fn solve(desc: &Clues, line: Line) -> Result<Line, ()> {
+    #[derive(Debug, Copy, Clone)]
+    pub struct UnsolvableLine;
+
+    pub fn solve(desc: &Clues, line: Line) -> Result<Line, UnsolvableLine> {
         let mut solver = DynamicSolver::new(desc, line);
-        if solver.solve() {
-            Ok(solver.get_solution())
-        } else {
-            Err(())
-        }
+        solver.solve()?;
+        Ok(solver.get_solution())
     }
 
     struct DynamicSolver<'a> {
@@ -668,9 +668,9 @@ mod line {
             }
         }
 
-        fn solve(&mut self) -> bool {
+        fn solve(&mut self) -> Result<(), UnsolvableLine> {
             if !self.try_solve() {
-                return false;
+                return Err(UnsolvableLine);
             }
             let solved = &mut self.solved_line;
 
@@ -679,7 +679,7 @@ mod line {
                 let init = BW::default();
                 replace(solved, &both, &init);
             }
-            true
+            Ok(())
         }
 
         fn get_solution(self) -> Line {
@@ -843,7 +843,7 @@ mod propagation {
     use std::{collections::HashSet, hash::Hash, rc::Rc};
 
     use super::{
-        line,
+        line::{solve as solve_line, UnsolvableLine},
         utils::{abs_sub, GrowableCache},
         BoardMutRef, BoardRef, Line, LineDirection, LinePosition, Point, BW,
     };
@@ -854,7 +854,7 @@ mod propagation {
         source: Line,
     }
 
-    type CacheValue = Result<Line, ()>;
+    type CacheValue = Result<Line, UnsolvableLine>;
     type LineSolverCache = GrowableCache<CacheKey, CacheValue>;
 
     fn new_cache(capacity: usize) -> LineSolverCache {
@@ -1007,7 +1007,7 @@ mod propagation {
             }
         }
 
-        pub fn run(&mut self, point: Option<Point>) -> Result<Vec<Point>, ()> {
+        pub fn run(&mut self, point: Option<Point>) -> Result<Vec<Point>, UnsolvableLine> {
             if let Some(point) = point {
                 let queue = SmallJobQueue::with_point(point);
                 self.run_jobs(queue)
@@ -1020,7 +1020,7 @@ mod propagation {
             }
         }
 
-        fn run_jobs<Q>(&mut self, mut queue: Q) -> Result<Vec<Point>, ()>
+        fn run_jobs<Q>(&mut self, mut queue: Q) -> Result<Vec<Point>, UnsolvableLine>
         where
             Q: JobQueue<LinePosition>,
         {
@@ -1046,7 +1046,10 @@ mod propagation {
             Ok(solved_cells)
         }
 
-        fn update_line(&mut self, line_pos: LinePosition) -> Result<Option<Vec<usize>>, ()> {
+        fn update_line(
+            &mut self,
+            line_pos: LinePosition,
+        ) -> Result<Option<Vec<usize>>, UnsolvableLine> {
             let (cache_key, line) = {
                 let board = self.board();
                 let line = board.get_line(line_pos);
@@ -1073,7 +1076,7 @@ mod propagation {
             let value = {
                 let board = self.board();
                 let line_desc = board.description(line_pos);
-                line::solve(line_desc, Rc::clone(&line))
+                solve_line(line_desc, Rc::clone(&line))
             };
 
             self.set_cached_solution(line_pos.direction(), cache_key, value.clone());
@@ -1110,7 +1113,9 @@ mod propagation {
 mod probing {
     use std::{collections::BinaryHeap, rc::Rc};
 
-    use super::{propagation, utils::PartialEntry, BoardMutRef, BoardRef, Point, BW};
+    use super::{
+        line::UnsolvableLine, propagation, utils::PartialEntry, BoardMutRef, BoardRef, Point, BW,
+    };
 
     #[derive(Debug)]
     pub struct ProbeImpact {
@@ -1184,7 +1189,10 @@ mod probing {
             queue
         }
 
-        pub fn propagate_point(&mut self, point: &Point) -> Result<Vec<(Priority, Point)>, ()> {
+        pub fn propagate_point(
+            &mut self,
+            point: &Point,
+        ) -> Result<Vec<(Priority, Point)>, UnsolvableLine> {
             let fixed_points = self.run_propagation(point)?;
 
             let board = self.board();
@@ -1272,7 +1280,7 @@ mod probing {
             self.board.borrow()
         }
 
-        fn run_propagation(&mut self, point: &Point) -> Result<Vec<Point>, ()> {
+        fn run_propagation(&mut self, point: &Point) -> Result<Vec<Point>, UnsolvableLine> {
             self.propagation_solver.run(Some(*point))
         }
 
@@ -1640,7 +1648,7 @@ fn run(
     let mut solver = propagation::Solver::new(Rc::clone(&board));
     solver
         .run(None)
-        .map_err(|_| "Bad puzzle for sure: simple propagation failed".to_string())?;
+        .map_err(|err| format!("Bad puzzle for sure: simple propagation failed: {:?}", err))?;
 
     if !board.borrow().is_solved_full() {
         let mut solver = backtracking::Solver::with_options(board, max_solutions);

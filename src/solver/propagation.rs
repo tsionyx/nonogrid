@@ -7,7 +7,7 @@ use crate::{
     block::{Block, Line},
     board::{Board, LineDirection, LinePosition, Point},
     cache::{cache_info, Cached, GrowableCache},
-    solver::line::{self, LineSolver},
+    solver::line::{self, LineSolver, UnsolvableLine},
     utils::{
         abs_sub,
         rc::{MutRc, ReadRc, ReadRef},
@@ -130,7 +130,7 @@ where
     source: Line<B::Color>,
 }
 
-type CacheValue<B> = Result<Line<<B as Block>::Color>, ()>;
+type CacheValue<B> = Result<Line<<B as Block>::Color>, UnsolvableLine>;
 type LineSolverCache<B> = GrowableCache<CacheKey<B>, CacheValue<B>>;
 
 const MAX_CACHE_ENTRIES_PER_LINE: usize = 2000;
@@ -213,7 +213,7 @@ where
         }
     }
 
-    pub fn run<S>(&mut self, point: Option<Point>) -> Result<Vec<Point>, ()>
+    pub fn run<S>(&mut self, point: Option<Point>) -> Result<Vec<Point>, UnsolvableLine>
     where
         S: LineSolver<BlockType = B>,
     {
@@ -230,7 +230,7 @@ where
         }
     }
 
-    fn run_jobs<S, Q>(&mut self, mut queue: Q) -> Result<Vec<Point>, ()>
+    fn run_jobs<S, Q>(&mut self, mut queue: Q) -> Result<Vec<Point>, UnsolvableLine>
     where
         S: LineSolver<BlockType = B>,
         Q: JobQueue<LinePosition>,
@@ -263,7 +263,10 @@ where
     /// If the line gets partially solved, put the crossed lines into queue.
     ///
     /// Return the list of indexes which was updated during this solution.
-    fn update_line<S>(&mut self, position: LinePosition) -> Result<Option<Vec<usize>>, ()>
+    fn update_line<S>(
+        &mut self,
+        position: LinePosition,
+    ) -> Result<Option<Vec<usize>>, UnsolvableLine>
     where
         S: LineSolver<BlockType = B>,
     {

@@ -14,21 +14,21 @@ pub trait LineSolver {
     type BlockType: Block;
 
     fn new(desc: ReadRc<Description<Self::BlockType>>, line: Line<LineColor<Self>>) -> Self;
-    fn solve(&mut self) -> bool;
+    fn solve(&mut self) -> Result<(), UnsolvableLine>;
     fn get_solution(self) -> Line<LineColor<Self>>;
 }
 
-pub fn solve<L, B>(desc: ReadRc<Description<B>>, line: Line<B::Color>) -> Result<Line<B::Color>, ()>
+pub fn solve<L, B>(
+    desc: ReadRc<Description<B>>,
+    line: Line<B::Color>,
+) -> Result<Line<B::Color>, UnsolvableLine>
 where
     L: LineSolver<BlockType = B>,
     B: Block,
 {
     let mut solver = L::new(desc, line);
-    if solver.solve() {
-        Ok(solver.get_solution())
-    } else {
-        Err(())
-    }
+    solver.solve()?;
+    Ok(solver.get_solution())
 }
 
 pub trait DynamicColor: Color
@@ -52,6 +52,9 @@ pub struct DynamicSolver<B: Block, S = <B as Block>::Color> {
     solution_matrix: Vec<Option<bool>>,
     solved_line: Box<[S]>,
 }
+
+#[derive(Debug, Copy, Clone)]
+pub struct UnsolvableLine;
 
 impl<B> LineSolver for DynamicSolver<B>
 where
@@ -78,9 +81,9 @@ where
         }
     }
 
-    fn solve(&mut self) -> bool {
+    fn solve(&mut self) -> Result<(), UnsolvableLine> {
         if !self.try_solve() {
-            return false;
+            return Err(UnsolvableLine);
         }
 
         let solved = &mut self.solved_line;
@@ -90,7 +93,7 @@ where
             let init = B::Color::default();
             utils::replace(solved, &both, &init);
         }
-        true
+        Ok(())
     }
 
     fn get_solution(self) -> Line<B::Color> {
@@ -448,7 +451,7 @@ mod tests {
             let original_line = line.clone().into();
 
             let mut ds = DynamicSolver::new(ReadRc::new(desc), line.into());
-            assert!(ds.solve());
+            assert!(ds.solve().is_ok());
             assert_eq!(ds.line, original_line);
             assert_eq!(ds.get_solution(), expected.into());
         }
@@ -595,6 +598,6 @@ mod tests_solve_color {
         ]);
 
         let mut ds = DynamicSolver::new(desc, unsolved_line(4));
-        assert_eq!(ds.solve(), false);
+        assert!(ds.solve().is_err());
     }
 }

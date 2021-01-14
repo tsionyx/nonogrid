@@ -26,7 +26,7 @@ where
     let mut solver = propagation::Solver::new(MutRc::clone(&board));
     let solved_points = solver
         .run::<S>(None)
-        .map_err(|_| "Bad puzzle for sure: simple propagation failed".to_string())?;
+        .map_err(|err| format!("Bad puzzle: simple propagation failed: {:?}", err))?;
 
     warn!("Solved {} points", solved_points.len());
 
@@ -58,7 +58,7 @@ where
     let mut solver = propagation::Solver::new(MutRc::clone(&board));
     let solved_points = solver
         .run::<S>(None)
-        .map_err(|_| "Bad puzzle for sure: simple propagation failed".to_string())?;
+        .map_err(|err| format!("Bad puzzle: simple propagation failed: {:?}", err))?;
     warn!("Solved {} points", solved_points.len());
 
     if board.read().is_solved_full() {

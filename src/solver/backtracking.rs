@@ -690,7 +690,12 @@ where
         let new_probes = self
             .probe_solver
             .propagate_point::<S>(&point)
-            .map_err(|_| format!("Error while propagating value {:?} in {:?}", &color, &point))?;
+            .map_err(|err| {
+                format!(
+                    "Error while propagating value {:?} in {:?}: {:?}",
+                    &color, &point, err
+                )
+            })?;
 
         if self.board().is_solved_full() {
             self.add_solution()?;
