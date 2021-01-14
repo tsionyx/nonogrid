@@ -5,6 +5,9 @@ language: rust
 
 
 _shared_job: &clippy_job
+  before_install:
+    - cargo install cargo-audit
+
   script:
     # three scenarios for different sets of features
     - cargo clippy --all-targets --all-features -- -Dwarnings -W clippy::nursery
@@ -15,18 +18,20 @@ _shared_job: &clippy_job
     - cargo clippy --lib -- -Dwarnings -W clippy::pedantic
     - cargo clippy --lib --no-default-features -- -Dwarnings -W clippy::pedantic
 
+    # check for vulnerabilities
+    - cargo audit
+
 jobs:
   allow_failures:
     - rust: nightly
   fast_finish: true
   include:
-    # do not run clippy on 1.39 and install cargo audit with the --force
+    # do not run clippy on 1.39
     - name: Minimal supported version
       rust: 1.39.0
-      before_install:
-        - cargo install --force cargo-audit --version=^0.11
       script:
         - echo "Skipping the script section (clippy) for the minimal version"
+
     - <<: *clippy_job
       rust: stable
     - <<: *clippy_job
@@ -35,7 +40,6 @@ jobs:
       rust: nightly
 
     - stage: deploy
-      before_install: []
       install: []
       before_script: []
 
@@ -86,9 +90,6 @@ jobs:
 cache:
   - cargo
 
-before_install:
-  - cargo install cargo-audit
-
 install:
   - rustup component add rustfmt
   - rustup component add clippy
@@ -99,7 +100,6 @@ before_script:
   # clear the previous artifacts: prevent repeating coverage runs
   - rm -f target/debug/deps/*-*
   - cargo test --all-features --workspace
-  - cargo audit
 
 
 stages:
