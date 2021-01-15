@@ -161,7 +161,7 @@ where
         self_
     }
 
-    fn board(&self) -> ReadRef<Board<B>> {
+    fn board(&self) -> ReadRef<'_, Board<B>> {
         self.board.read()
     }
 

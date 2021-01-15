@@ -146,7 +146,7 @@ impl<B> fmt::Debug for Board<B>
 where
     B: Block,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "Board(height={}, width={}, colors={:?})",

@@ -323,13 +323,13 @@ pub mod rc {
         pub type ReadRef<'a, T> = RwLockReadGuard<'a, T>;
         pub type MutRef<'a, T> = RwLockWriteGuard<'a, T>;
 
-        pub fn read_ref<T>(cell_value: &InteriorMutableRef<T>) -> ReadRef<T> {
+        pub fn read_ref<T>(cell_value: &InteriorMutableRef<T>) -> ReadRef<'_, T> {
             cell_value.read().expect(
                 "Cannot read the value under mutable reference: already locked for writing.",
             )
         }
 
-        pub fn mutate_ref<T>(cell_value: &InteriorMutableRef<T>) -> MutRef<T> {
+        pub fn mutate_ref<T>(cell_value: &InteriorMutableRef<T>) -> MutRef<'_, T> {
             cell_value
                 .write()
                 .expect("Cannot write the value under mutable reference: already locked.")
@@ -348,11 +348,11 @@ pub mod rc {
         pub type ReadRef<'a, T> = Ref<'a, T>;
         pub type MutRef<'a, T> = RefMut<'a, T>;
 
-        pub fn read_ref<T>(cell_value: &InteriorMutableRef<T>) -> ReadRef<T> {
+        pub fn read_ref<T>(cell_value: &InteriorMutableRef<T>) -> ReadRef<'_, T> {
             cell_value.borrow()
         }
 
-        pub fn mutate_ref<T>(cell_value: &InteriorMutableRef<T>) -> MutRef<T> {
+        pub fn mutate_ref<T>(cell_value: &InteriorMutableRef<T>) -> MutRef<'_, T> {
             cell_value.borrow_mut()
         }
     }
@@ -365,11 +365,11 @@ pub mod rc {
             Self(ReadRc::new(InteriorMutableRef::new(data)))
         }
 
-        pub fn read(&self) -> ReadRef<T> {
+        pub fn read(&self) -> ReadRef<'_, T> {
             read_ref(&self.0)
         }
 
-        pub fn write(&self) -> MutRef<T> {
+        pub fn write(&self) -> MutRef<'_, T> {
             mutate_ref(&self.0)
         }
     }

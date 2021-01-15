@@ -394,7 +394,7 @@ mod xml {
     impl WebPbn {
         const BASE_URL: &'static str = "http://webpbn.com";
 
-        fn parse_block<B>(block: &Node, palette: &ColorPalette) -> B
+        fn parse_block<B>(block: &Node<'_>, palette: &ColorPalette) -> B
         where
             B: Block,
         {
@@ -412,7 +412,7 @@ mod xml {
             B::from_str_and_color(&value, color_id)
         }
 
-        fn parse_line<B>(description: &Node, palette: &ColorPalette) -> Description<B>
+        fn parse_line<B>(description: &Node<'_>, palette: &ColorPalette) -> Description<B>
         where
             B: Block,
         {
@@ -432,7 +432,7 @@ mod xml {
             )
         }
 
-        fn get_clues<B>(descriptions: &Nodeset, palette: &ColorPalette) -> Vec<Description<B>>
+        fn get_clues<B>(descriptions: &Nodeset<'_>, palette: &ColorPalette) -> Vec<Description<B>>
         where
             B: Block,
         {
@@ -859,7 +859,7 @@ impl BoardParser for DetectedParser {
 }
 
 impl fmt::Debug for DetectedParser {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         let inner = match self.parser_kind {
             ParserKind::Toml => format!("{:?}", self.cast::<MyFormat>()),
             ParserKind::WebPbn => format!("{:?}", self.cast::<WebPbn>()),

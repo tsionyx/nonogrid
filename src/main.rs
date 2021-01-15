@@ -39,7 +39,7 @@ mod cli {
         matches: ArgMatches<'a>,
     }
 
-    impl<'a> Params<'a> {
+    impl Params<'_> {
         pub(super) fn new() -> Self {
             let matches = App::new(crate_name!())
                 .version(crate_version!())

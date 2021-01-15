@@ -120,7 +120,7 @@ impl Sub for MultiColor {
 }
 
 impl fmt::Display for MultiColor {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let colors = self.variants_as_ids();
         if colors.len() == 1 {
             let color = colors
@@ -185,7 +185,7 @@ impl Block for ColoredBlock {
 }
 
 impl fmt::Display for ColoredBlock {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.size)
     }
 }

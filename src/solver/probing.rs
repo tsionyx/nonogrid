@@ -280,7 +280,7 @@ impl<B> FullProbe1<B>
 where
     B: Block,
 {
-    fn board(&self) -> ReadRef<Board<B>> {
+    fn board(&self) -> ReadRef<'_, Board<B>> {
         self.board.read()
     }
 

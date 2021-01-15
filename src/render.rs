@@ -85,7 +85,7 @@ impl<B> ShellRenderer<B>
 where
     B: Block,
 {
-    fn board(&self) -> ReadRef<Board<B>> {
+    fn board(&self) -> ReadRef<'_, Board<B>> {
         self.board.read()
     }
 
@@ -185,7 +185,7 @@ where
 }
 
 impl Display for BinaryColor {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use BinaryColor::{Black, BlackOrWhite, Undefined, White};
 
         let symbol = match self {

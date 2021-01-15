@@ -133,7 +133,7 @@ where
     K: fmt::Debug,
     V: fmt::Display,
 {
-    fn format(&self, f: &mut fmt::Formatter, spaces: usize, indent_size: usize) -> fmt::Result {
+    fn format(&self, f: &mut fmt::Formatter<'_>, spaces: usize, indent_size: usize) -> fmt::Result {
         if self.children.is_empty() {
             self.format_value(f)
         } else {
@@ -141,7 +141,7 @@ where
         }
     }
 
-    fn format_value(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn format_value(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(ref value) = self.value {
             write!(f, "{:.6}", value)
         } else {
@@ -151,7 +151,7 @@ where
 
     fn format_with_children(
         &self,
-        f: &mut fmt::Formatter,
+        f: &mut fmt::Formatter<'_>,
         spaces: usize,
         indent_size: usize,
     ) -> fmt::Result {
@@ -203,7 +203,7 @@ where
     K: fmt::Debug,
     V: fmt::Display,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.format(f, 0, 2)
     }
 }
@@ -286,7 +286,7 @@ where
         Ok(())
     }
 
-    fn board(&self) -> ReadRef<Board<B>> {
+    fn board(&self) -> ReadRef<'_, Board<B>> {
         self.board.read()
     }
 
