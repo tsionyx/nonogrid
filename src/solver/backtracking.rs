@@ -379,6 +379,7 @@ where
 
         let log = |f: f64| f.ln_1p() + 1.0;
 
+        #[allow(clippy::cast_precision_loss)]
         // Max is the most trivial, but also most ineffective strategy.
         // For details, see https://ieeexplore.ieee.org/document/6476646
         match Self::CHOOSE_STRATEGY {

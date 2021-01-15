@@ -133,6 +133,7 @@ where
             let column_rate = column_rate_cache
                 .unwrap_or_insert_with(point.x, || board.column_solution_rate(point.x));
 
+            #[allow(clippy::cast_precision_loss)]
             let priority = no_solved as f64 + row_rate + column_rate;
             (point, priority.into())
         }));

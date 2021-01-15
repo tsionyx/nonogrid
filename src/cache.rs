@@ -65,7 +65,7 @@ impl<K: Hash + Eq, V> Cached<K, V> for GrowableCache<K, V> {
     }
 }
 
-pub fn cache_info<K, V, C>(cache: &C) -> (usize, u32, f32)
+pub fn cache_info<K, V, C>(cache: &C) -> (usize, u32, f64)
 where
     C: Cached<K, V>,
 {
@@ -75,7 +75,7 @@ where
         let hit_rate = if hits == 0 {
             0.0
         } else {
-            hits as f32 / (hits + misses) as f32
+            f64::from(hits) / f64::from(hits + misses)
         };
 
         (cache.cache_size(), hits, hit_rate)

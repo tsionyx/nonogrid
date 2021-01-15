@@ -314,6 +314,7 @@ where
     where
         B::Color: 'a,
     {
+        #![allow(clippy::cast_precision_loss)]
         let solved: f64 = line.map(|cell| self.cell_solution_rate(cell)).sum();
         solved / size as f64
     }
