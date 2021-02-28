@@ -73,7 +73,13 @@ nohup bash benches/batch.sh webpbn {1..35000} >benches/batch.log 2>&1 &
 bash benches/batch.sh stat benches/batch.log 10 --details
 ```
 
-#### black-and-white (with SAT solver, >=10 seconds)
+#### with SAT solver
+
+```
+cargo build --release --no-default-features --features="args std_time logger sat"
+```
+
+##### black-and-white (>=10 seconds)
 
 | puzzle_id | solve time, sec | SAT variables | SAT clauses |
 |-----------|----------------:|--------------:|------------:|
@@ -96,7 +102,7 @@ bash benches/batch.sh stat benches/batch.log 10 --details
 | [Meow**](https://webpbn.com/survey/puzzles/)   | + | 35_036 | 1_872_216 |
 | [Faase**](https://webpbn.com/survey/puzzles/)  | + | 89_918 | 9_968_433 |
 
-#### colored (with SAT solver, >=10 seconds)
+##### colored (>=10 seconds)
 
 | puzzle_id | solve time, sec | SAT variables | SAT clauses | colors (w/o blank) |
 |-----------|----------------:|--------------:|------------:|-------------------:|
@@ -108,6 +114,69 @@ bash benches/batch.sh stat benches/batch.log 10 --details
 | 16838     | 311             |        70_240 |   6_752_766 | 2
 | 25158     | 33              |        20_433 |     660_340 | 4
 | 26810     | 33              |        45_695 |   2_351_897 | 4
+| 34250     | 1418            |        37_899 |   1_996_812 | 4
+
+#### with custom backtracking
+
+```
+cargo build --release --no-default-features --features="args std_time logger"
+```
+
+##### black-and-white (>=10 seconds)
+
+| puzzle_id | solve time, sec | depth reached, levels  |
+|-----------|----------------:|-----------------------:|
+| 3867*     |             149 |                     21 |
+| 8098*     |              19 |                      8 |
+| 9892*     |             103 |                     22 |
+| 12548*    |               + |                     46 |
+| 13480     |               + |                     41 |
+| 16900     |              83 |                     30 |
+| 18297*    |             326 |                     14 |
+| 22336*    |               + |                     12 |
+| 25385     |               + |                     40 |
+| 25820     |               + |                     35 |
+| 26520     |               + |                     50 |
+| 27174     |              36 |                      7 |
+| 30509     |              24 |                     98 |
+| 30654     |               3 |                    372 |
+| 30681     |              67 |                     30 |
+| 32291     |              36 |                      6 |
+| [Knotty**](https://webpbn.com/survey/puzzles/) | + | 27 |
+| [Meow**](https://webpbn.com/survey/puzzles/)   | + | 28 |
+| [Faase**](https://webpbn.com/survey/puzzles/)  | + | 43 |
+
+##### colored (>=10 seconds)
+
+| puzzle_id | solve time, sec |  depth reached, levels  | colors (w/o blank) |
+|-----------|----------------:|------------------------:|-------------------:|
+| 672*      |               + |                      70 | 3
+| 3085      |             991 |                      25 | 3
+| 3114      |             173 |                      18 | 3
+| 3149*     |               + |                      37 | 4
+| 3620*     |               + |                      22 | 4
+| 4445*     |              23 |                      13 | 3
+| 7778      |              33 |                      42 | 2
+| 10585     |               + |                      27 | 4
+| 11546     |              15 |                      36 | 4
+| 12831     |               + |                      22 | 4
+| 14717     |               + |                      33 | 3
+| 15101     |               + |                      33 | 4
+| 16552     |               + |                      26 | 4
+| 16838     |               + |                      37 | 2
+| 16878     |               + |                      35 | 2
+| 17045     |              77 |                      23 | 3
+| 18290     |           1_846 |                      34 | 4
+| 26810     |               + |                      29 | 4
+| 29436     |               + |                      24 | 4
+| 29826     |              22 |                      21 | 3
+| 30640     |             667 |                      28 | 4
+| 31812     |              27 |                     523 | 3
+| 33745     |               + |                      47 | 4
+| 34250     |               + |                      16 | 4
+| 34722     |               + |                      26 | 4
+
++ - search was not completed after 1 hour
 
 &ast; - puzzles from http://webpbn.com/survey/.
 
