@@ -469,7 +469,7 @@ impl<B> Board<B>
 where
     B: Block,
     // to suppress IDEA warning
-    B::Color: Copy,
+    B::Color: Copy + fmt::Debug,
 {
     fn set_color(&mut self, point: &Point, color: &B::Color) {
         let old_value = self.cell(point);

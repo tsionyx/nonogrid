@@ -213,7 +213,7 @@ impl<B, P, S> Solver<B, P, S>
 where
     B: Block,
     // to suppress IDEA warning
-    B::Color: Copy,
+    B::Color: Copy + fmt::Debug,
     P: ProbeSolver<BlockType = B>,
     S: LineSolver<BlockType = B>,
 {

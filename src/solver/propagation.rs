@@ -145,6 +145,7 @@ where
 impl<B> Solver<B>
 where
     B: Block,
+    B::Color: Debug,
 {
     pub fn new(board: MutRc<Board<B>>) -> Self {
         Self {

@@ -106,6 +106,7 @@ fn at_most_one(vars: &[Var]) -> impl Iterator<Item = Vec<Lit>> + 'static {
 impl<B> ClauseGenerator<B>
 where
     B: Block,
+    B::Color: std::fmt::Debug,
 {
     const BLACK_COLOR: ColorId = 0;
 

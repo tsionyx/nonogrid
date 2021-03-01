@@ -280,6 +280,7 @@ impl<PropagationResult> ProbeResult<PropagationResult> {
 impl<B> FullProbe1<B>
 where
     B: Block,
+    B::Color: std::fmt::Debug,
 {
     fn board(&self) -> ReadRef<'_, Board<B>> {
         self.board.read()
