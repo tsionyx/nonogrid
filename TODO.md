@@ -25,6 +25,7 @@
   - https://github.com/Izaron/Nonograms/raw/master/puzzles
 - docs.rs (+from README)
 - SVG, XML, [cmd](https://docs.python.org/3/library/cmd.html)
+- [backtracking](https://github.com/advancedresearch/quickbacktrack/blob/master/src/lib.rs)
 
 
 ## Refactoring

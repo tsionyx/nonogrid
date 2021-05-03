@@ -9,6 +9,7 @@ use std::{
     slice::Chunks,
 };
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum BW {
     Undefined,
@@ -98,6 +99,7 @@ impl Sub for BW {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 struct BB(usize);
 
@@ -331,6 +333,7 @@ mod utils {
         type Output = T;
 
         fn unwrap_or_insert_with<F: FnOnce() -> T>(&mut self, index: usize, default: F) -> T {
+            #![allow(clippy::collapsible_match)]
             if let Some(elem) = self.get(index) {
                 if let Some(y) = *elem {
                     return y;

@@ -1439,9 +1439,7 @@ mod tests {
         ";
 
         let f = MyFormat::with_content(s).unwrap();
-        let mut colors = vec![];
-        colors.push(("g".to_string(), '%', "0, 204, 0".to_string()));
-
+        let colors = vec![("g".to_string(), '%', "0, 204, 0".to_string())];
         assert_eq!(f.get_colors(), colors)
     }
 }
