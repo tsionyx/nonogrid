@@ -28,11 +28,11 @@ impl Color for BinaryColor {
         Self::White
     }
 
-    fn is_solved(&self) -> bool {
-        *self == Self::Black || *self == Self::White
+    fn is_solved(self) -> bool {
+        self == Self::Black || self == Self::White
     }
 
-    fn solution_rate(&self, _all_colors: &[ColorId]) -> f64 {
+    fn solution_rate(self, _all_colors: &[ColorId]) -> f64 {
         if self.is_solved() {
             1.0
         } else {
@@ -40,15 +40,15 @@ impl Color for BinaryColor {
         }
     }
 
-    fn variants(&self) -> Vec<Self> {
+    fn variants(self) -> Vec<Self> {
         if self.is_solved() {
-            vec![*self]
+            vec![self]
         } else {
             vec![Self::White, Self::Black]
         }
     }
 
-    fn as_color_id(&self) -> Option<ColorId> {
+    fn as_color_id(self) -> Option<ColorId> {
         None
     }
 
@@ -107,11 +107,11 @@ impl Block for BinaryBlock {
             .collect()
     }
 
-    fn size(&self) -> usize {
+    fn size(self) -> usize {
         self.0
     }
 
-    fn color(&self) -> Self::Color {
+    fn color(self) -> Self::Color {
         BinaryColor::Black
     }
 }
