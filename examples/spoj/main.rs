@@ -634,7 +634,7 @@ mod line {
     pub fn solve(desc: &Clues, line: Line) -> Result<Line, UnsolvableLine> {
         let mut solver = DynamicSolver::new(desc, line);
         solver.solve()?;
-        Ok(solver.get_solution())
+        Ok(solver.into_solution())
     }
 
     struct DynamicSolver<'a> {
@@ -677,7 +677,7 @@ mod line {
             Ok(())
         }
 
-        fn get_solution(self) -> Line {
+        fn into_solution(self) -> Line {
             self.solved_line.into()
         }
 
@@ -693,10 +693,10 @@ mod line {
             }
 
             let (position, block) = (self.line.len() - 1, self.desc.vec.len());
-            self.get_sol(position as isize, block)
+            self.solve_block(position as isize, block)
         }
 
-        fn get_sol(&mut self, position: isize, block: usize) -> bool {
+        fn solve_block(&mut self, position: isize, block: usize) -> bool {
             if position < 0 {
                 return block == 0;
             }
@@ -750,7 +750,7 @@ mod line {
 
         fn fill_matrix_blank(&mut self, position: usize, block: usize) -> bool {
             if self.can_be_blank_at(position) {
-                let has_blank = self.get_sol(position as isize - 1, block);
+                let has_blank = self.solve_block(position as isize - 1, block);
                 if has_blank {
                     let blank = BW::blank();
                     self.update_solved(position, blank);
@@ -775,7 +775,7 @@ mod line {
                 let block_start = position as isize - block_size as isize + 1;
 
                 if self.can_place_color(block_start, position, should_have_trailing_space) {
-                    let has_color = self.get_sol(block_start - 1, block - 1);
+                    let has_color = self.solve_block(block_start - 1, block - 1);
                     if has_color {
                         self.set_color_block(
                             block_start,
