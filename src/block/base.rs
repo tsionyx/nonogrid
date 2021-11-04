@@ -160,6 +160,9 @@ where
     }
 
     /// The number of potential block positions for given line size.
+    ///
+    /// # Panics
+    /// If the specified line length is less than the minimum space to put the blocks into.
     pub fn positions_number(&self, line_length: usize) -> usize {
         let min_space = self.min_space();
         assert!(line_length >= min_space);
@@ -183,7 +186,7 @@ where
                         if first_index == None {
                             first_index = Some(block_index);
                         }
-                        last_index = Some(block_index)
+                        last_index = Some(block_index);
                     }
                 }
 
@@ -428,7 +431,7 @@ pub mod color {
         ) {
             let current_max = self.vec.values().map(|color| color.id).max();
             let id = current_max.map_or(1, |val| val * 2);
-            self.color_with_name_value_symbol_and_id(name, value, symbol, id)
+            self.color_with_name_value_symbol_and_id(name, value, symbol, id);
         }
 
         pub fn color_with_name_and_value(&mut self, name: &str, value: ColorValue) {
@@ -440,7 +443,7 @@ pub mod color {
                 .find(|available_symbol| !occupied_symbols.contains(available_symbol))
                 .expect("Cannot create color: No more symbols available.");
 
-            self.color_with_name_value_and_symbol(name, value, next_symbol)
+            self.color_with_name_value_and_symbol(name, value, next_symbol);
         }
     }
 }

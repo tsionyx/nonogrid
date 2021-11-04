@@ -1,6 +1,5 @@
 //! The algorithm based on the ideas
 //! from the [article](https://habr.com/ru/post/433330/)
-#![allow(clippy::filter_map)]
 
 use std::{
     collections::{HashMap, HashSet},
@@ -332,7 +331,7 @@ where
     fn point_once_clauses(&self, cell_point: Point) -> impl Iterator<Item = Vec<Lit>> {
         let point_vars = self.get_vars(cell_point);
 
-        let values: Vec<_> = point_vars.values().cloned().collect();
+        let values: Vec<_> = point_vars.values().copied().collect();
         at_most_one(&values)
     }
 

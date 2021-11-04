@@ -105,7 +105,7 @@ impl Sub for MultiColor {
         debug!("Previous state: {:?}", colors);
         debug!("Bad state: {:?}", bad_state);
 
-        let new_value: HashSet<_> = colors.difference(&bad_state).cloned().collect();
+        let new_value: HashSet<_> = colors.difference(&bad_state).copied().collect();
 
         if !new_value.is_empty() && new_value.is_subset(&colors) {
             let new_state: Vec<_> = new_value.into_iter().collect();
