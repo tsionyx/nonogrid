@@ -778,7 +778,7 @@ mod line {
                     let has_color = self.solve_block(block_start - 1, block - 1);
                     if has_color {
                         self.set_color_block(
-                            block_start,
+                            block_start as usize,
                             position,
                             current_block.color(),
                             should_have_trailing_space,
@@ -815,7 +815,7 @@ mod line {
 
         fn set_color_block(
             &mut self,
-            start: isize,
+            start: usize,
             mut end: usize,
             color: BW,
             trailing_space: bool,
@@ -827,7 +827,7 @@ mod line {
                 end += 1
             }
 
-            for i in start as usize..end {
+            for i in start..end {
                 self.update_solved(i, color);
             }
         }
