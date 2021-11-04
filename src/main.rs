@@ -5,7 +5,7 @@ use std::{
 };
 
 use self::{
-    block::{binary::BinaryBlock, multicolor::ColoredBlock, Block},
+    block::{base::BlockSizesIterator, binary::BinaryBlock, multicolor::ColoredBlock, Block},
     board::Board,
     cli::Params,
     parser::{BoardParser, NetworkReader, ParseError, PuzzleScheme},
@@ -201,6 +201,7 @@ where
     B: 'static + Block + Display,
     B::Color: DynamicColor + Display,
     P: BoardParser,
+    for<'a> BlockSizesIterator<'a, B>: Iterator<Item = usize>,
 {
     let board = {
         let mut board = board_parser.parse::<B>();

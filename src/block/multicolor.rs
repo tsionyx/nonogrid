@@ -9,7 +9,7 @@ use log::debug;
 use crate::{
     block::base::{
         color::{ColorId, ColorPalette},
-        Block, Color,
+        Block, BlockSizesIterator, Color,
     },
     utils::{from_two_powers, two_powers},
 };
@@ -147,6 +147,30 @@ impl ColoredBlock {
     }
 }
 
+impl Iterator for BlockSizesIterator<'_, ColoredBlock> {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let block = self.inner.get(self.pos)?;
+
+        let prev_sum = self.acc_block.map_or(0, |acc_block| {
+            // 1 cell is for a minimal gap between the previous run of blocks
+            // and the current block
+            let gap_size = if acc_block.color() == block.color() {
+                1
+            } else {
+                0
+            };
+            acc_block.size() + gap_size
+        });
+
+        let current = prev_sum + block.size();
+        self.acc_block = Some(ColoredBlock::from_size_and_color(current, block.color));
+        self.pos += 1;
+        Some(current)
+    }
+}
+
 impl Block for ColoredBlock {
     type Color = MultiColor;
 
@@ -156,24 +180,11 @@ impl Block for ColoredBlock {
     }
 
     fn partial_sums(desc: &[Self]) -> Vec<usize> {
-        desc.iter()
-            .scan(None, |acc_block: &mut Option<Self>, block| {
-                let prev_sum = acc_block.map_or(0, |acc_block| {
-                    // 1 cell is for a minimal gap between the previous run of blocks
-                    // and the current block
-                    let gap_size = if acc_block.color() == block.color() {
-                        1
-                    } else {
-                        0
-                    };
-                    acc_block.size() + gap_size
-                });
+        Self::partial_sums_iter(desc).collect()
+    }
 
-                let current = prev_sum + block.size();
-                *acc_block = Some(Self::from_size_and_color(current, block.color));
-                Some(current)
-            })
-            .collect()
+    fn partial_sums_iter(desc: &[Self]) -> BlockSizesIterator<'_, Self> {
+        BlockSizesIterator::new(desc)
     }
 
     fn size(&self) -> usize {

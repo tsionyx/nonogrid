@@ -2,8 +2,10 @@ use std::iter::once;
 
 use crate::{
     block::{
-        base::color::ColorPalette, binary::BinaryColor, multicolor::MultiColor, Block, Color,
-        Description, Line,
+        base::{color::ColorPalette, BlockSizesIterator},
+        binary::BinaryColor,
+        multicolor::MultiColor,
+        Block, Color, Description, Line,
     },
     utils::{self, rc::ReadRc},
 };
@@ -56,10 +58,12 @@ pub struct DynamicSolver<B: Block, S = <B as Block>::Color> {
 #[derive(Debug, Copy, Clone)]
 pub struct UnsolvableLine;
 
+#[allow(single_use_lifetimes)]
 impl<B> LineSolver for DynamicSolver<B>
 where
     B: Block,
     B::Color: DynamicColor,
+    for<'a> BlockSizesIterator<'a, B>: Iterator<Item = usize>,
 {
     type BlockType = B;
 
@@ -103,14 +107,16 @@ where
 
 #[allow(clippy::cast_possible_wrap)]
 #[allow(clippy::cast_sign_loss)]
+#[allow(single_use_lifetimes)]
 impl<B> DynamicSolver<B>
 where
     B: Block,
     B::Color: DynamicColor,
+    for<'a> BlockSizesIterator<'a, B>: Iterator<Item = usize>,
 {
     fn calc_block_sum(desc: &Description<B>) -> Vec<usize> {
         once(0)
-            .chain(B::partial_sums(&desc.vec).into_iter().map(|size| size - 1))
+            .chain(B::partial_sums_iter(&desc.vec).map(|size| size - 1))
             .collect()
     }
 

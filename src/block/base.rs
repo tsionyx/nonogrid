@@ -49,12 +49,29 @@ where
     }
 
     fn from_size_and_color(size: usize, color: Option<ColorId>) -> Self;
-    fn partial_sums(desc: &[Self]) -> Vec<usize>
-    where
-        Self: Sized;
+    fn partial_sums(desc: &[Self]) -> Vec<usize>;
+
+    fn partial_sums_iter(desc: &[Self]) -> BlockSizesIterator<'_, Self>;
 
     fn size(&self) -> usize;
     fn color(&self) -> Self::Color;
+}
+
+#[derive(Debug)]
+pub struct BlockSizesIterator<'a, B: Block> {
+    pub(super) inner: &'a [B],
+    pub(super) pos: usize,
+    pub(super) acc_block: Option<B>,
+}
+
+impl<'a, B: Block> BlockSizesIterator<'a, B> {
+    pub(super) fn new(desc: &'a [B]) -> Self {
+        Self {
+            inner: desc,
+            pos: 0,
+            acc_block: None,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]

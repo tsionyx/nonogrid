@@ -5,7 +5,7 @@ use std::{
 
 use crate::block::base::{
     color::{ColorId, ColorPalette},
-    Block, Color,
+    Block, BlockSizesIterator, Color,
 };
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
@@ -85,6 +85,25 @@ impl Sub for BinaryColor {
     }
 }
 
+impl Iterator for BlockSizesIterator<'_, BinaryBlock> {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let block = self.inner.get(self.pos)?;
+
+        let prev_sum = self.acc_block.map_or(0, |acc_block| {
+            // 1 cell is for a minimal gap between the previous run of blocks
+            // and the current block
+            acc_block.size() + 1
+        });
+
+        let current = prev_sum + block.0;
+        self.acc_block = Some(BinaryBlock(current));
+        self.pos += 1;
+        Some(current)
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 pub struct BinaryBlock(pub usize);
 
@@ -96,15 +115,11 @@ impl Block for BinaryBlock {
     }
 
     fn partial_sums(desc: &[Self]) -> Vec<usize> {
-        desc.iter()
-            .scan(None, |acc_sum, block| {
-                // 1 cell is for a minimal gap between the previous run of blocks
-                // and the current block
-                let prev_sum = acc_sum.map_or(0, |prev_sum| prev_sum + 1);
-                *acc_sum = Some(prev_sum + block.0);
-                *acc_sum
-            })
-            .collect()
+        Self::partial_sums_iter(desc).collect()
+    }
+
+    fn partial_sums_iter(desc: &[Self]) -> BlockSizesIterator<'_, Self> {
+        BlockSizesIterator::new(desc)
     }
 
     fn size(&self) -> usize {
