@@ -240,7 +240,7 @@ pub fn split_sections<'a, 'b>(
     }
 
     let eof = lines.len();
-    let indexes_with_eof: Vec<_> = section_indexes.values().cloned().chain(once(eof)).collect();
+    let indexes_with_eof: Vec<_> = section_indexes.values().copied().chain(once(eof)).collect();
 
     let mut ranges: HashMap<_, _> = idx_to_ranges(indexes_with_eof)
         .ok_or_else(|| "Should be enough indexes".to_string())?
@@ -301,6 +301,7 @@ pub mod time {
     use std::time::Instant;
 
     #[cfg(feature = "std_time")]
+    #[allow(clippy::unnecessary_wraps)]
     pub fn now() -> Option<Instant> {
         Some(Instant::now())
     }

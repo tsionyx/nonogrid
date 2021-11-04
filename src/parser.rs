@@ -621,6 +621,8 @@ impl NonogramsOrg {
     /// that produces a nonogram solution for the given cyphered solution
     /// (it can be found in puzzle HTML in the form 'var d=[...]').
     #[allow(clippy::shadow_unrelated)]
+    #[allow(unknown_lints)]
+    #[allow(clippy::no_effect_underscore_binding)]
     pub fn decipher(&self) -> (Vec<String>, Vec<Vec<ColorId>>) {
         let cyphered = self.encoded();
 

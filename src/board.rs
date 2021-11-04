@@ -278,7 +278,7 @@ where
     }
 
     pub fn get_column(&self, index: usize) -> Line<B::Color> {
-        self.get_column_iter(index).cloned().collect()
+        self.get_column_iter(index).copied().collect()
     }
 
     pub fn get_line(&self, line_pos: LinePosition) -> Line<B::Color> {

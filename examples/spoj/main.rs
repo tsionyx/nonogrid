@@ -1,5 +1,6 @@
 #![allow(clippy::missing_const_for_fn)]
 #![allow(clippy::use_self)]
+#![allow(clippy::option_if_let_else)]
 
 use std::{
     cell::{Ref, RefCell},
@@ -184,7 +185,6 @@ mod utils {
 
     /// The copy of `hashbrown::fx`
     mod fx {
-        use std::default::Default;
         use std::hash::{BuildHasherDefault, Hasher};
         use std::intrinsics::copy_nonoverlapping;
         use std::mem::size_of;
@@ -192,6 +192,7 @@ mod utils {
 
         pub type FxHashBuilder = BuildHasherDefault<FxHasher>;
 
+        #[derive(Default)]
         pub struct FxHasher {
             hash: usize,
         }
@@ -200,13 +201,6 @@ mod utils {
         const K: usize = 0x9e37_79b9;
         #[cfg(target_pointer_width = "64")]
         const K: usize = 0x517c_c1b7_2722_0a95;
-
-        impl Default for FxHasher {
-            #[inline]
-            fn default() -> Self {
-                Self { hash: 0 }
-            }
-        }
 
         impl FxHasher {
             #[inline]
@@ -1675,7 +1669,7 @@ fn read_next_line() -> Vec<usize> {
 
 fn read_description() -> Clues {
     let mut row = read_next_line();
-    if let Some(&0) = row.last() {
+    if row.last() == Some(&0) {
         row.pop().unwrap();
     }
     Clues::new(row.into_iter().map(BB).collect())

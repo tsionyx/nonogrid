@@ -270,9 +270,7 @@ where
                 println!("{}", r.render_simple());
                 found = true;
             }
-            if !found {
-                panic!("Puzzle is unsatisfied");
-            }
+            assert!(found, "Puzzle is unsatisfied");
         }
     }
 }

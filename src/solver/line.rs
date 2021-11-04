@@ -147,7 +147,7 @@ where
             .solution_matrix
             .get_mut(position * self.job_size + block)
         {
-            *item = Some(can_be_solved)
+            *item = Some(can_be_solved);
         }
     }
 
@@ -281,7 +281,7 @@ where
             let blank = B::Color::blank();
             self.update_solved(end, blank);
         } else {
-            end += 1
+            end += 1;
         }
 
         // set colored cells

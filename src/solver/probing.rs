@@ -268,6 +268,7 @@ impl<PropagationResult> ProbeResult<PropagationResult> {
         }
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     fn unwrap(self) -> PropagationResult {
         if let Self::NewInfo(res) = self {
             return res;

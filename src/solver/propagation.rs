@@ -30,7 +30,7 @@ trait JobQueue<T> {
 
     fn extend<I: IntoIterator<Item = T>>(&mut self, jobs: I) {
         for job in jobs {
-            self.push(job)
+            self.push(job);
         }
     }
 }
@@ -52,7 +52,7 @@ where
     T: PartialEq + Copy + Debug,
 {
     fn push(&mut self, job: T) {
-        self.vec.push(job)
+        self.vec.push(job);
     }
 
     fn pop(&mut self) -> Option<T> {
@@ -103,7 +103,7 @@ where
 {
     fn push(&mut self, job: T) {
         let _ = self.visited.remove(&job);
-        self.vec.push(job)
+        self.vec.push(job);
     }
 
     fn pop(&mut self) -> Option<T> {
@@ -199,7 +199,7 @@ where
         };
 
         if let Some(cache) = cache {
-            cache.cache_set(key, solved)
+            cache.cache_set(key, solved);
         }
     }
 
@@ -354,6 +354,6 @@ where
     B: Block,
 {
     fn drop(&mut self) {
-        self.print_cache_info()
+        self.print_cache_info();
     }
 }
