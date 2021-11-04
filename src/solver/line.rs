@@ -38,8 +38,8 @@ where
     fn both_colors() -> Option<Self>;
 
     fn can_be_blank(&self) -> bool;
-    fn can_be(&self, color: Self) -> bool;
-    fn add_color(&self, color: Self) -> Self;
+    fn can_be(self, color: Self) -> bool;
+    fn add_color(self, color: Self) -> Self;
     fn solved_copy(&self) -> Self;
 }
 
@@ -300,14 +300,14 @@ impl DynamicColor for BinaryColor {
         self != &Self::Black
     }
 
-    fn can_be(&self, _always_black: Self) -> bool {
-        self != &Self::blank()
+    fn can_be(self, _always_black: Self) -> bool {
+        self != Self::blank()
     }
 
-    fn add_color(&self, color: Self) -> Self {
+    fn add_color(self, color: Self) -> Self {
         match self {
             Self::Undefined => color,
-            &value if value == color => value,
+            value if value == color => value,
             _ => Self::BlackOrWhite,
         }
     }
@@ -326,11 +326,11 @@ impl DynamicColor for MultiColor {
         (self.0 & ColorPalette::WHITE_ID) == ColorPalette::WHITE_ID
     }
 
-    fn can_be(&self, color: Self) -> bool {
+    fn can_be(self, color: Self) -> bool {
         (self.0 & color.0) != 0
     }
 
-    fn add_color(&self, color: Self) -> Self {
+    fn add_color(self, color: Self) -> Self {
         Self(self.0 | color.0)
     }
 

@@ -262,7 +262,7 @@ where
     }
 
     pub fn is_solved_full(&self) -> bool {
-        self.cells.iter().all(Color::is_solved)
+        self.cells.iter().copied().all(Color::is_solved)
     }
 
     fn get_row_slice(&self, index: usize) -> &[B::Color] {

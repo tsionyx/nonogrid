@@ -22,7 +22,7 @@ impl Color for MultiColor {
         Self(ColorPalette::WHITE_ID)
     }
 
-    fn is_solved(&self) -> bool {
+    fn is_solved(self) -> bool {
         self.0.is_power_of_two()
     }
 
@@ -41,7 +41,7 @@ impl Color for MultiColor {
     ///       rate = (N - N) / (N - 1) = 0
     ///    b) when the cell is solved
     ///       rate = (N - 1) / (N - 1) = 1
-    fn solution_rate(&self, all_colors: &[ColorId]) -> f64 {
+    fn solution_rate(self, all_colors: &[ColorId]) -> f64 {
         let all_colors: HashSet<_> = all_colors.iter().copied().collect();
         let cell_colors = self.variants_as_ids();
         let current_size = cell_colors.intersection(&all_colors).count();
@@ -62,11 +62,11 @@ impl Color for MultiColor {
         normalized_rate
     }
 
-    fn variants(&self) -> Vec<Self> {
+    fn variants(self) -> Vec<Self> {
         two_powers(self.0).map(Self).collect()
     }
 
-    fn as_color_id(&self) -> Option<ColorId> {
+    fn as_color_id(self) -> Option<ColorId> {
         Some(self.0)
     }
 
@@ -176,11 +176,11 @@ impl Block for ColoredBlock {
             .collect()
     }
 
-    fn size(&self) -> usize {
+    fn size(self) -> usize {
         self.size
     }
 
-    fn color(&self) -> Self::Color {
+    fn color(self) -> Self::Color {
         MultiColor(self.color)
     }
 }

@@ -24,16 +24,16 @@ where
         + Sub<Output = Result<Self, String>>,
 {
     fn blank() -> Self;
-    fn is_solved(&self) -> bool;
+    fn is_solved(self) -> bool;
     fn memoize_rate() -> bool {
         false
     }
-    fn solution_rate(&self, all_colors: &[ColorId]) -> f64;
-    fn variants(&self) -> Vec<Self>
+    fn solution_rate(self, all_colors: &[ColorId]) -> f64;
+    fn variants(self) -> Vec<Self>
     where
         Self: Sized;
 
-    fn as_color_id(&self) -> Option<ColorId>;
+    fn as_color_id(self) -> Option<ColorId>;
     fn from_color_ids(ids: &[ColorId]) -> Self;
 }
 
@@ -53,8 +53,8 @@ where
     where
         Self: Sized;
 
-    fn size(&self) -> usize;
-    fn color(&self) -> Self::Color;
+    fn size(self) -> usize;
+    fn color(self) -> Self::Color;
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
