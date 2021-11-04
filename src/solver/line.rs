@@ -217,7 +217,7 @@ where
                 if has_color {
                     // set cell blank, place the current block and continue
                     self.set_color_block(
-                        block_start,
+                        block_start as usize,
                         position,
                         current_color,
                         should_have_trailing_space,
@@ -272,7 +272,7 @@ where
 
     fn set_color_block(
         &mut self,
-        start: isize,
+        start: usize,
         mut end: usize,
         color: B::Color,
         trailing_space: bool,
@@ -285,7 +285,7 @@ where
         }
 
         // set colored cells
-        for i in start as usize..end {
+        for i in start..end {
             self.update_solved(i, color);
         }
     }
