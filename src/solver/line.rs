@@ -15,7 +15,7 @@ pub trait LineSolver {
 
     fn new(desc: ReadRc<Description<Self::BlockType>>, line: Line<LineColor<Self>>) -> Self;
     fn solve(&mut self) -> Result<(), UnsolvableLine>;
-    fn get_solution(self) -> Line<LineColor<Self>>;
+    fn into_solution(self) -> Line<LineColor<Self>>;
 }
 
 pub fn solve<L, B>(
@@ -28,7 +28,7 @@ where
 {
     let mut solver = L::new(desc, line);
     solver.solve()?;
-    Ok(solver.get_solution())
+    Ok(solver.into_solution())
 }
 
 pub trait DynamicColor: Color
@@ -96,7 +96,7 @@ where
         Ok(())
     }
 
-    fn get_solution(self) -> Line<B::Color> {
+    fn into_solution(self) -> Line<B::Color> {
         self.solved_line.into()
     }
 }
@@ -120,10 +120,10 @@ where
         }
 
         let (position, block) = (self.line.len() - 1, self.desc.vec.len());
-        self.get_sol(position as isize, block)
+        self.solve_block(position as isize, block)
     }
 
-    fn get_sol(&mut self, position: isize, block: usize) -> bool {
+    fn solve_block(&mut self, position: isize, block: usize) -> bool {
         if position < 0 {
             // finished placing the last block, exactly at the beginning of the line.
             return block == 0;
@@ -179,7 +179,7 @@ where
     fn fill_matrix_blank(&mut self, position: usize, block: usize) -> bool {
         if self.can_be_blank_at(position) {
             // current cell is either blank or unknown
-            let has_blank = self.get_sol(position as isize - 1, block);
+            let has_blank = self.solve_block(position as isize - 1, block);
             if has_blank {
                 let blank = B::Color::blank();
                 // set cell blank and continue
@@ -213,7 +213,7 @@ where
                 current_color,
                 should_have_trailing_space,
             ) {
-                let has_color = self.get_sol(block_start - 1, block - 1);
+                let has_color = self.solve_block(block_start - 1, block - 1);
                 if has_color {
                     // set cell blank, place the current block and continue
                     self.set_color_block(
@@ -451,7 +451,7 @@ mod tests {
             let mut ds = DynamicSolver::new(ReadRc::new(desc), line.into());
             assert!(ds.solve().is_ok());
             assert_eq!(ds.line, original_line);
-            assert_eq!(ds.get_solution(), expected.into());
+            assert_eq!(ds.into_solution(), expected.into());
         }
     }
 }
