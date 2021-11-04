@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 # https://stackoverflow.com/a/246128
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 MODE_WEBPBN="webpbn"
 MODE_NONOGRAMS="nonograms.org"
@@ -81,7 +81,7 @@ function run_single_nonogram() {
     local path=${SCRIPT_DIR}/puzzles-norg/${puzzle_id}.js
     if [[ ! -f ${path} ]]; then
         echo "File not found locally. Download into $path"
-        url=$(find_nonogram_url ${puzzle_id})
+        local url=$(find_nonogram_url ${puzzle_id})
         if [[ ! ${url} ]]; then
             echo "Not found URL for puzzle #$puzzle_id" >&2
             return
@@ -111,6 +111,7 @@ function prepare() {
     echo "Start at $(date)"
     export RUST_LOG=nonogrid=warn
     export RUST_BACKTRACE=1
+    export RUSTFLAGS="-C target-cpu=native -g"
     cargo build --release --no-default-features --features="args std_time logger sat"
 }
 

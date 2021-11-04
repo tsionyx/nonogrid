@@ -69,9 +69,16 @@ grep -oP 'Total: \K(.+)' benches/rand.log | sort -n | nl -ba | less
 ### Hardest backtracking puzzles
 
 ```
-nohup bash benches/batch.sh webpbn {1..35000} >benches/batch.log 2>&1 &
-bash benches/batch.sh stat benches/batch.log 10 --details
+# only 27895 of them are valid at 3 Nov 2021
+nohup bash benches/batch.sh webpbn {1..35500} >benches/batch.log 2>&1 &
+bash benches/batch.sh stat benches/batch.log 9 --details
 ```
+
+Most of the hardest puzzles are not unique, so we need to find at least two solutions to prove it.
+So, the solution ends when the second solution is found or if we found proof that the first solution is the only.
+However, for puzzles that take hours to solve, it can be helpful to know when
+the first solution has been found, and therefore, how long will it take to find the second one.
+
 
 #### with SAT solver
 
@@ -81,40 +88,40 @@ cargo build --release --no-default-features --features="args std_time logger sat
 
 ##### black-and-white (>=10 seconds)
 
-| puzzle_id | solve time, sec | SAT variables | SAT clauses |
-|-----------|----------------:|--------------:|------------:|
-| 9892*     | 33              |        13_887 |     425_270 |
-| 10088*    | 10              |        23_483 |   1_025_585 |
-| 12548*    | 137             |        13_685 |     503_999 |
-| 16900     | 12              |        32_295 |   1_751_050 |
-| 18297*    | 10              |         9_708 |     275_166 |
-| 19080     | 363             |        24_673 |   1_272_743 |
-| 22336*    | 259             |        67_137 |   5_461_726 |
-| 25385     | 279             |        21_334 |     923_394 |
-| 25588     | 187             |        21_017 |     993_331 |
-| 25820     | 106498 (42230 for 1-st solution) | 43_668 | 2_948_833 |
-| 26520     | 41161           |        29_223 |   1_696_163 |
-| 30532     | 13              |        15_212 |     444_144 |
-| 30654     | 1342            |        33_384 |   1_138_340 |
-| 32013     | 13              |         9_468 |     297_855 |
-| 32291     | 67              |        14_421 |     543_978 |
-| [Knotty**](https://webpbn.com/survey/puzzles/) | + | 11_076 |   230_271 |
-| [Meow**](https://webpbn.com/survey/puzzles/)   | + | 35_036 | 1_872_216 |
-| [Faase**](https://webpbn.com/survey/puzzles/)  | + | 89_918 | 9_968_433 |
+| puzzle_id | solve time, sec | 2-nd solution, sec | SAT variables | SAT clauses |
+|-----------|----------------:|-------------------:|--------------:|------------:|
+| 9892*     |              28 |                  0 |        13_887 |     425_270 |
+| 10088*    |              10 |                  0 |        23_483 |   1_025_585 |
+| 12548*    |             141 |                  0 |        13_685 |     503_999 |
+| 16900     |              15 |                  0 |        32_295 |   1_751_050 |
+| 18297*    |              11 |    0 (3 solutions) |         9_708 |     275_166 |
+| 19080     |             398 |                  0 |        24_673 |   1_272_743 |
+| 22336*    |             269 |                  0 |        67_137 |   5_461_726 |
+| 25385     |             295 |                  0 |        21_334 |     923_394 |
+| 25588     |             187 |                  0 |        21_017 |     993_331 |
+| 25820     |         106_498 |             64_268 |        43_668 |   2_948_833 |
+| 26520     |          41_161 |                  ? |        29_223 |   1_696_163 |
+| 30532     |              13 |                  0 |        15_212 |     444_144 |
+| 30654     |           1_243 |                 99 |        33_384 |   1_138_340 |
+| 32013     |              13 |                  0 |         9_468 |     297_855 |
+| 32291     |              61 |                  0 |        14_421 |     543_978 |
+| [Knotty**](https://webpbn.com/survey/puzzles/) | + | N/A | 11_076 |    230_271 |
+| [Meow**](https://webpbn.com/survey/puzzles/)   | + | N/A | 35_036 |  1_872_216 |
+| [Faase**](https://webpbn.com/survey/puzzles/)  | + | N/A | 89_918 |  9_968_433 |
 
 ##### colored (>=10 seconds)
 
-| puzzle_id | solve time, sec | SAT variables | SAT clauses | colors (w/o blank) |
-|-----------|----------------:|--------------:|------------:|-------------------:|
-| 672*      | 37              |        32_027 |   1_483_859 | 3
-| 2498*     | 44              |        42_352 |   2_259_671 | 4
-| 3114      | 25              |        28_886 |     995_422 | 3
-| 9786      | 51              |        16_094 |     581_210 | 2
-| 10585     | 414             |        28_224 |     829_213 | 4
-| 16838     | 311             |        70_240 |   6_752_766 | 2
-| 25158     | 33              |        20_433 |     660_340 | 4
-| 26810     | 33              |        45_695 |   2_351_897 | 4
-| 34250     | 1418            |        37_899 |   1_996_812 | 4
+| puzzle_id | solve time, sec | 2-nd solution, sec | SAT variables | SAT clauses | colors (w/o blank) |
+|-----------|----------------:|-------------------:|--------------:|------------:|-------------------:|
+| 672*      |              23 |                  0 |        32_027 |   1_483_859 | 3
+| 2498*     |              42 |                  0 |        42_352 |   2_259_671 | 4
+| 3114      |              29 |                  0 |        28_886 |     995_422 | 3
+| 9786      |              24 |                  0 |        16_094 |     581_210 | 2
+| 10585     |             275 |                  0 |        28_224 |     829_213 | 4
+| 16838     |             260 |                  0 |        70_240 |   6_752_766 | 2
+| 25158     |              35 |                  0 |        20_433 |     660_340 | 4
+| 26810     |              28 |                  0 |        45_695 |   2_351_897 | 4
+| 34250     |             252 |                  0 |        37_899 |   1_996_812 | 4
 
 #### with custom backtracking
 
@@ -208,34 +215,56 @@ The colored puzzles are only supported in the following formats:
 
 ## http://www.nonograms.org puzzles
 
-30100 puzzles run. All the puzzles are line solvable and has single solution.
+49601 puzzles run. All the puzzles are line solvable and has single solution.
 
 ### Distribution of solve times
 
 ```
-$ nohup bash benches/batch.sh nonograms.org {1..31000} 2>&1 > benches/batch-norg.log &
+$ nohup bash benches/batch.sh nonograms.org {1..50000} 2>&1 > benches/batch-norg.log &
 $ less benches/batch-norg.log | grep 'Total' | awk '{print $2}' | sort -r | uniq -c
-     2 0.06
-     1 0.05
-     5 0.04
-    11 0.03
-    46 0.02
-   268 0.01
- 29767 0.00
+     1 0.17
+     1 0.12
+     1 0.10
+     4 0.06
+     9 0.05
+    17 0.04
+    56 0.03
+   362 0.02
+  2276 0.01
+ 46874 0.00
 ```
 
-### Top 8 (>=0.04 sec)
+### Top 27 (>=0.05 sec)
 
-| puzzle_id | solve time, sec | colors (w/o blank) |
-|-----------|----------------:|-------------------:|
-| 4462*     | 0.05            | 3
-| 9596*     | 0.04            | 10
-| 17921     | 0.04            | 1 (black)
-| 18417     | 0.04            | 1 (black)
-| 20689     | 0.04            | 4
-| 21272     | 0.06            | 1 (black)
-| 21553     | 0.06            | 5
-| 22118     | 0.04            | 10
+| puzzle_id | solve time, sec                |    size | colors (w/o blank) |
+|-----------|-------------------------------:|---------|-------------------:|
+| 4462*     | 0.05-0.08         ###+         | 140x150 |   3
+| 9596*     | 0.05-0.06         ###          | 139x166 |  10
+| 17921     | 0.04-0.05         ##+          |  110x70 |   2 (black and white)
+| 18417     | 0.04-0.05         ##+          | 148x120 |   2 (black and white)
+| 20689     | 0.05              ##+          | 100x107 |   4
+| 21251     | 0.03-0.05         ##+          | 175x140 |   2 (black and white)
+| 21259     | 0.04-0.05         ##+          | 150x140 |   2 (black and white)
+| 21272     | 0.06-0.09         ###++        | 149x153 |   2 (black and white)
+| 21553     | 0.06-0.08         ###+         | 200x200 |   5
+| 22118     | 0.04-0.05         ##+          | 145x200 |  10
+| 31862     | 0.04-0.05         ##+          |  150x93 |   4
+| 33190     | 0.05-0.06         ###          | 125x200 |   9
+| 36040     | 0.05-0.06         ###          | 120x120 |   3
+| 39385     | 0.03-0.05         ##+          |  80x120 |   9
+| 40330     | 0.04-0.05         ##+          |   90x94 |   4
+| 41095     | 0.05-0.06         ###          | 185x195 |   7
+| 41103     | 0.04-0.05         ##+          | 158x200 |  10
+| 43693     | 0.04-0.05         ##+          |  200x15 |   2 (black and white)
+| 44129     | 0.04-0.05         ##+          |  194x33 |   2 (black and white)
+| 45290     | 0.04-0.05         ##+          | 130x160 |   2 (black and white)
+| 47574(ru) | 0.04-0.05         ##+          | 128x180 |   2 (black and white)
+| 47617(ru) | 0.12-0.17         ######+++    | 140x200 |   2 (black and white)
+| 47623(ru) | 0.06-0.07         ###+         | 160x190 |   2 (black and white)
+| 47648(ru) | 0.15-0.24         ########++++ | 150x200 |   2 (black and white)
+| 47650(ru) | 0.10-0.14         #####++      | 160x180 |   2 (black and white)
+| 48172     | 0.06-0.07         ###+         | 200x120 |   2 (black and white)
+| 48723     | 0.06-0.07         ###+         | 100x171 |   2 (black and white)
 
 
 &ast; - puzzles also mentioned in [this C++ solver post](
