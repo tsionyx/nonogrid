@@ -187,10 +187,22 @@ cargo build --release --no-default-features --features="args std_time logger"
 
 ```
 for fmt in $(curl -s https://webpbn.com/export.cgi | grep -oP 'name="fmt" value="\K([^"]+)'); do
-    echo "Downloading puzzle $ID with format $fmt"
+    echo "======== Downloading puzzle $ID with format $fmt ========"
     curl -s https://webpbn.com/export.cgi --data "id=$ID&fmt=$fmt&go=1" > ${ID}.${fmt}
 done
 ```
+
+The colored puzzles are only supported in the following formats:
+- _xml_: colored block represented as 'color="NAME"';
+- _pnm_;
+- _xls_?;
+- _olsak: colored block represented as the letters for every color: 'n:%  #00B000   green';
+- _cwc_: colored blocks represented as the numbers (1..N)
+- _crossa_: colored blocks represented as the numbers (1..N)
+
+- The blotted puzzles (not implemented yet) are only supported in the following formats:
+- _xml_: blotted block represented as '0';
+- _csv_: blotted block represented as '#'.
 
 
 
