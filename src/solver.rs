@@ -31,7 +31,10 @@ where
     warn!("Solved {} points", solved_points.len());
 
     if !board.read().is_solved_full() {
-        warn!("Trying to solve with backtracking");
+        warn!(
+            "Trying to solve with backtracking (solved on {:.3}%)",
+            board.read().solution_rate() * 100.0
+        );
         let mut solver =
             backtracking::Solver::<_, P, S>::with_options(board, max_solutions, timeout, max_depth);
         solver.run()?;
@@ -66,13 +69,19 @@ where
     }
 
     let impact = {
-        warn!("Solving with probing");
+        warn!(
+            "Solving with probing (solved on {:.3}%)",
+            board.read().solution_rate() * 100.0
+        );
         let mut probe_solver = P::with_board(MutRc::clone(&board));
         probe_solver.run_unsolved::<S>()?
     };
 
     if !board.read().is_solved_full() {
-        warn!("Trying to solve with SAT");
+        warn!(
+            "Trying to solve with SAT (solved on {:.3}%)",
+            board.read().solution_rate() * 100.0
+        );
         let solver = sat::ClauseGenerator::with_clues(
             board.read().descriptions(LineDirection::Column),
             board.read().descriptions(LineDirection::Row),
