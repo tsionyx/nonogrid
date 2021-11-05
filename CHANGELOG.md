@@ -5,6 +5,45 @@ The format based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
+## [0.7.2] - 2021-11-05
+
+### Added
+- special `UnsolvableLine` error type;
+- new benchmarks info:
+  - how it behaves on hard puzzles with the default backtracking (without SAT);
+  - when the SAT finds the first solution and how much time it needs to find the second one;
+  - new hard line-solvable puzzles from http://www.nonograms.org;
+- information on blotted (webpbn) puzzles:
+  - numbers;
+  - supported formats;
+- show solution rate on various steps of solving.
+
+### Changed
+- moved from Travis CI to Github Actions;
+- updated compiler lints in lib.rs;
+- refactoring:
+  - simplify string trimming while parsing;
+  - explicit anonymous lifetimes;
+  - signatures of members for `Copy` traits (`Color` and `Block`): `&self` -> `self`;
+  - new names for `LineSolver`'s methods:
+    - `get_soltion`-> `into_solution`;
+    - `get_sol` -> `solve_block`;
+  - get rid of isize argument in `LineSolver::set_color_block`;
+- updated dependencies:
+  - `ordered_float`=2.8;
+  - `smalvec`=1.6;
+  - others with `cargo update` (check that they are still compilable under Rust 1.39).
+
+### Fixed
+- a lot of clippy warnings (up to 1.57.0-beta.3 and 1.58.0-nightly);
+- suppress `clippy::cast_precision_loss`;
+- suppress some IDEA warnings (`std::fmt::Debug`);
+- benchmark script:
+  - variables scope;
+  - `RUSTFLAGS="-C target-cpu=native"` for maximum performance;
+- freeze `varisat` version to "=0.2.1" (to support Rust 1.39).
+
+
 ## [0.7.1] - 2020-08-09
 
 ### Added

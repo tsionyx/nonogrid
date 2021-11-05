@@ -2,8 +2,8 @@
 name = "nonogrid"
 description = "Efficient nonogram solver"
 repository = "https://github.com/tsionyx/nonogrid"
-version = "0.7.1"
-authors = ["Ivan Ladelshchikov <tsionyx@gmail.com>"]
+version = "0.7.2"
+authors = ["Ivan L <tsionyx@gmail.com>"]
 license = "MIT"
 edition = "2018"
 readme = "README.md"
