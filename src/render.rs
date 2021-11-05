@@ -190,7 +190,7 @@ impl Display for BinaryColor {
 
         let symbol = match self {
             White => '.',
-            Black => '\u{2b1b}',
+            Black => '\u{25A0}',
             Undefined | BlackOrWhite => '?',
         };
         write!(f, "{}", symbol)
