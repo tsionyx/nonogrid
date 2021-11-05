@@ -24,9 +24,9 @@ panic = 'abort'
 hashbrown = "0.6"
 lru = "0.5"
 priority-queue = "1.0"
-ordered-float = "2.0"
+ordered-float = "2.8"
 log = "0.4"
-smallvec = "1.4"
+smallvec = "1.6"
 
 
 clap = {version="2.33", optional=true}
