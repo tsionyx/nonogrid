@@ -1,0 +1,327 @@
+# Based on https://github.com/actions-rs/meta/blob/master/recipes/msrv.md
+name: Rust
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+  pull_request:
+    branches: [ master ]
+
+
+jobs:
+  fmt:
+    name: Rustfmt on rust '${{ matrix.rust }}'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - 1.39.0
+          - stable
+          - beta
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - name: Install rustfmt
+        run: rustup component add rustfmt
+
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  test:
+    name: Test Suite on rust '${{ matrix.rust }}'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - 1.39.0
+          - stable
+          - beta
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - name: Cache cargo registry
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo_registry-
+
+      - name: Cache cargo build
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.os }}-${{ matrix.rust }}-cargo_target-test-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            - ${{ runner.os }}-${{ matrix.rust }}-cargo_target-test-
+            - ${{ runner.os }}-${{ matrix.rust }}-cargo_target-
+
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features --workspace
+
+      # - name: Run cargo test (ignored)
+      #   uses: actions-rs/cargo@v1
+      #   with:
+      #     command: test
+      #     args: --all-features --workspace -- --ignored
+
+  clippy:
+    name: Clippy on rust '${{ matrix.rust }}'
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      matrix:
+        rust:
+          # - 1.39.0  # skipping the clippy for the minimal version
+          - stable
+          - beta
+        experimental: [false]
+        include:
+          - rust: nightly
+            experimental: true
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - name: Install clippy
+        run: rustup component add clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo_registry-
+
+      - name: Cache cargo build
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.os }}-${{ matrix.rust }}-cargo_target-clippy-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            - ${{ runner.os }}-${{ matrix.rust }}-cargo_target-clippy-
+            - ${{ runner.os }}-${{ matrix.rust }}-cargo_target-
+
+      - name: Run cargo clippy (+nursery) for the whole project
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-targets --workspace -- -Dwarnings -W clippy::nursery
+
+      - name: Run cargo clippy (+nursery) for the whole project (without default features)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-targets --workspace --no-default-features -- -Dwarnings -W clippy::nursery
+
+      - name: Run cargo clippy (+nursery) for the whole project (with all features)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-targets --workspace --all-features -- -Dwarnings -W clippy::nursery
+
+      - name: Run cargo clippy (+nursery, +pedantic) for the library only
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --lib -- -Dwarnings -W clippy::nursery -W clippy::pedantic
+
+      - name: Run cargo clippy (+nursery, +pedantic) for the library only (without default features)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --lib --no-default-features -- -Dwarnings -W clippy::nursery -W clippy::pedantic
+
+      - name: Run cargo clippy (+nursery, +pedantic) for the library only (with all features)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --lib --all-features -- -Dwarnings -W clippy::nursery -W clippy::pedantic
+
+  audit:
+    name: Audit on rust '${{ matrix.rust }}'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        rust:
+          - stable
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - name: Install audit
+        run: cargo install cargo-audit
+
+      - name: Cache cargo registry
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo_registry-
+
+      - name: Cache cargo build
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.os }}-${{ matrix.rust }}-cargo_target-clippy-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            - ${{ runner.os }}-${{ matrix.rust }}-cargo_target-clippy-
+            - ${{ runner.os }}-${{ matrix.rust }}-cargo_target-
+
+      - name: Check for vulnerabilities
+        uses: actions-rs/cargo@v1
+        with:
+          command: audit
+
+  coverage:
+    name: Coverage on rust '${{ matrix.rust }}'
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/master' }}
+    needs: [test, clippy]
+
+    strategy:
+      matrix:
+        rust:
+          - stable
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - name: Install the necessary tool
+        run: |
+          sudo apt-get update
+          sudo apt-get install libcurl4-openssl-dev libelf-dev libdw-dev cmake gcc binutils-dev libiberty-dev curl
+
+      - name: Cache cargo registry
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo_registry-
+
+      - name: Cache cargo build
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.os }}-${{ matrix.rust }}-cargo_target-test-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            - ${{ runner.os }}-${{ matrix.rust }}-cargo_target-test-
+            - ${{ runner.os }}-${{ matrix.rust }}-cargo_target-
+
+      - name: Run cargo test
+        shell: bash
+        run: |
+          # all that goes to >5 will eventually be in the stdin
+          exec 5>&1
+          # catch all the binaries names and write them into `test_bins`
+          cargo test --all-features --workspace 2>&1 | tee /dev/fd/5 | grep 'target/debug' | awk '{print $3}' | tr "()" " " > test_bins
+
+      - name: Prepare coverage tool
+        shell: bash
+        run: |
+          wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz && tar xzf master.tar.gz
+          cd kcov-master && mkdir build && cd build
+          cmake .. && make && make install DESTDIR=../../kcov-build
+          cd ../.. && rm -rf kcov-master master.tar.gz
+
+      - name: Run the coverage
+        shell: bash
+        run: |
+          cat test_bins | xargs echo "Running the test executions:"
+          for file in $(cat test_bins); do
+            echo "Running coverage for $file..."
+            mkdir -p "target/cov/$(basename $file)"
+            ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"
+          done
+
+          bash <(curl -s https://codecov.io/bash)
+          echo "Uploaded code coverage"
+
+  deploy:
+    name: Deploying on rust '${{ matrix.rust }}'
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/master' }}
+    needs: [test, clippy]
+
+    strategy:
+      matrix:
+        rust:
+          - stable
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Deploy the source on https://www.spoj.com
+        shell: bash
+        env:
+          SPOJ_PASSWORD: ${{ secrets.SPOJ_PASSWORD }}
+        run: |
+          SPOJ_TOKEN=$(curl -i 'https://www.spoj.com/login' --data "login_user=jcross_bot&password=$SPOJ_PASSWORD" | grep -oP 'SPOJ=[a-z0-9]+')
+
+          # remove comment lines, remove newlines, strip away multiple spaces
+          CONTENT=$(cat examples/spoj/main.rs | sed '/^ *\/\//d' | tr '\n' ' ' | sed 's/  */ /g')
+
+          # 93 is the Rust language code and the problem is here https://www.spoj.com/problems/JCROSS/
+          SUBMISSION_ID=$(curl 'https://www.spoj.com/submit/complete/' --cookie "$SPOJ_TOKEN" --data "lang=93&problemcode=JCROSS" --data-urlencode "file=$CONTENT" | grep newSubmissionId | grep -oP 'value="\K\d+')
+
+          echo "See the result at https://www.spoj.com/status/JCROSS,jcross_bot/ns=$SUBMISSION_ID"
