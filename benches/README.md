@@ -69,7 +69,7 @@ grep -oP 'Total: \K(.+)' benches/rand.log | sort -n | nl -ba | less
 ### Hardest backtracking puzzles
 
 ```
-# only 27895 of them are valid at 3 Nov 2021
+# only 27898 of them are valid at 5 Nov 2021
 nohup bash benches/batch.sh webpbn {1..35500} >benches/batch.log 2>&1 &
 bash benches/batch.sh stat benches/batch.log 9 --details
 ```
@@ -78,6 +78,22 @@ Most of the hardest puzzles are not unique, so we need to find at least two solu
 So, the solution ends when the second solution is found or if we found proof that the first solution is the only.
 However, for puzzles that take hours to solve, it can be helpful to know when
 the first solution has been found, and therefore, how long will it take to find the second one.
+
+Out of 27898 puzzles:
+- 23214 puzzles are line solvable (with propagation of changes):
+  - `less benches/batch.log | grep -B1 'Total:' | grep -oP '\d+ points' | sort -nr | uniq -c`
+  - 0 is the minimum number of points (empty descriptions set of puzzles: #845, #7693, etc.);
+  - 13517 is the maximum number of points to solve (#31651);
+
+- 3956 are solvable with the probing (unique solution found):
+  - `less benches/batch.log | grep -B1 'Total:' | grep 'Cache rows' | wc -l`
+
+- 728 cannot be solved with probing and was tried to solve with SAT:
+  - `less benches/batch.log | grep -B1 'Total:' | grep -oP '\d+-th solution found' | sort -nr | uniq -c`
+  - 88 of them has unique solution (#25820 is one of them, and it is the hardest puzzle to solve, see the table below);
+  - 104 has two solutions;
+  - 227 has more than 1000 solutions;
+  - #32722 has the highest complexity of probing (`less benches/batch.log | grep -oP 'hits=\d+' | grep -oP '\d+' | sort -nr | head`);
 
 
 #### with SAT solver
@@ -88,40 +104,42 @@ cargo build --release --no-default-features --features="args std_time logger sat
 
 ##### black-and-white (>=10 seconds)
 
-| puzzle_id | solve time, sec | 2-nd solution, sec | SAT variables | SAT clauses |
-|-----------|----------------:|-------------------:|--------------:|------------:|
-| 9892*     |              28 |                  0 |        13_887 |     425_270 |
-| 10088*    |              10 |                  0 |        23_483 |   1_025_585 |
-| 12548*    |             141 |                  0 |        13_685 |     503_999 |
-| 16900     |              15 |                  0 |        32_295 |   1_751_050 |
-| 18297*    |              11 |    0 (3 solutions) |         9_708 |     275_166 |
-| 19080     |             398 |                  0 |        24_673 |   1_272_743 |
-| 22336*    |             269 |                  0 |        67_137 |   5_461_726 |
-| 25385     |             295 |                  0 |        21_334 |     923_394 |
-| 25588     |             187 |                  0 |        21_017 |     993_331 |
-| 25820     |         106_498 |             64_268 |        43_668 |   2_948_833 |
-| 26520     |          41_161 |                  0 |        29_223 |   1_696_163 |
-| 30532     |              13 |                  0 |        15_212 |     444_144 |
-| 30654     |           1_243 |                 99 |        33_384 |   1_138_340 |
-| 32013     |              13 |                  0 |         9_468 |     297_855 |
-| 32291     |              61 |    0 (2 solutions) |        14_421 |     543_978 |
-| [Knotty**](https://webpbn.com/survey/puzzles/) | + | N/A | 11_076 |    230_271 |
-| [Meow**](https://webpbn.com/survey/puzzles/)   | + | N/A | 35_036 |  1_872_216 |
-| [Faase**](https://webpbn.com/survey/puzzles/)  | + | N/A | 89_918 |  9_968_433 |
+| puzzle_id | solve time, sec | after first, sec | solutions | SAT variables | SAT clauses |
+|-----------|----------------:|-----------------:|----------:|--------------:|------------:|
+| 9892*     |              28 |                0 |   >10_000 |        13_887 |     425_270 |
+| 10088*    |              10 |                0 |   >10_000 |        23_483 |   1_025_585 |
+| 12548*    |             141 |                0 |   >10_000 |        13_685 |     503_999 |
+| 16900     |              15 |                0 |   >10_000 |        32_295 |   1_751_050 |
+| 18297*    |              11 |                0 |         3 |         9_708 |     275_166 |
+| 19080     |             398 |                0 |   >10_000 |        24_673 |   1_272_743 |
+| 22336*    |             269 |                0 |   >10_000 |        67_137 |   5_461_726 |
+| 25385     |             295 |                0 |   >10_000 |        21_334 |     923_394 |
+| 25588     |             187 |                0 |   >10_000 |        21_017 |     993_331 |
+| 25820     |         103_996 |           61_619 |         1 |        43_668 |   2_948_833 |
+| 26520     |          41_161 |                0 | >10_000 (294_182 seconds) | 29_223 | 1_696_163 |
+| 30532     |              13 |                0 |   >10_000 |        15_212 |     444_144 |
+| 30654     |           1_243 |               56 |   >10_000 |        33_384 |   1_138_340 |
+| 32013     |              13 |                0 |   >10_000 |         9_468 |     297_855 |
+| 32291     |              61 |                0 |         2 |        14_421 |     543_978 |
+| [Knotty**](https://webpbn.com/survey/puzzles/) | 42_931 | 0 | >=2 | 11_076 |     230_271 |
+| [Meow**](https://webpbn.com/survey/puzzles/)   | ++ | N/A | ? |     35_036 |   1_872_216 |
+| [Faase**](https://webpbn.com/survey/puzzles/)  | ++ | N/A | ? |     89_918 |   9_968_433 |
+
+`++` - search was not completed after 1 week of training (>0.6M seconds)
 
 ##### colored (>=10 seconds)
 
-| puzzle_id | solve time, sec | 2-nd solution, sec | SAT variables | SAT clauses | colors (w/o blank) |
-|-----------|----------------:|-------------------:|--------------:|------------:|-------------------:|
-| 672*      |              23 |                  0 |        32_027 |   1_483_859 | 3
-| 2498*     |              42 |                  0 |        42_352 |   2_259_671 | 4
-| 3114      |              29 |                  0 |        28_886 |     995_422 | 3
-| 9786      |              24 |                  0 |        16_094 |     581_210 | 2
-| 10585     |             275 |                  0 |        28_224 |     829_213 | 4
-| 16838     |             260 |                  0 |        70_240 |   6_752_766 | 2
-| 25158     |              35 |                  0 |        20_433 |     660_340 | 4
-| 26810     |              28 |                  0 |        45_695 |   2_351_897 | 4
-| 34250     |             252 |                  0 |        37_899 |   1_996_812 | 4
+| puzzle_id | solve time, sec | after first, sec | solutions | SAT variables | SAT clauses | colors (w/o blank) |
+|-----------|----------------:|-----------------:|----------:|--------------:|------------:|-------------------:|
+| 672*      |              23 |                1 |   >10_000 |        32_027 |   1_483_859 | 3
+| 2498*     |              42 |                0 |   >10_000 |        42_352 |   2_259_671 | 4
+| 3114      |              29 |                0 |   >10_000 |        28_886 |     995_422 | 3
+| 9786      |              24 |                0 |   >10_000 |        16_094 |     581_210 | 2
+| 10585     |             275 |                0 |   >10_000 |        28_224 |     829_213 | 4
+| 16838     |             260 |                1 |   >10_000 |        70_240 |   6_752_766 | 2
+| 25158     |              35 |                0 |   >10_000 |        20_433 |     660_340 | 4
+| 26810     |              28 |                0 |   >10_000 |        45_695 |   2_351_897 | 4
+| 34250     |             252 |                0 |   >10_000 |        37_899 |   1_996_812 | 4
 
 #### with custom backtracking
 
@@ -183,11 +201,11 @@ cargo build --release --no-default-features --features="args std_time logger"
 | 34250     |               + |                      16 | 4
 | 34722     |               + |                      26 | 4
 
-+ - search was not completed after 1 hour
+`+` - search was not completed after 1 hour
 
-&ast; - puzzles from http://webpbn.com/survey/.
+`*` - puzzles from http://webpbn.com/survey/.
 
-** - puzzles are not in public access but can be downloaded at https://webpbn.com/survey/puzzles/
+`**` - puzzles are not in public access but can be downloaded at https://webpbn.com/survey/puzzles/
 
 
 ## Export puzzle $ID in every supported format
@@ -200,72 +218,76 @@ done
 ```
 
 The colored puzzles are only supported in the following formats:
-- _xml_: colored block represented as 'color="NAME"';
+- _xml_: colored block represented as _'color="NAME"'_;
 - _pnm_;
 - _xls_?;
-- _olsak: colored block represented as the letters for every color: 'n:%  #00B000   green';
+- _olsak_: colored block represented as the letters for every color: _'n:%  #00B000   green'_;
 - _cwc_: colored blocks represented as the numbers (1..N)
 - _crossa_: colored blocks represented as the numbers (1..N)
 
-- The blotted puzzles (not implemented yet) are only supported in the following formats:
-- _xml_: blotted block represented as '0';
-- _csv_: blotted block represented as '#'.
+The blotted puzzles (not implemented yet) are only supported in the following formats:
+- _xml_: blotted block represented as _'0'_;
+- _csv_: blotted block represented as _'#'_.
 
 
 
 ## http://www.nonograms.org puzzles
 
-49601 puzzles run. All the puzzles are line solvable and has single solution.
+49686 puzzles run. All the puzzles are line solvable and has single solution.
 
 ### Distribution of solve times
 
 ```
 $ nohup bash benches/batch.sh nonograms.org {1..50000} 2>&1 > benches/batch-norg.log &
 $ less benches/batch-norg.log | grep 'Total' | awk '{print $2}' | sort -r | uniq -c
-     1 0.17
+     1 0.16
      1 0.12
-     1 0.10
-     4 0.06
+     1 0.09
+     2 0.06
      9 0.05
-    17 0.04
-    56 0.03
-   362 0.02
-  2276 0.01
- 46874 0.00
+    16 0.04
+    72 0.03
+   341 0.02
+  2229 0.01
+ 47014 0.00
 ```
 
-### Top 27 (>=0.05 sec)
+### Top 31 (>=0.04 sec)
 
-| puzzle_id | solve time, sec                |    size | colors (w/o blank) |
-|-----------|-------------------------------:|---------|-------------------:|
-| 4462*     | 0.05-0.08         ###+         | 140x150 |   3
-| 9596*     | 0.05-0.06         ###          | 139x166 |  10
-| 17921     | 0.04-0.05         ##+          |  110x70 |   2 (black and white)
-| 18417     | 0.04-0.05         ##+          | 148x120 |   2 (black and white)
-| 20689     | 0.05              ##+          | 100x107 |   4
-| 21251     | 0.03-0.05         ##+          | 175x140 |   2 (black and white)
-| 21259     | 0.04-0.05         ##+          | 150x140 |   2 (black and white)
-| 21272     | 0.06-0.09         ###++        | 149x153 |   2 (black and white)
-| 21553     | 0.06-0.08         ###+         | 200x200 |   5
-| 22118     | 0.04-0.05         ##+          | 145x200 |  10
-| 31862     | 0.04-0.05         ##+          |  150x93 |   4
-| 33190     | 0.05-0.06         ###          | 125x200 |   9
-| 36040     | 0.05-0.06         ###          | 120x120 |   3
-| 39385     | 0.03-0.05         ##+          |  80x120 |   9
-| 40330     | 0.04-0.05         ##+          |   90x94 |   4
-| 41095     | 0.05-0.06         ###          | 185x195 |   7
-| 41103     | 0.04-0.05         ##+          | 158x200 |  10
-| 43693     | 0.04-0.05         ##+          |  200x15 |   2 (black and white)
-| 44129     | 0.04-0.05         ##+          |  194x33 |   2 (black and white)
-| 45290     | 0.04-0.05         ##+          | 130x160 |   2 (black and white)
-| 47574(ru) | 0.04-0.05         ##+          | 128x180 |   2 (black and white)
-| 47617(ru) | 0.12-0.17         ######+++    | 140x200 |   2 (black and white)
-| 47623(ru) | 0.06-0.07         ###+         | 160x190 |   2 (black and white)
-| 47648(ru) | 0.15-0.24         ########++++ | 150x200 |   2 (black and white)
-| 47650(ru) | 0.10-0.14         #####++      | 160x180 |   2 (black and white)
-| 48172     | 0.06-0.07         ###+         | 200x120 |   2 (black and white)
-| 48723     | 0.06-0.07         ###+         | 100x171 |   2 (black and white)
+| puzzle_id | solve time, sec | solve time   |    size | colors (w/o blank) |
+|-----------|----------------:|:-------------|---------|-------------------:|
+| 4462*     |       0.05-0.08 | ###+         | 140x150 |   3
+| 9596*     |       0.05-0.06 | ###          | 139x166 |  10
+| 15118     |            0.04 | ##           | 140x130 |   2 (black and white)
+| 17921     |       0.04-0.05 | ##+          |  110x70 |   2 (black and white)
+| 18417     |       0.04-0.05 | ##+          | 148x120 |   2 (black and white)
+| 19043     |            0.04 | ##           |   96x96 |   2 (black and white)
+| 20689     |            0.05 | ##+          | 100x107 |   4
+| 21251     |       0.03-0.05 | ##+          | 175x140 |   2 (black and white)
+| 21259     |       0.04-0.05 | ##+          | 150x140 |   2 (black and white)
+| 21272     |       0.06-0.09 | ###++        | 149x153 |   2 (black and white)
+| 21553     |       0.05-0.08 | ###+         | 200x200 |   5
+| 22118     |       0.04-0.05 | ##+          | 145x200 |  10
+| 22340     |            0.04 | ##           |   97x97 |   2 (black and white)
+| 31862     |       0.04-0.05 | ##+          |  150x93 |   4
+| 33190     |       0.05-0.06 | ###          | 125x200 |   9
+| 36040     |       0.05-0.06 | ###          | 120x120 |   3
+| 39385     |       0.03-0.05 | ##+          |  80x120 |   9
+| 39792     |            0.04 | ##           |  70x100 |   8
+| 40330     |       0.04-0.05 | ##+          |   90x94 |   4
+| 41095     |       0.05-0.06 | ###          | 185x195 |   7
+| 41103     |       0.04-0.05 | ##+          | 158x200 |  10
+| 43693     |       0.04-0.05 | ##+          |  200x15 |   2 (black and white)
+| 44129     |       0.04-0.05 | ##+          |  194x33 |   2 (black and white)
+| 45290     |       0.04-0.05 | ##+          | 130x160 |   2 (black and white)
+| 47574(ru) |       0.03-0.05 | ##+          | 128x180 |   2 (black and white)
+| 47617(ru) |       0.12-0.17 | ######+++    | 140x200 |   2 (black and white)
+| 47623(ru) |       0.05-0.07 | ###+         | 160x190 |   2 (black and white)
+| 47648(ru) |       0.15-0.24 | ########++++ | 150x200 |   2 (black and white)
+| 47650(ru) |       0.09-0.14 | ####+++      | 160x180 |   2 (black and white)
+| 48172     |       0.05-0.07 | ###+         | 200x120 |   2 (black and white)
+| 48723     |       0.06-0.07 | ###+         | 100x171 |   2 (black and white)
 
 
-&ast; - puzzles also mentioned in [this C++ solver post](
+`*` - puzzles also mentioned in [this C++ solver post](
 https://izaron.github.io/post/solving-colored-japanese-crosswords-with-the-speed-of-light/#what-decreases-the-execution-time).
